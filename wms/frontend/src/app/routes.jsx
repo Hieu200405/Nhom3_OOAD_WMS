@@ -33,6 +33,7 @@ import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { PdfTestPage } from '../features/pdf/PdfTestPage.jsx';*/
 import { UsersPage } from '../features/users/UsersPage.jsx';
 import { Roles } from '../utils/constants.js';
+import {InventoryPage} from "@/features/inventory/InventoryPage.jsx";
 
 export const appRoutes = [
   {
@@ -76,7 +77,7 @@ export const appRoutes = [
     icon: Warehouse,
     component: WarehouseStructurePage,
     roles: [Roles.ADMIN, Roles.MANAGER],
-  },
+  },*/
   {
     path: '/inventory',
     labelKey: 'navigation.inventory',
@@ -84,7 +85,7 @@ export const appRoutes = [
     component: InventoryPage,
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
   },
-  {
+  /*{
     path: '/receipts',
     labelKey: 'navigation.receipts',
     icon: Receipt,
