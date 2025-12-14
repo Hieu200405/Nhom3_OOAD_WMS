@@ -14,7 +14,7 @@ import {
   RotateCw,
   Trash2,
 } from 'lucide-react';
-import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
+/*import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
 import { ProductsPage } from '../features/products/ProductsPage.jsx';
 import { CategoriesPage } from '../features/products/CategoriesPage.jsx';
 import { SuppliersPage } from '../features/partners/SuppliersPage.jsx';
@@ -30,12 +30,12 @@ import { StocktakingPage } from '../features/stocktaking/StocktakingPage.jsx';
 import { ReturnsPage } from '../features/returns/ReturnsPage.jsx';
 import { DisposalsPage } from '../features/disposals/DisposalsPage.jsx';
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
+import { PdfTestPage } from '../features/pdf/PdfTestPage.jsx';*/
 import { UsersPage } from '../features/users/UsersPage.jsx';
 import { Roles } from '../utils/constants.js';
-import { PdfTestPage } from '../features/pdf/PdfTestPage.jsx';
 
 export const appRoutes = [
-  {
+  /*{
     path: '/dashboard',
     labelKey: 'navigation.dashboard',
     icon: LayoutDashboard,
@@ -155,7 +155,7 @@ export const appRoutes = [
     icon: FileChartColumn,
     component: PdfTestPage,
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
-  },
+  },*/
   {
     path: '/users',
     labelKey: 'navigation.users',
