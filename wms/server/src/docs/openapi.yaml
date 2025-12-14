@@ -1,0 +1,200 @@
+openapi: 3.1.0
+info:
+  title: WMS API
+  version: 1.0.0
+  description: |
+    Warehouse management system API covering authentication, master data, inventory, and operations.
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authenticated
+        '401':
+          description: Invalid credentials
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user (admin only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName, role]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                fullName:
+                  type: string
+                role:
+                  type: string
+                  enum: [Admin, Manager, Staff]
+      responses:
+        '201':
+          description: Created
+  /products:
+    get:
+      tags: [Products]
+      summary: List products
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product list
+    post:
+      tags: [Products]
+      summary: Create product
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, categoryId, unit, priceIn, priceOut, minStock]
+              properties:
+                sku:
+                  type: string
+                name:
+                  type: string
+                categoryId:
+                  type: string
+                unit:
+                  type: string
+                priceIn:
+                  type: number
+                priceOut:
+                  type: number
+                minStock:
+                  type: number
+      responses:
+        '201':
+          description: Created
+  /receipts/{id}/transition:
+    post:
+      tags: [Receipts]
+      summary: Transition receipt status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+                  enum: [approved, supplierConfirmed, completed]
+      responses:
+        '200':
+          description: Updated
+  /deliveries/{id}/transition:
+    post:
+      tags: [Deliveries]
+      summary: Transition delivery status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+                  enum: [approved, prepared, delivered, completed]
+      responses:
+        '200':
+          description: Updated
+  /reports/{type}/pdf:
+    get:
+      tags: [Reports]
+      summary: Download report as PDF
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [overview, inventory, inbound, receipts, outbound, deliveries, stocktake, stocktaking]
+      responses:
+        '200':
+          description: PDF stream
