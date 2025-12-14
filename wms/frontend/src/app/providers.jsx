@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { bootstrapI18n } from '../i18n';
 import { AuthProvider } from './auth-context';
 import { ThemeProvider } from './theme-context';
-import { MockDataProvider } from '../services/mockDataContext';
+//import { MockDataProvider } from '../services/mockDataContext';
 
 const i18nInstance = bootstrapI18n();
 
