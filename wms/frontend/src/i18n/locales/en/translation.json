@@ -1,0 +1,178 @@
+﻿{
+  "app": {
+    "title": "Warehouse Management System",
+    "language": "Language",
+    "logout": "Sign out",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "search": "Search...",
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "back": "Back",
+    "status": "Status",
+    "filter": "Filter",
+    "actions": "Actions",
+    "total": "Total",
+    "lineItems": "Lines",
+    "exportPdf": "Export PDF",
+    "reset": "Reset demo data"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "categories": "Categories",
+    "suppliers": "Suppliers",
+    "customers": "Customers",
+    "warehouse": "Warehouse",
+    "inventory": "Inventory",
+    "receipts": "Receipts",
+    "deliveries": "Deliveries",
+    "incidents": "Incidents",
+    "stocktaking": "Stocktaking",
+    "returns": "Returns",
+    "disposals": "Disposals",
+    "reports": "Reports",
+    "users": "Users"
+  },
+  "login": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Login",
+    "remember": "Remember me",
+    "hint": "Demo accounts: admin/admin123, manager/manager123, staff/staff123"
+  },
+  "roles": {
+    "Admin": "Admin",
+    "Manager": "Manager",
+    "Staff": "Staff"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {{name}}!",
+    "cards": {
+      "inventoryValue": "Inventory value",
+      "pendingReceipts": "Pending receipts",
+      "pendingDeliveries": "Pending deliveries",
+      "incidents": "Open incidents"
+    },
+    "recentActivities": "Recent activities"
+  },
+  "warehouse": {
+    "title": "Warehouse structure",
+    "addNode": "Add node",
+    "editNode": "Edit node",
+    "barcode": "Location barcode",
+    "type": "Level",
+    "name": "Name",
+    "code": "Code"
+  },
+  "products": {
+    "title": "Products",
+    "sku": "SKU",
+    "name": "Product name",
+    "unit": "Unit",
+    "priceIn": "Purchase price",
+    "priceOut": "Selling price",
+    "category": "Category",
+    "create": "Add product",
+    "categoryFilter": "Filter by category"
+  },
+  "categories": {
+    "title": "Categories",
+    "create": "Add category"
+  },
+  "partners": {
+    "suppliers": "Suppliers",
+    "customers": "Customers"
+  },
+  "receipts": {
+    "title": "Inbound receipts",
+    "create": "Create receipt",
+    "supplier": "Supplier",
+    "date": "Receipt date",
+    "status": {
+      "Draft": "Draft",
+      "Approved": "Approved",
+      "Supplier Confirmed": "Supplier confirmed",
+      "Completed": "Completed",
+      "Rejected": "Rejected"
+    },
+    "hasShortage": "Short shipped",
+    "shortageNote": "Shortage note",
+    "damageNote": "Damage note",
+    "approve": "Approve",
+    "complete": "Complete",
+    "confirmSupplier": "Supplier confirmed",
+    "lines": {
+      "product": "Product",
+      "quantity": "Quantity",
+      "price": "Price"
+    }
+  },
+  "deliveries": {
+    "title": "Outbound deliveries",
+    "create": "Create delivery",
+    "customer": "Customer",
+    "date": "Delivery date",
+    "status": {
+      "Draft": "Draft",
+      "Approved": "Approved",
+      "Prepared": "Prepared",
+      "Delivered": "Delivered",
+      "Completed": "Completed",
+      "Cancelled": "Cancelled"
+    },
+    "prepare": "Prepare",
+    "deliver": "Deliver",
+    "complete": "Complete",
+    "deliveryNote": "Delivery note"
+  },
+  "incidents": {
+    "title": "Incident tickets",
+    "type": "Type",
+    "note": "Description",
+    "action": "Action plan",
+    "create": "Log incident"
+  },
+  "stocktaking": {
+    "title": "Stocktaking",
+    "create": "Create stocktake",
+    "adjustments": "Adjustments",
+    "difference": "Difference",
+    "apply": "Apply stock",
+    "approve": "Submit for approve"
+  },
+  "returns": {
+    "title": "Return orders",
+    "create": "Create return",
+    "reason": "Reason",
+    "status": {
+      "Awaiting Inspection": "Awaiting inspection",
+      "Restocked": "Restocked",
+      "Disposed": "Moved to disposal"
+    }
+  },
+  "disposals": {
+    "title": "Disposals",
+    "create": "Create disposal",
+    "council": "Disposal council",
+    "attachment": "Disposal report"
+  },
+  "reports": {
+    "title": "Reports",
+    "inventory": "Inventory",
+    "receipts": "Inbound",
+    "deliveries": "Outbound",
+    "stocktaking": "Adjustments"
+  },
+  "notifications": {
+    "saved": "Saved successfully",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "statusChanged": "Status updated"
+  }
+}
