@@ -1,12 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { appRoutes } from './routes.jsx';
-/*import { LoginPage } from '../features/auth/LoginPage.jsx';
-import { useAuth } from './auth-context.jsx';*/
+import { LoginPage } from '../features/auth/LoginPage.jsx';
+import { useAuth } from './auth-context.jsx';
 import { AppLayout } from './AppLayout.jsx';
 import { ProtectedRoute } from './ProtectedRoute.jsx';
 
 export default function App() {
-  /*const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <Routes>
@@ -47,32 +47,5 @@ export default function App() {
         }
       />
     </Routes>
-  );*/
-
-    return (
-        <Routes>
-            <Route element={<AppLayout />}>
-                {/* Mở app là vào UsersPage */}
-                <Route index element={<Navigate to="users" replace />} />
-
-                {appRoutes.map((route) => {
-                    const Component = route.component;
-                    const path = route.path.startsWith('/')
-                        ? route.path.slice(1)
-                        : route.path;
-
-                    return (
-                        <Route
-                            key={route.path}
-                            path={path}
-                            element={<Component />}
-                        />
-                    );
-                })}
-            </Route>
-
-            {/* fallback */}
-            <Route path="*" element={<Navigate to="users" replace />} />
-        </Routes>
-    );
+  );
 }
