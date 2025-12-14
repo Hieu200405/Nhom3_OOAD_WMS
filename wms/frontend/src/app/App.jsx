@@ -13,7 +13,7 @@ export default function App() {
       <Route
         path="/login"
         element={
-          isAuthenticated ? <Navigate to="/users" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         }
       />
       <Route
@@ -23,7 +23,7 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/users" replace />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
         {appRoutes.map((route) => {
           const Component = route.component;
           const path = route.path.startsWith('/') ? route.path.slice(1) : route.path;
@@ -43,7 +43,7 @@ export default function App() {
       <Route
         path="*"
         element={
-          <Navigate to={isAuthenticated ? '/users' : '/login'} replace />
+          <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
         }
       />
     </Routes>

@@ -14,8 +14,8 @@ import {
   RotateCw,
   Trash2,
 } from 'lucide-react';
-/*import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
-import { ProductsPage } from '../features/products/ProductsPage.jsx';
+import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
+/*import { ProductsPage } from '../features/products/ProductsPage.jsx';
 import { CategoriesPage } from '../features/products/CategoriesPage.jsx';
 import { SuppliersPage } from '../features/partners/SuppliersPage.jsx';
 import { CustomersPage } from '../features/partners/CustomersPage.jsx';
@@ -35,14 +35,14 @@ import { UsersPage } from '../features/users/UsersPage.jsx';
 import { Roles } from '../utils/constants.js';
 
 export const appRoutes = [
-  /*{
+  {
     path: '/dashboard',
     labelKey: 'navigation.dashboard',
     icon: LayoutDashboard,
     component: DashboardPage,
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
   },
-  {
+  /*{
     path: '/products',
     labelKey: 'navigation.products',
     icon: Package,
