@@ -6,21 +6,21 @@ const USERS = [
     username: 'admin',
     password: 'admin123',
     role: 'Admin',
-    fullName: 'Nguy?n Qu?n Tr?',
+    fullName: 'Nguyễn Quản Trị',
   },
   {
     id: 'user-manager',
     username: 'manager',
     password: 'manager123',
     role: 'Manager',
-    fullName: 'Tr?n Gi�m S�t',
+    fullName: 'Trần Giám Sát',
   },
   {
     id: 'user-staff',
     username: 'staff',
     password: 'staff123',
     role: 'Staff',
-    fullName: 'Ph?m Nh�n Vi�n',
+    fullName: 'Phạm Nhân Viên',
   },
 ];
 
@@ -49,7 +49,7 @@ export const authService = {
     await new Promise((resolve) => setTimeout(resolve, 400));
 
     if (!user) {
-      throw new Error('T�n dang nh?p ho?c m?t kh?u kh�ng h?p l?');
+      throw new Error('Tên đăng nhập hoặc mật khẩu không hợp lệ');
     }
 
     const payload = {
