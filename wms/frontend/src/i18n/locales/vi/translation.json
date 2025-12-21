@@ -118,6 +118,7 @@
     "create": "Tạo phiếu xuất",
     "customer": "Khách hàng",
     "date": "Ngày xuất",
+    "expectedDate": "Ngày dự kiến giao",
     "status": {
       "Draft": "Nháp",
       "Approved": "Đã duyệt",

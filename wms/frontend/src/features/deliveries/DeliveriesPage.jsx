@@ -19,6 +19,7 @@ import { useAuth } from '../../app/auth-context.jsx';
 const defaultForm = {
   customerId: '',
   date: new Date().toISOString().slice(0, 10),
+  expectedDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), // Default to tomorrow
   note: '',
   lines: [
     {
@@ -71,6 +72,7 @@ export function DeliveriesPage() {
       id: generateId('dvy'),
       customerId: form.customerId,
       date: form.date,
+      expectedDate: form.expectedDate,
       status: DeliveryStatus.DRAFT,
       note: form.note,
       lines,
@@ -108,6 +110,11 @@ export function DeliveriesPage() {
     {
       key: 'date',
       header: t('deliveries.date'),
+      render: (value) => formatDate(value),
+    },
+    {
+      key: 'expectedDate',
+      header: t('deliveries.expectedDate'),
       render: (value) => formatDate(value),
     },
     {
@@ -207,12 +214,20 @@ export function DeliveriesPage() {
             placeholder="Select customer"
             required
           />
-          <DatePicker
-            label={t('deliveries.date')}
-            value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-            required
-          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <DatePicker
+              label={t('deliveries.date')}
+              value={form.date}
+              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+            <DatePicker
+              label="Ngày giao dự kiến"
+              value={form.expectedDate}
+              onChange={(event) => setForm((prev) => ({ ...prev, expectedDate: event.target.value }))}
+              required
+            />
+          </div>
           <LineItemsEditor
             products={products}
             value={form.lines}

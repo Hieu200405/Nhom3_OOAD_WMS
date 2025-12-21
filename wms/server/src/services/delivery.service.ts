@@ -30,13 +30,13 @@ const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate 
     throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customer.type} customers (${tier.maxQty})`);
   }
 
-  // 2. SLA validation
-  const creationDate = deliveryData.createdAt ? new Date(deliveryData.createdAt) : new Date();
-  const deliveryDate = new Date(deliveryData.date);
-  const diffDays = (deliveryDate.getTime() - creationDate.getTime()) / (1000 * 3600 * 24);
+  // 2. SLA validation: Expected Date - Export Date
+  const exportDate = new Date(deliveryData.date);
+  const expectedDate = new Date(deliveryData.expectedDate);
+  const diffDays = (expectedDate.getTime() - exportDate.getTime()) / (1000 * 3600 * 24);
 
   if (diffDays > tier.slaDays && !deliveryData.notes?.includes('[EXCEPTION]')) {
-    throw badRequest(`Delivery date exceeds SLA limit of ${tier.slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
+    throw badRequest(`Delivery window (${Math.ceil(diffDays)} days) exceeds SLA limit of ${tier.slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
   }
 };
 
@@ -86,6 +86,7 @@ export const createDelivery = async (
     code: string;
     customerId: string;
     date: Date;
+    expectedDate: Date;
     lines: { productId: string; qty: number; priceOut: number; locationId: string }[];
     notes?: string;
   },
@@ -224,7 +225,6 @@ export const transitionDelivery = async (
         qty: line.qty
       }))
     );
-
     // Re-validate constraints on approval
     if (target === 'approved') {
       const customer = await PartnerModel.findById(delivery.customerId).lean();

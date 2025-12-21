@@ -125,13 +125,13 @@ function validateDeliveryRules(state, delivery) {
     throw new Error(`Tổng số lượng xuất (${totalQty}) vượt quá hạn mức cho phép của khách hàng ${type} (${tier.maxQty})`);
   }
 
-  // 2. SLA validation
-  const creationDate = delivery.createdAt ? new Date(delivery.createdAt) : new Date();
-  const deliveryDate = new Date(delivery.date);
-  const diffDays = (deliveryDate.getTime() - creationDate.getTime()) / (1000 * 3600 * 24);
+  // 2. SLA validation: Expected Date - Export Date
+  const exportDate = new Date(delivery.date);
+  const expectedDate = new Date(delivery.expectedDate);
+  const diffDays = (expectedDate.getTime() - exportDate.getTime()) / (1000 * 3600 * 24);
 
   if (diffDays > tier.slaDays && !delivery.note?.includes('[EXCEPTION]')) {
-    throw new Error(`Ngày giao dự kiến vượt quá SLA cho phép của khách hàng ${type} (Tối đa ${tier.slaDays} ngày). Cần thêm "[EXCEPTION]" vào ghi chú để bỏ qua.`);
+    throw new Error(`Khoảng thời gian giao hàng (${Math.ceil(diffDays)} ngày) vượt quá SLA cho phép của khách hàng ${type} (Tối đa ${tier.slaDays} ngày). Cần thêm "[EXCEPTION]" vào ghi chú để bỏ qua.`);
   }
 }
 
