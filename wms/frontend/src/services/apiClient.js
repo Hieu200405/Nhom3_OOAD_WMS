@@ -21,9 +21,24 @@ export async function apiClient(path, options = {}) {
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
   const useMock = import.meta.env.VITE_USE_MOCK ?? 'true';
 
-  if (useMock !== 'false' && !skipMock && typeof mockHandler === 'function') {
-    return mockHandler(path, { method, body });
+  // (Race condition fix for page reloads)
+  if (useMock !== 'false' && !skipMock) {
+    if (typeof mockHandler !== 'function') {
+      // Wait for up to 1 second for the handler to be registered
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (typeof mockHandler === 'function') {
+          break;
+        }
+      }
+    }
+
+    if (typeof mockHandler === 'function') {
+      return mockHandler(path, { method, body });
+    }
   }
+
+  console.log('[API Client] Using REAL API for:', path);
 
   const url = new URL(normalizedPath, baseUrl);
   if (params && typeof params === 'object') {
