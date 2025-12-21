@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useMockData } from '../../services/mockDataContext.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
+//\\import { AuditTrail } from '../../components/AuditTrail.jsx';
 
 export function ReceiptDetailPage() {
   const { id } = useParams();
@@ -98,6 +99,8 @@ export function ReceiptDetailPage() {
         ) : null}
         {receipt.damageNote ? <InfoCard title={t('receipts.damageNote')} value={receipt.damageNote} /> : null}
       </div>
+
+      <AuditTrail receiptId={receipt.id} />
     </div>
   );
 }

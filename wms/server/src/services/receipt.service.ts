@@ -8,6 +8,7 @@ import { recordAudit } from './audit.service.js';
 import { adjustInventory } from './inventory.service.js';
 import { resolveDefaultBin } from './warehouse.service.js';
 import type { ReceiptStatus } from '@wms/shared';
+import { useParams } from 'react-router-dom';
 
 const allowedTransitions: Record<ReceiptStatus, ReceiptStatus[]> = {
   draft: ['approved'],

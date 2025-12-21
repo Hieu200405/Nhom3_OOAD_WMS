@@ -4,8 +4,7 @@ import * as controller from '../controllers/receipt.controller.js';
 import { auth } from '../middlewares/auth.js';
 import { requireRole } from '../middlewares/rbac.js';
 import { validate } from '../middlewares/validate.js';
-import { objectIdSchema } from '@wms/shared/schemas';
-import { RECEIPT_STATUS } from '@wms/shared';
+import { objectIdSchema, RECEIPT_STATUS } from '@wms/shared';
 
 const router = Router();
 
@@ -40,6 +39,7 @@ const transitionSchema = z.object({
 
 router.use(auth);
 
+router.get('/:id/audit-logs', controller.getAuditLogs);
 router.get('/', controller.list);
 router.post('/', requireRole('Admin', 'Manager'), validate({ body: createSchema }), controller.create);
 router.put('/:id', requireRole('Admin', 'Manager'), validate({ body: updateSchema }), controller.update);
