@@ -4,6 +4,7 @@ import { registerMockHandler } from './apiClient';
 function parsePath(path) {
   const segments = path.split('/').filter(Boolean);
   const [resource, id, action] = segments;
+  console.log('[Mock Server] Path:', path, '=> resource:', resource, 'id:', id, 'action:', action);
   return { resource, id, action };
 }
 
@@ -83,6 +84,31 @@ function handleCollection(resource, id, action, ctx) {
 
 function handleReceipts({ id, action, method, body, state, actions }) {
   if (method === 'GET') {
+    // Handle audit-logs endpoint
+    if (action === 'audit-logs') {
+      const logs = state.auditLogs.filter(log => log.entityId === id && log.entity === 'Receipt');
+
+      // If no logs found but receipt exists, return a fallback "Created" log
+      if (logs.length === 0) {
+        const receipt = state.receipts.find(r => r.id === id);
+        if (receipt) {
+          return {
+            data: [{
+              _id: `fallback-${id}`,
+              actorId: { _id: 'system', name: 'Hệ thống (Mock)' },
+              action: 'receipt.created',
+              entity: 'Receipt',
+              entityId: id,
+              payload: { code: receipt.code, status: receipt.status },
+              createdAt: new Date(2025, 0, 1).toISOString()
+            }]
+          };
+        }
+      }
+
+      return { data: logs };
+    }
+
     if (!id) return state.receipts;
     return state.receipts.find((item) => item.id === id);
   }

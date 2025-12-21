@@ -7,6 +7,7 @@ import {
   transitionReceipt
 } from '../services/receipt.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { AuditLogModel } from '../models/auditLog.model.js';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const result = await listReceipts(req.query as any);
@@ -31,4 +32,16 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 export const transition = asyncHandler(async (req: Request, res: Response) => {
   const receipt = await transitionReceipt(req.params.id, req.body.to, req.user!.id);
   res.json({ data: receipt });
+});
+
+export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const logs = await AuditLogModel.find({
+    entity: 'Receipt',
+    entityId: id
+  })
+    .populate('actorId', 'name email')
+    .sort({ createdAt: -1 });
+
+  res.json({ data: logs });
 });

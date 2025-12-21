@@ -37,6 +37,7 @@ function ensureCollections(data) {
     stocktaking: [],
     returns: [],
     disposals: [],
+    auditLogs: [],
     ...data,
   };
 }
@@ -111,17 +112,40 @@ export function MockDataProvider({ children }) {
     });
   }, []);
 
+  const recordAudit = useCallback((draft, { action, entity, entityId, payload }) => {
+    const log = {
+      _id: generateId('audit'),
+      actorId: { _id: 'user-000', name: 'User (Mock)', email: 'mock@example.com' },
+      action,
+      entity,
+      entityId,
+      payload: payload ?? null,
+      createdAt: new Date().toISOString()
+    };
+    draft.auditLogs = [log, ...(draft.auditLogs ?? [])];
+  }, []);
+
   const createRecord = useCallback(
     (resource, payload) => {
       setWithClone((draft) => {
+        const id = payload.id ?? generateId(resource);
         const record = {
-          id: payload.id ?? generateId(resource),
+          id,
           ...payload,
         };
         draft[resource] = [...(draft[resource] ?? []), record];
+
+        if (resource === 'receipts') {
+          recordAudit(draft, {
+            action: 'receipt.created',
+            entity: 'Receipt',
+            entityId: id,
+            payload: { code: record.code, status: record.status || 'draft' }
+          });
+        }
       });
     },
-    [setWithClone],
+    [setWithClone, recordAudit],
   );
 
   const updateRecord = useCallback(
@@ -152,7 +176,15 @@ export function MockDataProvider({ children }) {
       setWithClone((draft) => {
         const receipt = draft.receipts.find((item) => item.id === id);
         if (!receipt) return;
+        const prevStatus = receipt.status;
         receipt.status = nextStatus;
+
+        recordAudit(draft, {
+          action: `receipt.${nextStatus}`,
+          entity: 'Receipt',
+          entityId: id,
+          payload: { from: prevStatus, to: nextStatus }
+        });
 
         if (
           nextStatus === ReceiptStatus.COMPLETED &&
@@ -170,7 +202,7 @@ export function MockDataProvider({ children }) {
         }
       });
     },
-    [setWithClone],
+    [setWithClone, recordAudit],
   );
 
   const transitionDeliveryStatus = useCallback(

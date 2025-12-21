@@ -127,7 +127,12 @@ export function ReceiptsPage() {
               <button
                 type="button"
                 onClick={() => transition(row, action.status)}
-                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition
+                  ${action.variant === 'danger'
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : 'bg-indigo-600 hover:bg-indigo-500'
+                  }
+`}
               >
                 {action.label}
               </button>
@@ -251,7 +256,15 @@ function availableActions(receipt, role) {
       status: ReceiptStatus.APPROVED,
       label: 'Approve',
       roles: managerRoles,
+      variant: 'success',
     });
+
+    actions.push({
+      status: ReceiptStatus.REJECTED,
+      label: 'Reject',
+      roles: managerRoles,
+      variant: 'danger',
+    })
   }
   if (receipt.status === ReceiptStatus.APPROVED) {
     actions.push({
