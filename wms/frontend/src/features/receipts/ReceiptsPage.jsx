@@ -252,6 +252,13 @@ function availableActions(receipt, role) {
       label: 'Approve',
       roles: managerRoles,
     });
+
+    actions.push({
+      status: ReceiptStatus.REJECTED,
+      label: 'Reject',
+      roles: managerRoles,
+      variant: 'danger',
+    })
   }
   if (receipt.status === ReceiptStatus.APPROVED) {
     actions.push({
