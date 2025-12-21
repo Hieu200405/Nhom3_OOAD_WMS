@@ -66,6 +66,7 @@ export const initialData = {
       policy: 'Thanh toán 30 ngày',
     },
     {
+
       id: 'cus-smartshop',
       name: 'Smart Shop Wholesale',
       type: 'Corporate', // Doanh nghiệp / Sỉ
