@@ -49,9 +49,10 @@ export function DeliveryDetailPage() {
         <StatusBadge status={delivery.status} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <InfoCard title="Delivery ID" value={delivery.id} />
         <InfoCard title={t('deliveries.date')} value={formatDate(delivery.date)} />
+        <InfoCard title="Ngày giao dự kiến" value={formatDate(delivery.expectedDate)} />
         <InfoCard title={t('deliveries.customer')} value={customer?.name ?? delivery.customerId} />
         <InfoCard title={t('app.total')} value={formatCurrency(delivery.total)} />
       </div>

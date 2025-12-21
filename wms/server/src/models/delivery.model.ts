@@ -11,7 +11,8 @@ export interface DeliveryLine {
 export interface Delivery {
   code: string;
   customerId: Types.ObjectId;
-  date: Date;
+  date: Date; // Departure/Export Date
+  expectedDate: Date; // Deadline for delivery (SLA)
   status: DeliveryStatus;
   lines: DeliveryLine[];
   notes?: string;
@@ -19,7 +20,7 @@ export interface Delivery {
   updatedAt: Date;
 }
 
-export interface DeliveryDocument extends Delivery, Document {}
+export interface DeliveryDocument extends Delivery, Document { }
 
 const deliveryLineSchema = new Schema<DeliveryLine>(
   {
@@ -35,7 +36,8 @@ const deliverySchema = new Schema<DeliveryDocument>(
   {
     code: { type: String, required: true, unique: true, trim: true },
     customerId: { type: Schema.Types.ObjectId, ref: 'Partner', required: true },
-    date: { type: Date, required: true },
+    date: { type: Date, required: true }, // Departure Date
+    expectedDate: { type: Date, required: true }, // Delivery Deadline
     status: { type: String, enum: DELIVERY_STATUS, default: 'draft', required: true },
     lines: { type: [deliveryLineSchema], default: [] },
     notes: { type: String, trim: true }

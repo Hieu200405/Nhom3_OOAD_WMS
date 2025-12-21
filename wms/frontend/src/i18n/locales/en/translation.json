@@ -118,6 +118,7 @@
     "create": "Create delivery",
     "customer": "Customer",
     "date": "Delivery date",
+    "expectedDate": "Expected delivery date",
     "status": {
       "Draft": "Draft",
       "Approved": "Approved",

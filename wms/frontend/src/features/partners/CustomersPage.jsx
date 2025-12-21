@@ -10,14 +10,13 @@ import { generateId } from '../../utils/id.js';
 
 const emptyCustomer = {
   name: '',
-  type: 'Retail',
+  type: 'Individual',
   policy: '',
 };
 
 const customerTypes = [
-  { value: 'Retail', label: 'Retail' },
-  { value: 'Wholesale', label: 'Wholesale' },
-  { value: 'Key Account', label: 'Key Account' },
+  { value: 'Individual', label: 'Individual' },
+  { value: 'Corporate', label: 'Corporate' },
 ];
 
 export function CustomersPage() {

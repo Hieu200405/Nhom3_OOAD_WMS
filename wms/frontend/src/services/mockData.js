@@ -61,15 +61,22 @@ export const initialData = {
   customers: [
     {
       id: 'cus-modern',
-      name: 'Modern Retail',
-      type: 'Key Account',
+      name: 'Modern Retail Corp',
+      type: 'Corporate', // Doanh nghiệp / Sỉ
       policy: 'Thanh toán 30 ngày',
     },
     {
+
       id: 'cus-smartshop',
-      name: 'Smart Shop',
-      type: 'Wholesale',
+      name: 'Smart Shop Wholesale',
+      type: 'Corporate', // Doanh nghiệp / Sỉ
       policy: 'Chiết khấu 3%',
+    },
+    {
+      id: 'cus-johndoe',
+      name: 'John Doe',
+      type: 'Individual', // Cá nhân / Lẻ
+      policy: 'Thanh toán ngay',
     },
   ],
   warehouses: [
@@ -121,6 +128,7 @@ export const initialData = {
       id: 'dvy-20241003',
       customerId: 'cus-modern',
       date: '2024-10-03',
+      expectedDate: '2024-10-05',
       status: 'Delivered',
       note: 'Giao đúng hẹn',
       lines: [
@@ -134,6 +142,7 @@ export const initialData = {
       id: 'dvy-20241007',
       customerId: 'cus-smartshop',
       date: '2024-10-07',
+      expectedDate: '2024-10-10',
       status: 'Draft',
       lines: [
         { id: 'dvy-20241007-line-1', productId: 'prod-notebook', sku: 'NTB-050', name: 'Sổ tay A5', quantity: 30, price: 30000 },
