@@ -93,6 +93,20 @@ function adjustInventory(nextState, productId, deltaQuantity, note) {
   }
 }
 
+function checkStock(state, lines) {
+  for (const line of lines) {
+    const inventoryItem = state.inventory.find((item) => item.productId === line.productId);
+    const available = inventoryItem ? inventoryItem.quantity : 0;
+    if (available < line.qty && available < (line.quantity || 0)) {
+      // Handle both .qty (backend style) and .quantity (frontend style)
+      const requested = line.qty || line.quantity;
+      if (available < requested) {
+        throw new Error(`Sản phẩm (ID: ${line.productId}) không đủ tồn kho. Yêu cầu: ${requested}, Hiện có: ${available}`);
+      }
+    }
+  }
+}
+
 const MockDataContext = createContext(null);
 
 export function MockDataProvider({ children }) {
@@ -133,6 +147,11 @@ export function MockDataProvider({ children }) {
           id,
           ...payload,
         };
+
+        if (resource === 'deliveries') {
+          checkStock(draft, record.lines || []);
+        }
+
         draft[resource] = [...(draft[resource] ?? []), record];
 
         if (resource === 'receipts') {

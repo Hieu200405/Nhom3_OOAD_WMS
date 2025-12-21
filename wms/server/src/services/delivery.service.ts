@@ -90,6 +90,16 @@ export const createDelivery = async (
       throw badRequest('Quantity must be positive');
     }
   }
+
+  // Ensure stock is available before creating the delivery
+  await ensureStock(
+    payload.lines.map((line) => ({
+      productId: line.productId,
+      locationId: line.locationId,
+      qty: line.qty
+    }))
+  );
+
   const delivery = await DeliveryModel.create({
     ...payload,
     customerId: customer._id
