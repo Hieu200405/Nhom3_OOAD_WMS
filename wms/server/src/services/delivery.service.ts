@@ -16,6 +16,30 @@ const allowedTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
   completed: []
 };
 
+const CUSTOMER_CONSTRAINTS = {
+  Corporate: { maxQty: 1000, slaDays: 7 },
+  Individual: { maxQty: 50, slaDays: 2 }
+};
+
+const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate = false) => {
+  const tier = customer.type === 'Corporate' ? CUSTOMER_CONSTRAINTS.Corporate : CUSTOMER_CONSTRAINTS.Individual;
+
+  // 1. Total quantity validation
+  const totalQty = deliveryData.lines.reduce((sum: number, line: any) => sum + line.qty, 0);
+  if (totalQty > tier.maxQty) {
+    throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customer.type} customers (${tier.maxQty})`);
+  }
+
+  // 2. SLA validation
+  const creationDate = deliveryData.createdAt ? new Date(deliveryData.createdAt) : new Date();
+  const deliveryDate = new Date(deliveryData.date);
+  const diffDays = (deliveryDate.getTime() - creationDate.getTime()) / (1000 * 3600 * 24);
+
+  if (diffDays > tier.slaDays && !deliveryData.notes?.includes('[EXCEPTION]')) {
+    throw badRequest(`Delivery date exceeds SLA limit of ${tier.slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
+  }
+};
+
 type ListQuery = {
   page?: string;
   limit?: string;
@@ -99,6 +123,9 @@ export const createDelivery = async (
       qty: line.qty
     }))
   );
+
+  // Validate additional constraints (Qty limit, SLA)
+  await validateDeliveryRules(payload, customer);
 
   const delivery = await DeliveryModel.create({
     ...payload,
@@ -197,6 +224,14 @@ export const transitionDelivery = async (
         qty: line.qty
       }))
     );
+
+    // Re-validate constraints on approval
+    if (target === 'approved') {
+      const customer = await PartnerModel.findById(delivery.customerId).lean();
+      if (customer) {
+        await validateDeliveryRules(delivery.toObject(), customer);
+      }
+    }
   }
 
   if (target === 'completed') {

@@ -97,13 +97,41 @@ function checkStock(state, lines) {
   for (const line of lines) {
     const inventoryItem = state.inventory.find((item) => item.productId === line.productId);
     const available = inventoryItem ? inventoryItem.quantity : 0;
-    if (available < line.qty && available < (line.quantity || 0)) {
-      // Handle both .qty (backend style) and .quantity (frontend style)
-      const requested = line.qty || line.quantity;
-      if (available < requested) {
-        throw new Error(`Sản phẩm (ID: ${line.productId}) không đủ tồn kho. Yêu cầu: ${requested}, Hiện có: ${available}`);
-      }
+    const requested = line.qty !== undefined ? line.qty : line.quantity;
+
+    if (requested !== undefined && available < requested) {
+      throw new Error(`Sản phẩm (ID: ${line.productId}) không đủ tồn kho. Yêu cầu: ${requested}, Hiện có: ${available}`);
     }
+  }
+}
+
+const CUSTOMER_CONSTRAINTS = {
+  Corporate: { maxQty: 1000, slaDays: 7 },
+  Individual: { maxQty: 50, slaDays: 2 }
+};
+
+function validateDeliveryRules(state, delivery) {
+  const customer = state.customers.find(c => c.id === delivery.customerId);
+  const type = customer?.type || 'Individual';
+  const tier = CUSTOMER_CONSTRAINTS[type] || CUSTOMER_CONSTRAINTS.Individual;
+
+  // 1. Total quantity validation
+  const totalQty = (delivery.lines || []).reduce((sum, line) => {
+    const qty = line.qty !== undefined ? line.qty : line.quantity;
+    return sum + (qty || 0);
+  }, 0);
+
+  if (totalQty > tier.maxQty) {
+    throw new Error(`Tổng số lượng xuất (${totalQty}) vượt quá hạn mức cho phép của khách hàng ${type} (${tier.maxQty})`);
+  }
+
+  // 2. SLA validation
+  const creationDate = delivery.createdAt ? new Date(delivery.createdAt) : new Date();
+  const deliveryDate = new Date(delivery.date);
+  const diffDays = (deliveryDate.getTime() - creationDate.getTime()) / (1000 * 3600 * 24);
+
+  if (diffDays > tier.slaDays && !delivery.note?.includes('[EXCEPTION]')) {
+    throw new Error(`Ngày giao dự kiến vượt quá SLA cho phép của khách hàng ${type} (Tối đa ${tier.slaDays} ngày). Cần thêm "[EXCEPTION]" vào ghi chú để bỏ qua.`);
   }
 }
 
@@ -141,17 +169,21 @@ export function MockDataProvider({ children }) {
 
   const createRecord = useCallback(
     (resource, payload) => {
+      const id = payload.id ?? generateId(resource);
+      const now = new Date().toISOString();
+      const record = {
+        id,
+        createdAt: now,
+        ...payload,
+      };
+
+      // Validate BEFORE setWithClone to avoid React crash
+      if (resource === 'deliveries') {
+        checkStock(stateRef.current, record.lines || []);
+        validateDeliveryRules(stateRef.current, record);
+      }
+
       setWithClone((draft) => {
-        const id = payload.id ?? generateId(resource);
-        const record = {
-          id,
-          ...payload,
-        };
-
-        if (resource === 'deliveries') {
-          checkStock(draft, record.lines || []);
-        }
-
         draft[resource] = [...(draft[resource] ?? []), record];
 
         if (resource === 'receipts') {
@@ -226,10 +258,30 @@ export function MockDataProvider({ children }) {
 
   const transitionDeliveryStatus = useCallback(
     (id, nextStatus) => {
+      // Validate BEFORE setWithClone to avoid React crash
+      if ([DeliveryStatus.APPROVED, DeliveryStatus.PREPARED, DeliveryStatus.COMPLETED].includes(nextStatus)) {
+        const delivery = stateRef.current.deliveries.find((item) => item.id === id);
+        if (delivery) {
+          checkStock(stateRef.current, delivery.lines || []);
+          if (nextStatus === DeliveryStatus.APPROVED) {
+            validateDeliveryRules(stateRef.current, delivery);
+          }
+        }
+      }
+
       setWithClone((draft) => {
         const delivery = draft.deliveries.find((item) => item.id === id);
         if (!delivery) return;
+
+        const prevStatus = delivery.status;
         delivery.status = nextStatus;
+
+        recordAudit(draft, {
+          action: `delivery.${nextStatus}`,
+          entity: 'Delivery',
+          entityId: id,
+          payload: { from: prevStatus, to: nextStatus }
+        });
 
         if (
           nextStatus === DeliveryStatus.COMPLETED &&
@@ -247,7 +299,7 @@ export function MockDataProvider({ children }) {
         }
       });
     },
-    [setWithClone],
+    [setWithClone, recordAudit],
   );
 
   const resetData = useCallback(() => {

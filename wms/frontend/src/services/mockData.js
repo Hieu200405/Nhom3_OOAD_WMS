@@ -61,15 +61,21 @@ export const initialData = {
   customers: [
     {
       id: 'cus-modern',
-      name: 'Modern Retail',
-      type: 'Key Account',
+      name: 'Modern Retail Corp',
+      type: 'Corporate', // Doanh nghiệp / Sỉ
       policy: 'Thanh toán 30 ngày',
     },
     {
       id: 'cus-smartshop',
-      name: 'Smart Shop',
-      type: 'Wholesale',
+      name: 'Smart Shop Wholesale',
+      type: 'Corporate', // Doanh nghiệp / Sỉ
       policy: 'Chiết khấu 3%',
+    },
+    {
+      id: 'cus-johndoe',
+      name: 'John Doe',
+      type: 'Individual', // Cá nhân / Lẻ
+      policy: 'Thanh toán ngay',
     },
   ],
   warehouses: [
