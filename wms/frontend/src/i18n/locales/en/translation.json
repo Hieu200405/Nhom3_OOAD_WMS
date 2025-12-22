@@ -135,9 +135,38 @@
   "incidents": {
     "title": "Incident tickets",
     "type": "Type",
+    "refType": "Reference type",
+    "refId": "Reference id",
+    "product": "Product",
+    "quantity": "Quantity",
     "note": "Description",
     "action": "Action plan",
-    "create": "Log incident"
+    "create": "Log incident",
+    "typePlaceholder": "Select incident type",
+    "actionPlaceholder": "Select follow-up action",
+    "refPlaceholder": "Receipt or delivery code",
+    "addLine": "Add product line",
+    "removeLine": "Remove line",
+    "refTypes": {
+      "receipt": "Receipt",
+      "delivery": "Delivery"
+    },
+    "types": {
+      "shortage": "Shortage",
+      "late": "Late delivery",
+      "damaged": "Damaged",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "replenish": "Replenish",
+      "return": "Return",
+      "refund": "Refund"
+    },
+    "statusValues": {
+      "open": "Open",
+      "inProgress": "In progress",
+      "resolved": "Resolved"
+    }
   },
   "stocktaking": {
     "title": "Stocktaking",
@@ -145,7 +174,13 @@
     "adjustments": "Adjustments",
     "difference": "Difference",
     "apply": "Apply stock",
-    "approve": "Submit for approve"
+    "approve": "Approve stocktake",
+    "approvedBy": "Approved by",
+    "approvedAt": "Approved at",
+    "minutes": "Minutes",
+    "attachments": "Attachments",
+    "minutesPlaceholder": "Approval minutes or notes",
+    "attachmentsPlaceholder": "Attachment URLs, comma-separated"
   },
   "returns": {
     "title": "Return orders",

@@ -28,4 +28,10 @@ export const StocktakingStatus = {
   APPLIED: 'Applied',
 };
 
+export const IncidentStatus = {
+  OPEN: 'open',
+  IN_PROGRESS: 'inProgress',
+  RESOLVED: 'resolved',
+};
+
 export const DisposalReasons = ['Expired', 'Damaged', 'Lost'];

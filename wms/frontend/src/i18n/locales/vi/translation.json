@@ -137,7 +137,36 @@
     "type": "Loại sự cố",
     "note": "Nội dung",
     "action": "Hướng xử lý",
-    "create": "Ghi nhận sự cố"
+    "create": "Ghi nhận sự cố",
+    "refType": "Reference type",
+    "refId": "Reference id",
+    "product": "Product",
+    "quantity": "Quantity",
+    "typePlaceholder": "Select incident type",
+    "actionPlaceholder": "Select follow-up action",
+    "refPlaceholder": "Receipt or delivery code",
+    "addLine": "Add product line",
+    "removeLine": "Remove line",
+    "refTypes": {
+      "receipt": "Receipt",
+      "delivery": "Delivery"
+    },
+    "types": {
+      "shortage": "Shortage",
+      "late": "Late delivery",
+      "damaged": "Damaged",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "replenish": "Replenish",
+      "return": "Return",
+      "refund": "Refund"
+    },
+    "statusValues": {
+      "open": "Open",
+      "inProgress": "In progress",
+      "resolved": "Resolved"
+    }
   },
   "stocktaking": {
     "title": "Kiểm kê kho",
@@ -145,7 +174,13 @@
     "adjustments": "Phiếu điều chỉnh",
     "difference": "Chênh lệch",
     "apply": "Áp tồn",
-    "approve": "Trình duyệt"
+    "approve": "Approve stocktake",
+    "approvedBy": "Approved by",
+    "approvedAt": "Approved at",
+    "minutes": "Minutes",
+    "attachments": "Attachments",
+    "minutesPlaceholder": "Approval minutes or notes",
+    "attachmentsPlaceholder": "Attachment URLs, comma-separated"
   },
   "returns": {
     "title": "Phiếu trả hàng",

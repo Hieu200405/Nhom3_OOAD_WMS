@@ -28,6 +28,9 @@ export type IncidentType = (typeof INCIDENT_TYPES)[number];
 export const INCIDENT_ACTIONS = ['replenish', 'return', 'refund'] as const;
 export type IncidentAction = (typeof INCIDENT_ACTIONS)[number];
 
+export const INCIDENT_STATUS = ['open', 'inProgress', 'resolved'] as const;
+export type IncidentStatus = (typeof INCIDENT_STATUS)[number];
+
 export const ADJUSTMENT_REASONS = ['loss', 'found', 'correction'] as const;
 export type AdjustmentReason = (typeof ADJUSTMENT_REASONS)[number];
 

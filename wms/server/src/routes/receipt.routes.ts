@@ -41,8 +41,8 @@ router.use(auth);
 
 router.get('/:id/audit-logs', controller.getAuditLogs);
 router.get('/', controller.list);
-router.post('/', requireRole('Admin', 'Manager'), validate({ body: createSchema }), controller.create);
-router.put('/:id', requireRole('Admin', 'Manager'), validate({ body: updateSchema }), controller.update);
+router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
+router.put('/:id', requireRole('Staff', 'Manager', 'Admin'), validate({ body: updateSchema }), controller.update);
 router.delete('/:id', requireRole('Admin'), controller.remove);
 router.post(
   '/:id/transition',
