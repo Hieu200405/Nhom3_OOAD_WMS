@@ -31,7 +31,11 @@ export const listStocktakes = async (query: ListQuery) => {
       date: item.date,
       status: item.status,
       items: item.items,
-      adjustmentId: item.adjustmentId?.toString() ?? null
+      adjustmentId: item.adjustmentId?.toString() ?? null,
+      approvedBy: item.approvedBy?.toString() ?? null,
+      approvedAt: item.approvedAt ?? null,
+      minutes: item.minutes ?? null,
+      attachments: item.attachments ?? []
     })),
     total,
     { page, limit, sort, skip }
@@ -72,6 +76,8 @@ export const createStocktake = async (
     code: string;
     date: Date;
     items: { productId: string; locationId: string; systemQty?: number; countedQty: number }[];
+    minutes?: string;
+    attachments?: string[];
   },
   actorId: string
 ) => {
@@ -83,7 +89,9 @@ export const createStocktake = async (
   const stocktake = await StocktakeModel.create({
     code: payload.code,
     date: payload.date,
-    items
+    items,
+    minutes: payload.minutes,
+    attachments: payload.attachments
   });
   await recordAudit({
     action: 'stocktake.created',
@@ -100,6 +108,8 @@ export const updateStocktake = async (
   payload: {
     date?: Date;
     items?: { productId: string; locationId: string; systemQty?: number; countedQty: number }[];
+    minutes?: string;
+    attachments?: string[];
   },
   actorId: string
 ) => {
@@ -114,6 +124,8 @@ export const updateStocktake = async (
   if (payload.items) {
     stocktake.items = await enrichItemsWithSystemQty(payload.items);
   }
+  if (payload.minutes !== undefined) stocktake.minutes = payload.minutes;
+  if (payload.attachments !== undefined) stocktake.attachments = payload.attachments;
   await stocktake.save();
   await recordAudit({
     action: 'stocktake.updated',
@@ -125,7 +137,11 @@ export const updateStocktake = async (
   return stocktake.toObject();
 };
 
-export const approveStocktake = async (id: string, actorId: string) => {
+export const approveStocktake = async (
+  id: string,
+  actorId: string,
+  payload?: { minutes?: string; attachments?: string[] }
+) => {
   const stocktake = await StocktakeModel.findById(new Types.ObjectId(id));
   if (!stocktake) {
     throw notFound('Stocktake not found');
@@ -157,13 +173,17 @@ export const approveStocktake = async (id: string, actorId: string) => {
   });
   stocktake.status = 'approved';
   stocktake.adjustmentId = adjustment._id as Types.ObjectId;
+  stocktake.approvedBy = new Types.ObjectId(actorId);
+  stocktake.approvedAt = new Date();
+  if (payload?.minutes !== undefined) stocktake.minutes = payload.minutes;
+  if (payload?.attachments !== undefined) stocktake.attachments = payload.attachments;
   await stocktake.save();
   await recordAudit({
     action: 'stocktake.approved',
     entity: 'Stocktake',
     entityId: stocktake._id,
     actorId,
-    payload: { adjustmentId: adjustment._id }
+    payload: { adjustmentId: adjustment._id, approvedAt: stocktake.approvedAt }
   });
   return stocktake.toObject();
 };

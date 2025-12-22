@@ -154,10 +154,15 @@ export const initialData = {
   incidents: [
     {
       id: 'inc-20241005',
-      type: 'Giao thiếu',
-      note: 'Supplier ACE giao thiếu 5 chuột',
-      action: 'Bổ sung trong 7 ngày',
-      relatedId: 'rcp-20241005',
+      type: 'shortage',
+      status: 'open',
+      refType: 'receipt',
+      refId: 'rcp-20241005',
+      lines: [
+        { id: 'inc-20241005-line-1', productId: 'prod-mouse', quantity: 5 },
+      ],
+      note: 'Supplier ACE short shipped 5 mice',
+      action: 'replenish',
     },
   ],
   stocktaking: [
@@ -166,6 +171,10 @@ export const initialData = {
       name: 'Kiểm kê kho tháng 09',
       date: '2024-09-30',
       status: 'Pending Approval',
+      approvedBy: null,
+      approvedAt: null,
+      minutes: '',
+      attachments: [],
       adjustments: [
         {
           id: 'st-202409-aj-1',

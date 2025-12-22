@@ -24,7 +24,7 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const approve = asyncHandler(async (req: Request, res: Response) => {
-  const stocktake = await approveStocktake(req.params.id, req.user!.id);
+  const stocktake = await approveStocktake(req.params.id, req.user!.id, req.body);
   res.json({ data: stocktake });
 });
 

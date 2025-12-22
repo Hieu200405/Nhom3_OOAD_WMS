@@ -27,6 +27,12 @@ export function StocktakingPage() {
   const { data, actions } = useMockData();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState({ open: false, record: null, status: null });
+  const [approval, setApproval] = useState({
+    open: false,
+    record: null,
+    minutes: "",
+    attachments: ""
+  });
   const [form, setForm] = useState({
     name: "",
     date: new Date().toISOString().slice(0, 10),
@@ -107,7 +113,12 @@ export function StocktakingPage() {
       toast.error("Manager approval is required before applying inventory.");
       return;
     }
-    actions.updateRecord("stocktaking", record.id, { status: nextStatus });
+    const changes = { status: nextStatus };
+    if (nextStatus === StocktakingStatus.APPROVED) {
+      changes.approvedBy = "Manager";
+      changes.approvedAt = new Date().toISOString();
+    }
+    actions.updateRecord("stocktaking", record.id, changes);
     if (nextStatus === StocktakingStatus.APPLIED) {
       updateInventoryFromAdjustments(record.adjustments);
       toast.success("Inventory updated from stocktake.");
@@ -115,6 +126,15 @@ export function StocktakingPage() {
   };
 
   const requestTransition = (record, nextStatus) => {
+    if (nextStatus === StocktakingStatus.APPROVED) {
+      setApproval({
+        open: true,
+        record,
+        minutes: record.minutes ?? "",
+        attachments: (record.attachments ?? []).join(", ")
+      });
+      return;
+    }
     if (nextStatus === StocktakingStatus.APPLIED) {
       setConfirm({ open: true, record, status: nextStatus });
       return;
@@ -169,10 +189,26 @@ export function StocktakingPage() {
           { key: 'name', header: 'Name' },
           { key: 'date', header: t('deliveries.date'), render: (value) => formatDate(value) },
           { key: 'status', header: t('app.status'), render: (value) => <StatusBadge status={value} /> },
+          { key: 'approvedBy', header: t('stocktaking.approvedBy'), render: (value) => value ?? '-' },
+          {
+            key: 'approvedAt',
+            header: t('stocktaking.approvedAt'),
+            render: (value) => (value ? formatDate(value) : '-')
+          },
           {
             key: 'adjustments',
             header: t('stocktaking.adjustments'),
             render: (value) => value.length,
+          },
+          {
+            key: 'minutes',
+            header: t('stocktaking.minutes'),
+            render: (value) => value ?? '-',
+          },
+          {
+            key: 'attachments',
+            header: t('stocktaking.attachments'),
+            render: (value) => (value?.length ? value.length : 0),
           },
           {
             key: 'actions',
@@ -310,6 +346,64 @@ export function StocktakingPage() {
           setConfirm({ open: false, record: null, status: null });
         }}
       />
+
+      <Modal
+        open={approval.open}
+        onClose={() => setApproval({ open: false, record: null, minutes: "", attachments: "" })}
+        title={t('stocktaking.approve')}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setApproval({ open: false, record: null, minutes: "", attachments: "" })}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {t('app.cancel')}
+            </button>
+            <button
+              type="submit"
+              form="stocktake-approval-form"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            >
+              {t('app.save')}
+            </button>
+          </>
+        }
+      >
+        <form
+          id="stocktake-approval-form"
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!approval.record) return;
+            const attachments = approval.attachments
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean);
+            actions.updateRecord("stocktaking", approval.record.id, {
+              status: StocktakingStatus.APPROVED,
+              approvedBy: "Manager",
+              approvedAt: new Date().toISOString(),
+              minutes: approval.minutes || "",
+              attachments
+            });
+            setApproval({ open: false, record: null, minutes: "", attachments: "" });
+          }}
+        >
+          <Input
+            label={t('stocktaking.minutes')}
+            value={approval.minutes}
+            onChange={(event) => setApproval((prev) => ({ ...prev, minutes: event.target.value }))}
+            placeholder={t('stocktaking.minutesPlaceholder')}
+          />
+          <Input
+            label={t('stocktaking.attachments')}
+            value={approval.attachments}
+            onChange={(event) => setApproval((prev) => ({ ...prev, attachments: event.target.value }))}
+            placeholder={t('stocktaking.attachmentsPlaceholder')}
+          />
+        </form>
+      </Modal>
     </div>
   );
 }

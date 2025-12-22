@@ -18,20 +18,34 @@ const itemSchema = z.object({
 const createSchema = z.object({
   code: z.string().min(1),
   date: z.coerce.date(),
-  items: z.array(itemSchema).min(1)
+  items: z.array(itemSchema).min(1),
+  minutes: z.string().optional(),
+  attachments: z.array(z.string()).optional()
 });
 
 const updateSchema = z.object({
   date: z.coerce.date().optional(),
-  items: z.array(itemSchema).optional()
+  items: z.array(itemSchema).optional(),
+  minutes: z.string().optional(),
+  attachments: z.array(z.string()).optional()
 });
 
-router.use(auth, requireRole('Manager', 'Admin'));
+const approveSchema = z.object({
+  minutes: z.string().optional(),
+  attachments: z.array(z.string()).optional()
+}).default({});
+
+router.use(auth);
 
 router.get('/', controller.list);
-router.post('/', validate({ body: createSchema }), controller.create);
-router.put('/:id', validate({ body: updateSchema }), controller.update);
-router.post('/:id/approve', controller.approve);
-router.post('/:id/apply', controller.apply);
+router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
+router.put('/:id', requireRole('Staff', 'Manager', 'Admin'), validate({ body: updateSchema }), controller.update);
+router.post(
+  '/:id/approve',
+  requireRole('Manager', 'Admin'),
+  validate({ body: approveSchema }),
+  controller.approve
+);
+router.post('/:id/apply', requireRole('Manager', 'Admin'), controller.apply);
 
 export default router;
