@@ -90,10 +90,10 @@ export const initialData = {
     { id: 'loc-hcm-bin-a1-01-01', parentId: 'loc-hcm-rack-a1-01', type: 'Bin', name: 'Ngăn 01', code: 'WH-HCM-A-A1-01-01', barcode: 'WHHCMAA10101' },
   ],
   inventory: [
-    { id: 'inv-laptop', productId: 'prod-laptop', quantity: 18, status: 'Available', locationId: 'loc-hcm-bin-a1-01-01' },
-    { id: 'inv-mouse', productId: 'prod-mouse', quantity: 120, status: 'Available', locationId: 'loc-hcm-bin-a1-01-01' },
-    { id: 'inv-coffee', productId: 'prod-coffee', quantity: 80, status: 'Available', locationId: 'loc-hcm-bin-a1-01-01' },
-    { id: 'inv-notebook', productId: 'prod-notebook', quantity: 240, status: 'Available', locationId: 'loc-hcm-bin-a1-01-01' },
+    { id: 'inv-laptop', productId: 'prod-laptop', quantity: 18, status: 'available', locationId: 'loc-hcm-bin-a1-01-01' },
+    { id: 'inv-mouse', productId: 'prod-mouse', quantity: 120, status: 'reserved', locationId: 'loc-hcm-bin-a1-01-01' },
+    { id: 'inv-coffee', productId: 'prod-coffee', quantity: 80, status: 'pending', locationId: 'loc-hcm-bin-a1-01-01' },
+    { id: 'inv-notebook', productId: 'prod-notebook', quantity: 240, status: 'special', locationId: 'loc-hcm-bin-a1-01-01' },
   ],
   receipts: [
     {

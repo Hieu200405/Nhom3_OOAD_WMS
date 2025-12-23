@@ -37,6 +37,39 @@ components:
               type: string
             details:
               nullable: true
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        locationId:
+          type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum: [available, reserved, pending, special]
+        batch:
+          type: string
+          nullable: true
+        expDate:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    InventoryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
 paths:
   /auth/login:
     post:
@@ -198,3 +231,61 @@ paths:
       responses:
         '200':
           description: PDF stream
+  /inventory:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: sort
+          schema:
+            type: string
+        - in: query
+          name: productId
+          schema:
+            type: string
+        - in: query
+          name: locationId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryListResponse'
+  /inventory/move:
+    post:
+      tags: [Inventory]
+      summary: Move inventory between locations
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, fromLocation, toLocation, qty]
+              properties:
+                productId:
+                  type: string
+                fromLocation:
+                  type: string
+                toLocation:
+                  type: string
+                qty:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Inventory moved

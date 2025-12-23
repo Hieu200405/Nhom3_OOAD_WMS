@@ -4,6 +4,7 @@ export interface Inventory {
   productId: Types.ObjectId;
   locationId: Types.ObjectId;
   quantity: number;
+  status: 'available' | 'reserved' | 'pending' | 'special';
   batch?: string | null;
   expDate?: Date | null;
   updatedAt: Date;
@@ -17,6 +18,7 @@ const inventorySchema = new Schema<InventoryDocument>(
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', required: true },
     quantity: { type: Number, required: true, min: 0 },
+    status: { type: String, enum: ['available', 'reserved', 'pending', 'special'], default: 'available' },
     batch: { type: String, trim: true },
     expDate: { type: Date }
   },

@@ -28,6 +28,7 @@ export const listInventory = async (query: InventoryQuery) => {
     productId: item.productId.toString(),
     locationId: item.locationId.toString(),
     quantity: item.quantity,
+    status: (item as any).status ?? 'available',
     batch: item.batch ?? null,
     expDate: item.expDate?.toISOString() ?? null,
     updatedAt: item.updatedAt
@@ -50,7 +51,7 @@ export const adjustInventory = async (
   productId: string | Types.ObjectId,
   locationId: string | Types.ObjectId,
   delta: number,
-  options?: { batch?: string | null; expDate?: Date | null; allowNegative?: boolean }
+  options?: { batch?: string | null; expDate?: Date | null; allowNegative?: boolean; status?: 'available' | 'reserved' | 'pending' | 'special' }
 ) => {
   if (!delta) return null;
   await ensureLocationExists(locationId);
@@ -70,6 +71,7 @@ export const adjustInventory = async (
       ...filter,
       batch: options?.batch ?? null,
       expDate: options?.expDate ?? null,
+      status: options?.status ?? 'available',
       quantity: 0
     });
   }
