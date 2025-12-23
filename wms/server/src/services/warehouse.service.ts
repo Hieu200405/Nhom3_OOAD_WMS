@@ -59,7 +59,8 @@ export const listWarehouseNodes = async (query: ListQuery) => {
       name: node.name,
       code: node.code,
       parentId: node.parentId?.toString() ?? null,
-      barcode: node.barcode
+      barcode: node.barcode,
+      warehouseType: (node as any).warehouseType ?? null
     })),
     total,
     { page, limit, sort, skip }
@@ -76,6 +77,7 @@ export const getWarehouseTree = async () => {
       name: node.name,
       code: node.code,
       barcode: node.barcode,
+      warehouseType: (node as any).warehouseType ?? null,
       parentId: node.parentId?.toString() ?? null,
       children: [] as any[]
     });
@@ -92,7 +94,7 @@ export const getWarehouseTree = async () => {
 };
 
 export const createWarehouseNode = async (
-  payload: { type: WarehouseNodeType; name: string; code: string; parentId?: string; barcode?: string },
+  payload: { type: WarehouseNodeType; name: string; code: string; parentId?: string; barcode?: string; warehouseType?: string | null },
   actorId: string
 ) => {
   const existing = await WarehouseNodeModel.findOne({ code: payload.code }).lean();
@@ -100,6 +102,9 @@ export const createWarehouseNode = async (
     throw conflict('Warehouse code already exists');
   }
   const parent = await validateParentChain(payload.type, payload.parentId);
+  if (payload.type === 'warehouse' && !payload.warehouseType) {
+    throw badRequest('warehouseType is required for warehouse nodes');
+  }
   const node = await WarehouseNodeModel.create({
     ...payload,
     parentId: parent ? (parent._id as Types.ObjectId) : null
@@ -116,7 +121,7 @@ export const createWarehouseNode = async (
 
 export const updateWarehouseNode = async (
   id: string,
-  payload: Partial<{ name: string; barcode: string; parentId: string | null }>,
+  payload: Partial<{ name: string; barcode: string; parentId: string | null; warehouseType?: string | null }>,
   actorId: string
 ) => {
   const node = await WarehouseNodeModel.findById(new Types.ObjectId(id));
@@ -129,6 +134,12 @@ export const updateWarehouseNode = async (
   }
   if (payload.name) node.name = payload.name;
   if (typeof payload.barcode !== 'undefined') node.barcode = payload.barcode;
+  if (typeof payload.warehouseType !== 'undefined') {
+    // only allow warehouseType on warehouse nodes
+    if (node.type === 'warehouse') {
+      node.warehouseType = payload.warehouseType as any;
+    }
+  }
   await node.save();
   await recordAudit({
     action: 'warehouse.updated',

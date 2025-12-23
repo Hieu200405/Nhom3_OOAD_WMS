@@ -7,6 +7,7 @@ export interface WarehouseNode {
   code: string;
   parentId?: Types.ObjectId | null;
   barcode?: string | null;
+  warehouseType?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,7 +20,8 @@ const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, unique: true, trim: true },
     parentId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', default: null },
-    barcode: { type: String, trim: true }
+    barcode: { type: String, trim: true },
+    warehouseType: { type: String, trim: true, default: null }
   },
   { timestamps: true }
 );

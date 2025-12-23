@@ -17,11 +17,19 @@ const LEVELS = [
   { value: "Bin", label: "Bin" }
 ];
 
+const WAREHOUSE_TYPES = [
+  { value: 'Main', label: 'Kho tổng' },
+  { value: 'Cold', label: 'Kho lạnh' },
+  { value: 'Chemical', label: 'Kho hóa chất' },
+  { value: 'HighValue', label: 'Kho giá trị cao' }
+];
+
 const emptyNode = {
   name: "",
   type: "Warehouse",
   code: "",
   barcode: "",
+  warehouseType: "",
   parentId: null
 };
 
@@ -158,6 +166,14 @@ export function WarehouseStructurePage() {
             onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
             options={LEVELS}
           />
+          {form.type === 'Warehouse' ? (
+            <Select
+              label={"Loại kho"}
+              value={form.warehouseType}
+              onChange={(event) => setForm((prev) => ({ ...prev, warehouseType: event.target.value }))}
+              options={WAREHOUSE_TYPES}
+            />
+          ) : null}
           <Input
             label={t("warehouse.name")}
             value={form.name}
