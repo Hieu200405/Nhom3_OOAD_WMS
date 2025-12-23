@@ -14,13 +14,15 @@ const createSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
   parentId: objectIdSchema.optional(),
-  barcode: z.string().optional()
+  barcode: z.string().optional(),
+  warehouseType: z.string().optional()
 });
 
 const updateSchema = z.object({
   name: z.string().optional(),
   barcode: z.string().nullable().optional(),
   parentId: objectIdSchema.nullable().optional()
+  ,warehouseType: z.string().nullable().optional()
 });
 
 router.use(auth);
