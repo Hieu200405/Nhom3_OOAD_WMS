@@ -42,28 +42,59 @@ function readAuth() {
 
 export const authService = {
   async login({ username, password }) {
-    const user = USERS.find(
-      (candidate) => candidate.username === username && candidate.password === password,
-    );
+    // Check if we should use mock or real API
+    const useMock = import.meta.env.VITE_USE_MOCK ?? 'true';
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    if (useMock === 'true') {
+      const user = USERS.find(
+        (candidate) => candidate.username === username && candidate.password === password,
+      );
 
-    if (!user) {
-      throw new Error('Tên đăng nhập hoặc mật khẩu không hợp lệ');
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      if (!user) {
+        throw new Error('Tên đăng nhập hoặc mật khẩu không hợp lệ');
+      }
+
+      const payload = {
+        token: `mock-token-${user.id}`,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          fullName: user.fullName,
+        },
+      };
+
+      persistAuth(payload);
+      return payload;
+    } else {
+      // Real API Login
+      // We need to avoid circular dependency if apiClient depends on auth info, 
+      // but apiClient mainly reads from localStorage.
+      const { apiClient } = await import('./apiClient.js');
+      try {
+        const res = await apiClient('/auth/login', {
+          method: 'POST',
+          body: { email: username, password }, // Backend expects email
+          skipMock: true
+        });
+
+        const payload = {
+          token: res.data.accessToken,
+          user: {
+            id: res.data.user.id,
+            username: res.data.user.email.split('@')[0],
+            role: res.data.user.role,
+            fullName: res.data.user.fullName,
+          }
+        };
+        persistAuth(payload);
+        return payload;
+      } catch (error) {
+        throw new Error(error.message || 'Đăng nhập thất bại');
+      }
     }
-
-    const payload = {
-      token: `mock-token-${user.id}`,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        fullName: user.fullName,
-      },
-    };
-
-    persistAuth(payload);
-    return payload;
   },
 
   logout() {
