@@ -36,6 +36,7 @@
     "returns": "Trả hàng",
     "disposals": "Hủy hàng",
     "reports": "Báo cáo",
+    "financials": "Công nợ & Thanh toán",
     "users": "Người dùng"
   },
   "login": {
@@ -168,7 +169,23 @@
     "inventory": "Tồn kho",
     "receipts": "Nhập kho",
     "deliveries": "Xuất kho",
-    "stocktaking": "Kiểm kê & điều chỉnh"
+    "stocktaking": "Kiểm kê & điều chỉnh",
+    "financials": "Công nợ"
+  },
+  "financials": {
+    "title": "Quản lý công nợ",
+    "transactions": "Lịch sử giao dịch",
+    "amount": "Số tiền",
+    "balance": "Số dư",
+    "type": "Loại",
+    "payment": "Thanh toán",
+    "liability": "Ghi nợ",
+    "refund": "Hoàn tiền",
+    "reference": "Tham chiếu",
+    "date": "Ngày",
+    "partner": "Đối tác",
+    "createPayment": "Ghi nhận thanh toán",
+    "debtAmount": "Số tiền nợ"
   },
   "notifications": {
     "saved": "Đã lưu thành công",

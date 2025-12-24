@@ -38,6 +38,7 @@ function ensureCollections(data) {
     returns: [],
     disposals: [],
     auditLogs: [],
+    financialTransactions: [],
     ...data,
   };
 }
@@ -251,6 +252,25 @@ export function MockDataProvider({ children }) {
           );
           receipt.inventoryApplied = true;
         }
+
+        // Record liability automatically when completed
+        if (nextStatus === ReceiptStatus.COMPLETED) {
+          const supplier = draft.suppliers.find(s => s.id === receipt.supplierId);
+          draft.financialTransactions = [
+            {
+              id: generateId('ft'),
+              partnerId: receipt.supplierId,
+              partnerName: supplier?.name || 'NCC',
+              type: 'liability',
+              amount: receipt.total || 0,
+              referenceId: receipt.id,
+              referenceType: 'Receipt',
+              date: new Date().toISOString().split('T')[0],
+              note: `Tự động ghi nợ từ phiếu nhập ${receipt.id}`
+            },
+            ...(draft.financialTransactions ?? [])
+          ];
+        }
       });
     },
     [setWithClone, recordAudit],
@@ -296,6 +316,25 @@ export function MockDataProvider({ children }) {
             ),
           );
           delivery.inventoryApplied = true;
+        }
+
+        // Record liability automatically when completed
+        if (nextStatus === DeliveryStatus.COMPLETED) {
+          const customer = draft.customers.find(c => c.id === delivery.customerId);
+          draft.financialTransactions = [
+            {
+              id: generateId('ft'),
+              partnerId: delivery.customerId,
+              partnerName: customer?.name || 'KH',
+              type: 'liability',
+              amount: delivery.total || 0,
+              referenceId: delivery.id,
+              referenceType: 'Delivery',
+              date: new Date().toISOString().split('T')[0],
+              note: `Tự động ghi nợ từ phiếu xuất ${delivery.id}`
+            },
+            ...(draft.financialTransactions ?? [])
+          ];
         }
       });
     },
