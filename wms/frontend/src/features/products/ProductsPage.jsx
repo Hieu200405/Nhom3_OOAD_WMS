@@ -22,6 +22,8 @@ const emptyProduct = {
   unit: '',
   barcode: '',
   image: '',
+  description: '',
+  supplierIds: [],
 };
 
 export function ProductsPage() {
@@ -70,6 +72,13 @@ export function ProductsPage() {
       actions.createRecord('products', { ...form, id: generateId('prod') });
     }
     setOpen(false);
+  };
+
+  const handleSupplierChange = (e) => {
+    // Simple multi-select handling for strings
+    const options = Array.from(e.target.options);
+    const selected = options.filter(o => o.selected).map(o => o.value);
+    setForm(prev => ({ ...prev, supplierIds: selected }));
   };
 
   return (
@@ -227,10 +236,8 @@ export function ProductsPage() {
                       setForm(prev => ({ ...prev, image: res.url }));
                     } catch (error) {
                       console.error(error);
-                      // Fallback for demo/mock mode if backend is not running
                       if (import.meta.env.VITE_USE_MOCK === 'true') {
                         toast('Backend unavailable, using local placeholder', { icon: '⚠️' });
-                        // Create a fake local URL
                         const reader = new FileReader();
                         reader.onload = (e) => setForm(prev => ({ ...prev, image: e.target.result }));
                         reader.readAsDataURL(file);
@@ -264,20 +271,31 @@ export function ProductsPage() {
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             required
           />
-          <Select
-            label={t('products.category')}
-            value={form.categoryId}
-            onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
-            options={categories}
-            placeholder="Select category"
-            required
-          />
+
           <Input
-            label={t('products.unit')}
-            value={form.unit}
-            onChange={(event) => setForm((prev) => ({ ...prev, unit: event.target.value }))}
-            required
+            label="Mô tả"
+            value={form.description}
+            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Chi tiết về sản phẩm..."
           />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Select
+              label={t('products.category')}
+              value={form.categoryId}
+              onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
+              options={categories}
+              placeholder="Select category"
+              required
+            />
+            <Input
+              label={t('products.unit')}
+              value={form.unit}
+              onChange={(event) => setForm((prev) => ({ ...prev, unit: event.target.value }))}
+              required
+            />
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             <NumberInput
               label={t('products.priceIn')}
@@ -303,6 +321,27 @@ export function ProductsPage() {
               }
               required
             />
+          </div>
+
+          {/* Suppliers Multi-Select (Simple implementation) */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Nhà cung cấp
+            </label>
+            <select
+              multiple
+              value={form.supplierIds || []}
+              onChange={handleSupplierChange}
+              className="block w-full rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
+              style={{ minHeight: '100px' }}
+            >
+              {data.suppliers?.map(sup => (
+                <option key={sup.id} value={sup.id}>
+                  {sup.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">Giữ Ctrl (Window) hoặc Cmd (Mac) để chọn nhiều</p>
           </div>
         </form>
       </Modal>

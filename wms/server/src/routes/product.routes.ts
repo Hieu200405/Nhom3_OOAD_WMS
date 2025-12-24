@@ -16,7 +16,9 @@ const baseSchema = z.object({
   priceIn: z.number().nonnegative(),
   priceOut: z.number().nonnegative(),
   minStock: z.number().nonnegative(),
-  image: z.string().optional()
+  image: z.string().optional(),
+  description: z.string().optional(),
+  supplierIds: z.array(objectIdSchema).optional()
 });
 
 router.use(auth);
