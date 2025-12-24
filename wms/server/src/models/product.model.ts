@@ -9,11 +9,13 @@ export interface Product {
   priceOut: number;
   minStock: number;
   image?: string;
+  description?: string;
+  supplierIds: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ProductDocument extends Product, Document {}
+export interface ProductDocument extends Product, Document { }
 
 const productSchema = new Schema<ProductDocument>(
   {
@@ -24,7 +26,9 @@ const productSchema = new Schema<ProductDocument>(
     priceIn: { type: Number, required: true, min: 0 },
     priceOut: { type: Number, required: true, min: 0 },
     minStock: { type: Number, required: true, min: 0 },
-    image: { type: String }
+    image: { type: String },
+    description: { type: String },
+    supplierIds: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }]
   },
   { timestamps: true }
 );

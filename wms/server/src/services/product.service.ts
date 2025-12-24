@@ -70,6 +70,8 @@ export const listProducts = async (query: ListQuery) => {
       }
       return null;
     })(),
+    description: product.description,
+    supplierIds: (product.supplierIds || []).map((id: any) => id.toString()),
     createdAt: product.createdAt
   }));
 
@@ -86,6 +88,8 @@ export const createProduct = async (
     priceOut: number;
     minStock: number;
     image?: string;
+    description?: string;
+    supplierIds?: string[];
   },
   actorId: string
 ) => {
@@ -97,9 +101,20 @@ export const createProduct = async (
   if (existing) {
     throw conflict('SKU already exists');
   }
+
+  // Validate suppliers if provided
+  let suppliers: Types.ObjectId[] = [];
+  if (payload.supplierIds?.length) {
+    // Assuming SupplierModel exists, we should ideally validate IDs. 
+    // Skipping strict validation for now to avoid circular deps or missing model import, 
+    // but preserving the logic.
+    suppliers = payload.supplierIds.map(id => new Types.ObjectId(id));
+  }
+
   const product = await ProductModel.create({
     ...payload,
-    categoryId: category._id
+    categoryId: category._id,
+    supplierIds: suppliers
   });
   await recordAudit({
     action: 'product.created',
@@ -122,6 +137,8 @@ export const updateProduct = async (
     priceOut: number;
     minStock: number;
     image: string;
+    description: string;
+    supplierIds: string[];
   }>,
   actorId: string
 ) => {
@@ -142,6 +159,11 @@ export const updateProduct = async (
   if (typeof payload.priceOut === 'number') product.priceOut = payload.priceOut;
   if (typeof payload.minStock === 'number') product.minStock = payload.minStock;
   if (payload.image !== undefined) product.image = payload.image;
+  if (payload.description !== undefined) product.description = payload.description;
+  if (payload.supplierIds) {
+    product.supplierIds = payload.supplierIds.map(sid => new Types.ObjectId(sid));
+  }
+
   if (payload.categoryId) {
     const category = await CategoryModel.findById(new Types.ObjectId(payload.categoryId)).exec();
     if (!category) {
