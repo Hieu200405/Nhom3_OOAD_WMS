@@ -24,6 +24,7 @@ function cloneData(data) {
 
 function ensureCollections(data) {
   return {
+    users: [],
     categories: [],
     products: [],
     suppliers: [],

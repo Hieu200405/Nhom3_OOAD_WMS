@@ -4,6 +4,11 @@ export const initialData = {
     { id: 'cat-fmcg', name: 'Tiêu dùng nhanh', description: 'Thực phẩm & đồ uống' },
     { id: 'cat-office', name: 'Văn phòng phẩm', description: 'Dụng cụ văn phòng' },
   ],
+  users: [
+    { id: 'user-admin', username: 'admin', fullName: 'Nguyễn Quản Trị', email: 'admin@example.com', role: 'Admin', isActive: true, createdAt: '2024-01-01T00:00:00.000Z' },
+    { id: 'user-manager', username: 'manager', fullName: 'Trần Giám Sát', email: 'manager@example.com', role: 'Manager', isActive: true, createdAt: '2024-01-02T00:00:00.000Z' },
+    { id: 'user-staff', username: 'staff', fullName: 'Phạm Nhân Viên', email: 'staff@example.com', role: 'Staff', isActive: true, createdAt: '2024-01-03T00:00:00.000Z' },
+  ],
   products: [
     {
       id: 'prod-laptop',
