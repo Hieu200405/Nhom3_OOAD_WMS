@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import { ArrowRight, Plus } from 'lucide-react';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
@@ -49,10 +50,19 @@ export function ReceiptsPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    if (!form.supplierId) {
+      toast.error('Vui lòng chọn nhà cung cấp');
+      return;
+    }
+
     const lines = form.lines
       .filter((line) => line.productId)
       .map((line) => {
         const product = products.find((item) => item.id === line.productId);
+        if (product && line.price <= 0) {
+          // Optional: basic validation for price
+        }
         return {
           ...line,
           sku: product?.sku ?? '',
@@ -60,30 +70,45 @@ export function ReceiptsPage() {
         };
       });
 
-    if (lines.length === 0) return;
+    if (lines.length === 0) {
+      toast.error('Vui lòng thêm ít nhất một sản phẩm');
+      return;
+    }
 
     const total = lines.reduce((sum, line) => sum + line.quantity * line.price, 0);
-    actions.createRecord('receipts', {
-      id: generateId('rcp'),
-      supplierId: form.supplierId,
-      date: form.date,
-      status: ReceiptStatus.DRAFT,
-      lines,
-      total,
-      hasShortage: form.hasShortage,
-      shortageNote: form.shortageNote,
-      damageNote: form.damageNote,
-      inventoryApplied: false,
-    });
-    setOpen(false);
-    setForm({
-      ...defaultForm,
-      lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
-    });
+
+    try {
+      actions.createRecord('receipts', {
+        id: generateId('rcp'),
+        supplierId: form.supplierId,
+        date: form.date,
+        status: ReceiptStatus.DRAFT,
+        lines,
+        total,
+        hasShortage: form.hasShortage,
+        shortageNote: form.shortageNote,
+        damageNote: form.damageNote,
+        inventoryApplied: false,
+      });
+
+      toast.success(t('notifications.saved'));
+      setOpen(false);
+      setForm({
+        ...defaultForm,
+        lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
+      });
+    } catch (error) {
+      toast.error(error.message || 'Lỗi khi tạo phiếu nhập');
+    }
   };
 
   const transition = (receipt, status) => {
-    actions.transitionReceiptStatus(receipt.id, status);
+    try {
+      actions.transitionReceiptStatus(receipt.id, status);
+      toast.success(t('notifications.statusChanged'));
+    } catch (error) {
+      toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
+    }
   };
 
   const columns = [
