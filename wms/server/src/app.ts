@@ -24,10 +24,20 @@ export const createApp = () => {
 
   fs.mkdirSync(env.uploadDir, { recursive: true });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' }
+    })
+  );
   app.use(
     cors({
-      origin: env.clientUrl,
+      origin: (requestOrigin, callback) => {
+        if (!requestOrigin || /^http:\/\/localhost:\d+$/.test(requestOrigin) || requestOrigin === env.clientUrl) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true
     })
   );

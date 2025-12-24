@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'http://localhost:4000/api/v1/';
+const DEFAULT_BASE_URL = 'http://localhost:4001/api/v1/';
 
 let mockHandler = null;
 
@@ -14,6 +14,19 @@ export async function apiClient(path, options = {}) {
     params,
     skipMock = false,
   } = options;
+
+  let authHeaders = {};
+  try {
+    const stored = localStorage.getItem('wms-auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) {
+        authHeaders['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
 
   const envBase =
     import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? DEFAULT_BASE_URL;
@@ -49,13 +62,23 @@ export async function apiClient(path, options = {}) {
     });
   }
 
+  /* Determine headers. If body is FormData, let browser set Content-Type */
+  const finalHeaders = { ...authHeaders, ...headers };
+  let finalBody = body;
+
+  if (body instanceof FormData) {
+    // Browser sets multipart/form-data with boundary
+  } else {
+    finalHeaders['Content-Type'] = 'application/json';
+    if (body) {
+      finalBody = JSON.stringify(body);
+    }
+  }
+
   const response = await fetch(url.toString(), {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: finalHeaders,
+    body: finalBody,
   });
 
   if (!response.ok) {

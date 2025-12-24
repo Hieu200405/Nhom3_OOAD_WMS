@@ -8,8 +8,10 @@ import { Input } from '../../components/forms/Input.jsx';
 import { NumberInput } from '../../components/forms/NumberInput.jsx';
 import { Select } from '../../components/forms/Select.jsx';
 import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import { generateId } from '../../utils/id.js';
+import toast from 'react-hot-toast';
 
 const emptyProduct = {
   sku: '',
@@ -19,6 +21,7 @@ const emptyProduct = {
   priceOut: 0,
   unit: '',
   barcode: '',
+  image: '',
 };
 
 export function ProductsPage() {
@@ -101,6 +104,18 @@ export function ProductsPage() {
       <DataTable
         data={filteredProducts}
         columns={[
+          {
+            key: 'image',
+            header: '',
+            sortable: false,
+            render: (value) => (
+              value ? (
+                <img src={value} alt="" className="h-10 w-10 rounded object-cover border border-slate-200 dark:border-slate-700" />
+              ) : (
+                <div className="h-10 w-10 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-[10px]">img</div>
+              )
+            )
+          },
           { key: 'sku', header: t('products.sku') },
           { key: 'name', header: t('products.name') },
           {
@@ -161,6 +176,75 @@ export function ProductsPage() {
         }
       >
         <form id="product-form" className="space-y-4" onSubmit={handleSubmit}>
+          {/* Image Upload Section */}
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t('products.image', 'Product Image')}
+            </span>
+            <div className="flex items-center gap-4">
+              {form.image ? (
+                <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                  <img src={form.image} alt="Product" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, image: '' }))}
+                    className="absolute right-0 top-0 bg-red-500 p-0.5 text-white hover:bg-red-600"
+                  >
+                    <div className="h-3 w-3">×</div>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800">
+                  <span className="text-xs text-slate-400">No Image</span>
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/50 dark:file:text-indigo-300"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    try {
+                      const formData = new FormData();
+                      formData.append('image', file);
+
+                      const promise = apiClient('/upload/image', {
+                        method: 'POST',
+                        body: formData,
+                        skipMock: true
+                      });
+
+                      toast.promise(promise, {
+                        loading: 'Uploading...',
+                        success: 'Image uploaded',
+                        error: 'Upload failed'
+                      });
+
+                      const res = await promise;
+                      setForm(prev => ({ ...prev, image: res.url }));
+                    } catch (error) {
+                      console.error(error);
+                      // Fallback for demo/mock mode if backend is not running
+                      if (import.meta.env.VITE_USE_MOCK === 'true') {
+                        toast('Backend unavailable, using local placeholder', { icon: '⚠️' });
+                        // Create a fake local URL
+                        const reader = new FileReader();
+                        reader.onload = (e) => setForm(prev => ({ ...prev, image: e.target.result }));
+                        reader.readAsDataURL(file);
+                      }
+                    }
+                  }}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  PNG, JPG, WEBP up to 5MB.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             <Input
               label="SKU"
