@@ -38,6 +38,7 @@ function ensureCollections(data) {
     stocktaking: [],
     returns: [],
     disposals: [],
+    supplierProducts: [],
     auditLogs: [],
     ...data,
   };

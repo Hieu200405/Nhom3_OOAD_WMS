@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
@@ -23,7 +23,7 @@ const emptyProduct = {
   barcode: '',
   image: '',
   description: '',
-  supplierIds: [],
+  supplierIds: [], // Deprecated in UI but kept for compatibility
 };
 
 export function ProductsPage() {
@@ -33,7 +33,40 @@ export function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [activeTab, setActiveTab] = useState('general'); // general | suppliers
   const [form, setForm] = useState(emptyProduct);
+
+  // Supplier Product State
+  const [supplierProducts, setSupplierProducts] = useState([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+
+  // Load suppliers when editing a product
+  useEffect(() => {
+    if (editing && activeTab === 'suppliers') {
+      fetchSupplierProducts(editing.id);
+    }
+  }, [editing, activeTab]);
+
+  const fetchSupplierProducts = async (productId) => {
+    if (import.meta.env.VITE_USE_MOCK === 'true') {
+      // Mock data logic for demonstration
+      setSupplierProducts([
+        { id: 'sp1', supplierId: { name: 'Samsung Vina' }, priceIn: 15000000, isPreferred: true, currency: 'VND' },
+        { id: 'sp2', supplierId: { name: 'FPT Trading' }, priceIn: 15200000, isPreferred: false, currency: 'VND' }
+      ]);
+      return;
+    }
+    setIsLoadingSuppliers(true);
+    try {
+      const res = await apiClient(`/supplier-products?productId=${productId}`);
+      setSupplierProducts(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load supplier data');
+    } finally {
+      setIsLoadingSuppliers(false);
+    }
+  };
 
   const categories = useMemo(
     () => data.categories.map((category) => ({ value: category.id, label: category.name })),
@@ -55,12 +88,14 @@ export function ProductsPage() {
   const openCreateModal = () => {
     setForm(emptyProduct);
     setEditing(null);
+    setActiveTab('general');
     setOpen(true);
   };
 
   const openEditModal = (product) => {
     setEditing(product);
     setForm(product);
+    setActiveTab('general');
     setOpen(true);
   };
 
@@ -72,13 +107,6 @@ export function ProductsPage() {
       actions.createRecord('products', { ...form, id: generateId('prod') });
     }
     setOpen(false);
-  };
-
-  const handleSupplierChange = (e) => {
-    // Simple multi-select handling for strings
-    const options = Array.from(e.target.options);
-    const selected = options.filter(o => o.selected).map(o => o.value);
-    setForm(prev => ({ ...prev, supplierIds: selected }));
   };
 
   return (
@@ -164,186 +192,245 @@ export function ProductsPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Update product' : 'Create product'}
+        title={editing ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'}
+        maxWidth="max-w-3xl"
         actions={
-          <>
+          activeTab === 'general' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {t('app.cancel')}
+              </button>
+              <button
+                type="submit"
+                form="product-form"
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+              >
+                {t('app.save')}
+              </button>
+            </>
+          ) : (
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              {t('app.cancel')}
+              Đóng
             </button>
-            <button
-              type="submit"
-              form="product-form"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-            >
-              {t('app.save')}
-            </button>
-          </>
+          )
         }
       >
-        <form id="product-form" className="space-y-4" onSubmit={handleSubmit}>
-          {/* Image Upload Section */}
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t('products.image', 'Product Image')}
-            </span>
-            <div className="flex items-center gap-4">
-              {form.image ? (
-                <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                  <img src={form.image} alt="Product" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, image: '' }))}
-                    className="absolute right-0 top-0 bg-red-500 p-0.5 text-white hover:bg-red-600"
-                  >
-                    <div className="h-3 w-3">×</div>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800">
-                  <span className="text-xs text-slate-400">No Image</span>
-                </div>
-              )}
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/50 dark:file:text-indigo-300"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+        {/* Tabs */}
+        <div className="mb-6 flex space-x-4 border-b border-slate-200 dark:border-slate-700">
+          <button
+            className={`pb-2 text-sm font-medium transition-colors ${activeTab === 'general' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('general')}
+          >
+            Thông tin chung
+          </button>
+          {editing && (
+            <button
+              className={`pb-2 text-sm font-medium transition-colors ${activeTab === 'suppliers' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+              onClick={() => setActiveTab('suppliers')}
+            >
+              Nhà cung cấp
+            </button>
+          )}
+        </div>
 
-                    try {
-                      const formData = new FormData();
-                      formData.append('image', file);
+        {activeTab === 'general' ? (
+          <form id="product-form" className="space-y-4" onSubmit={handleSubmit}>
+            {/* Image Upload Section */}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t('products.image', 'Product Image')}
+              </span>
+              <div className="flex items-center gap-4">
+                {form.image ? (
+                  <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                    <img src={form.image} alt="Product" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, image: '' }))}
+                      className="absolute right-0 top-0 bg-red-500 p-0.5 text-white hover:bg-red-600"
+                    >
+                      <div className="h-3 w-3">×</div>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800">
+                    <span className="text-xs text-slate-400">No Image</span>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/50 dark:file:text-indigo-300"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
 
-                      const promise = apiClient('/upload/image', {
-                        method: 'POST',
-                        body: formData,
-                        skipMock: true
-                      });
+                      try {
+                        const formData = new FormData();
+                        formData.append('image', file);
 
-                      toast.promise(promise, {
-                        loading: 'Uploading...',
-                        success: 'Image uploaded',
-                        error: 'Upload failed'
-                      });
+                        const promise = apiClient('/upload/image', {
+                          method: 'POST',
+                          body: formData,
+                          skipMock: true
+                        });
 
-                      const res = await promise;
-                      setForm(prev => ({ ...prev, image: res.url }));
-                    } catch (error) {
-                      console.error(error);
-                      if (import.meta.env.VITE_USE_MOCK === 'true') {
-                        toast('Backend unavailable, using local placeholder', { icon: '⚠️' });
-                        const reader = new FileReader();
-                        reader.onload = (e) => setForm(prev => ({ ...prev, image: e.target.result }));
-                        reader.readAsDataURL(file);
+                        toast.promise(promise, {
+                          loading: 'Uploading...',
+                          success: 'Image uploaded',
+                          error: 'Upload failed'
+                        });
+
+                        const res = await promise;
+                        setForm(prev => ({ ...prev, image: res.url }));
+                      } catch (error) {
+                        console.error(error);
+                        if (import.meta.env.VITE_USE_MOCK === 'true') {
+                          toast('Backend unavailable, using local placeholder', { icon: '⚠️' });
+                          const reader = new FileReader();
+                          reader.onload = (e) => setForm(prev => ({ ...prev, image: e.target.result }));
+                          reader.readAsDataURL(file);
+                        }
                       }
-                    }
-                  }}
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  PNG, JPG, WEBP up to 5MB.
-                </p>
+                    }}
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    PNG, JPG, WEBP up to 5MB.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                label="SKU"
+                value={form.sku}
+                onChange={(event) => setForm((prev) => ({ ...prev, sku: event.target.value }))}
+                required
+              />
+              <Input
+                label="Barcode"
+                value={form.barcode}
+                onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
+              />
+            </div>
             <Input
-              label="SKU"
-              value={form.sku}
-              onChange={(event) => setForm((prev) => ({ ...prev, sku: event.target.value }))}
+              label={t('products.name')}
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               required
             />
+
             <Input
-              label="Barcode"
-              value={form.barcode}
-              onChange={(event) => setForm((prev) => ({ ...prev, barcode: event.target.value }))}
+              label="Mô tả"
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Chi tiết về sản phẩm..."
             />
-          </div>
-          <Input
-            label={t('products.name')}
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-            required
-          />
 
-          <Input
-            label="Mô tả"
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Chi tiết về sản phẩm..."
-          />
+            <div className="grid gap-3 md:grid-cols-2">
+              <Select
+                label={t('products.category')}
+                value={form.categoryId}
+                onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
+                options={categories}
+                placeholder="Select category"
+                required
+              />
+              <Input
+                label={t('products.unit')}
+                value={form.unit}
+                onChange={(event) => setForm((prev) => ({ ...prev, unit: event.target.value }))}
+                required
+              />
+            </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Select
-              label={t('products.category')}
-              value={form.categoryId}
-              onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
-              options={categories}
-              placeholder="Select category"
-              required
-            />
-            <Input
-              label={t('products.unit')}
-              value={form.unit}
-              onChange={(event) => setForm((prev) => ({ ...prev, unit: event.target.value }))}
-              required
-            />
-          </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <NumberInput
+                label={t('products.priceIn') + ' (Giá chuẩn)'}
+                min={0}
+                value={form.priceIn}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    priceIn: Number(event.target.value),
+                  }))
+                }
+                required
+              />
+              <NumberInput
+                label={t('products.priceOut')}
+                min={0}
+                value={form.priceOut}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    priceOut: Number(event.target.value),
+                  }))
+                }
+                required
+              />
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-semibold">Danh sách nhà cung cấp cho sản phẩm này</h3>
+              <button className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded hover:bg-indigo-100">
+                + Thêm NCC
+              </button>
+            </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <NumberInput
-              label={t('products.priceIn')}
-              min={0}
-              value={form.priceIn}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  priceIn: Number(event.target.value),
-                }))
-              }
-              required
-            />
-            <NumberInput
-              label={t('products.priceOut')}
-              min={0}
-              value={form.priceOut}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  priceOut: Number(event.target.value),
-                }))
-              }
-              required
-            />
+            {isLoadingSuppliers ? (
+              <p className="text-sm text-slate-500">Đang tải...</p>
+            ) : (
+              <div className="border rounded-lg overflow-hidden border-slate-200 dark:border-slate-700">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2">Nhà cung cấp</th>
+                      <th className="px-4 py-2">Giá nhập</th>
+                      <th className="px-4 py-2 text-center">Ưu tiên</th>
+                      <th className="px-4 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {supplierProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-4 text-center text-slate-500">Chưa có nhà cung cấp nào được gán.</td>
+                      </tr>
+                    ) : (
+                      supplierProducts.map((sp) => (
+                        <tr key={sp.id}>
+                          <td className="px-4 py-2 font-medium">{sp.supplierId?.name || 'N/A'}</td>
+                          <td className="px-4 py-2 text-indigo-600 font-semibold">
+                            {sp.priceIn?.toLocaleString()} {sp.currency}
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {sp.isPreferred && <Check className="h-4 w-4 inline text-green-500" />}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button className="text-slate-400 hover:text-indigo-600 mr-2"><Pencil className="h-3 w-3" /></button>
+                            <button className="text-slate-400 hover:text-red-600"><X className="h-3 w-3" /></button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-
-          {/* Suppliers Multi-Select (Simple implementation) */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Nhà cung cấp
-            </label>
-            <select
-              multiple
-              value={form.supplierIds || []}
-              onChange={handleSupplierChange}
-              className="block w-full rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
-              style={{ minHeight: '100px' }}
-            >
-              {data.suppliers?.map(sup => (
-                <option key={sup.id} value={sup.id}>
-                  {sup.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500">Giữ Ctrl (Window) hoặc Cmd (Mac) để chọn nhiều</p>
-          </div>
-        </form>
+        )}
       </Modal>
     </div>
   );
