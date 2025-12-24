@@ -71,6 +71,30 @@ export function SuppliersPage() {
           { key: 'contact', header: 'Contact' },
           { key: 'contract', header: 'Contract' },
           {
+            key: 'debt',
+            header: t('financials.debtAmount'),
+            render: (_, row) => {
+              const transactions = data.financialTransactions.filter(t => t.partnerId === row.id);
+              const remainingDebt = transactions.reduce((acc, curr) => acc + (curr.debtAmount || 0), 0);
+              const overdueCount = transactions.filter(t => {
+                const dueDate = t.paymentDueDate ? new Date(t.paymentDueDate) : null;
+                return dueDate && dueDate < new Date() && t.debtAmount > 0;
+              }).length;
+
+              return (
+                <div className="flex flex-col text-xs">
+                  <span className="font-bold text-amber-600">{remainingDebt.toLocaleString('vi-VN')}</span>
+                  {overdueCount > 0 && (
+                    <span className="text-[10px] text-rose-500 font-bold flex items-center gap-0.5">
+                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+                      {t('financials.overdueReceipts')}: {overdueCount}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+          },
+          {
             key: 'actions',
             header: t('app.actions'),
             sortable: false,
