@@ -39,3 +39,9 @@ export type ReturnFrom = (typeof RETURN_FROM)[number];
 
 export const DISPOSAL_REASONS = ['expired', 'damaged', 'lost'] as const;
 export type DisposalReason = (typeof DISPOSAL_REASONS)[number];
+
+export const FINANCIAL_TRANSACTION_TYPES = ['payment', 'liability', 'refund'] as const;
+export type FinancialTransactionType = (typeof FINANCIAL_TRANSACTION_TYPES)[number];
+
+export const FINANCIAL_TRANSACTION_STATUS = ['pending', 'completed', 'cancelled'] as const;
+export type FinancialTransactionStatus = (typeof FINANCIAL_TRANSACTION_STATUS)[number];

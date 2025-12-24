@@ -19,7 +19,8 @@
     "total": "Total",
     "lineItems": "Lines",
     "exportPdf": "Export PDF",
-    "reset": "Reset demo data"
+    "reset": "Reset demo data",
+    "notes": "Note"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -36,6 +37,7 @@
     "returns": "Returns",
     "disposals": "Disposals",
     "reports": "Reports",
+    "financials": "Financials",
     "users": "Users"
   },
   "login": {
@@ -203,7 +205,44 @@
     "inventory": "Inventory",
     "receipts": "Inbound",
     "deliveries": "Outbound",
-    "stocktaking": "Adjustments"
+    "stocktaking": "Adjustments",
+    "financials": "Financials"
+  },
+  "financials": {
+    "title": "Financial Management",
+    "transactions": "Transaction history",
+    "amount": "Amount",
+    "balance": "Balance",
+    "type": "Type",
+    "payment": "Payment",
+    "liability": "Liability",
+    "refund": "Refund",
+    "reference": "Reference",
+    "date": "Date",
+    "partner": "Partner",
+    "createPayment": "Record payment",
+    "debtAmount": "Debt amount",
+    "receivable": "Receivable",
+    "payable": "Payable",
+    "totalReceivable": "Total Receivable",
+    "totalPayable": "Total Payable",
+    "overdueCount": "Overdue Debts",
+    "totalCollected": "Total Collected (Period)",
+    "totalPaidInPeriod": "Total Paid (Period)",
+    "payNow": "Pay",
+    "collectNow": "Collect",
+    "quickPayAmount": "Payment Amount",
+    "id": "Transaction ID",
+    "relatedReceipt": "Related Receipt",
+    "paidAmount": "Paid",
+    "paymentDueDate": "Due Date",
+    "status": "Status",
+    "overdueDays": "Overdue {{days}} days",
+    "filterOverdue": "Overdue only",
+    "filterUnpaid": "Unpaid only",
+    "debtSummary": "Debt Summary",
+    "debtCount": "Debt Count",
+    "overdueReceipts": "Overdue Receipts"
   },
   "notifications": {
     "saved": "Saved successfully",

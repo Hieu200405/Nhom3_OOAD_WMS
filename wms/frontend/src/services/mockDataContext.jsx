@@ -40,6 +40,7 @@ function ensureCollections(data) {
     disposals: [],
     supplierProducts: [],
     auditLogs: [],
+    financialTransactions: [],
     ...data,
   };
 }
@@ -253,6 +254,32 @@ export function MockDataProvider({ children }) {
           );
           receipt.inventoryApplied = true;
         }
+
+        // Record liability automatically when completed
+        if (nextStatus === ReceiptStatus.COMPLETED) {
+          const supplier = draft.suppliers.find(s => s.id === receipt.supplierId);
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30); // Default 30 days
+
+          draft.financialTransactions = [
+            {
+              id: generateId('ft'),
+              partnerId: receipt.supplierId,
+              partnerName: supplier?.name || 'NCC',
+              type: 'payable',
+              amount: receipt.total || 0,
+              paidAmount: 0,
+              debtAmount: receipt.total || 0,
+              status: 'UNPAID',
+              paymentDueDate: dueDate.toISOString().split('T')[0],
+              referenceId: receipt.id,
+              referenceType: 'Receipt',
+              date: new Date().toISOString().split('T')[0],
+              note: `Tự động ghi nợ từ phiếu nhập ${receipt.id}`
+            },
+            ...(draft.financialTransactions ?? [])
+          ];
+        }
       });
     },
     [setWithClone, recordAudit],
@@ -298,6 +325,34 @@ export function MockDataProvider({ children }) {
             ),
           );
           delivery.inventoryApplied = true;
+        }
+
+        // Record liability automatically when completed
+        if (nextStatus === DeliveryStatus.COMPLETED) {
+          const customer = draft.customers.find(c => c.id === delivery.customerId);
+          const dueDate = new Date();
+          // Policy-based due date?
+          const days = customer?.type === 'Corporate' ? 30 : 0;
+          dueDate.setDate(dueDate.getDate() + days);
+
+          draft.financialTransactions = [
+            {
+              id: generateId('ft'),
+              partnerId: delivery.customerId,
+              partnerName: customer?.name || 'KH',
+              type: 'receivable',
+              amount: delivery.total || 0,
+              paidAmount: 0,
+              debtAmount: delivery.total || 0,
+              status: days === 0 ? 'PAID' : 'UNPAID',
+              paymentDueDate: dueDate.toISOString().split('T')[0],
+              referenceId: delivery.id,
+              referenceType: 'Delivery',
+              date: new Date().toISOString().split('T')[0],
+              note: `Tự động ghi nợ từ phiếu xuất ${delivery.id}`
+            },
+            ...(draft.financialTransactions ?? [])
+          ];
         }
       });
     },

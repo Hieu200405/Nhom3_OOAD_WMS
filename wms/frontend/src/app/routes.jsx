@@ -13,6 +13,7 @@ import {
   Truck,
   RotateCw,
   Trash2,
+  Wallet,
 } from 'lucide-react';
 import { DashboardPage } from '../features/dashboard/DashboardPage.jsx';
 import { ProductsPage } from '../features/products/ProductsPage.jsx';
@@ -30,6 +31,7 @@ import { StocktakingPage } from '../features/stocktaking/StocktakingPage.jsx';
 import { ReturnsPage } from '../features/returns/ReturnsPage.jsx';
 import { DisposalsPage } from '../features/disposals/DisposalsPage.jsx';
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
+import { TransactionsPage } from '../features/financials/TransactionsPage.jsx';
 import { UsersPage } from '../features/users/UsersPage.jsx';
 import { Roles } from '../utils/constants.js';
 import { PdfTestPage } from '../features/pdf/PdfTestPage.jsx';
@@ -147,6 +149,13 @@ export const appRoutes = [
     labelKey: 'navigation.reports',
     icon: FileChartColumn,
     component: ReportsPage,
+    roles: [Roles.ADMIN, Roles.MANAGER],
+  },
+  {
+    path: '/financials',
+    labelKey: 'navigation.financials',
+    icon: Wallet,
+    component: TransactionsPage,
     roles: [Roles.ADMIN, Roles.MANAGER],
   },
   {
