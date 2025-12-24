@@ -218,6 +218,11 @@ export const initialData = {
       ],
     },
   ],
+  supplierProducts: [
+    { id: 'sp-1', supplierId: 'sup-ace', productId: 'prod-laptop', priceIn: 21500000, currency: 'VND', isPreferred: true },
+    { id: 'sp-2', supplierId: 'sup-ace', productId: 'prod-mouse', priceIn: 240000, currency: 'VND', isPreferred: true },
+    { id: 'sp-3', supplierId: 'sup-vcoffee', productId: 'prod-coffee', priceIn: 68000, currency: 'VND', isPreferred: true }
+  ],
   auditLogs: [
     {
       _id: 'audit-001',

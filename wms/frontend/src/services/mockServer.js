@@ -2,15 +2,17 @@ import { authService } from './auth';
 import { registerMockHandler } from './apiClient';
 
 function parsePath(path) {
-  const segments = path.split('/').filter(Boolean);
+  const [pathname, query] = path.split('?');
+  const segments = pathname.split('/').filter(Boolean);
   const [resource, id, action] = segments;
-  console.log('[Mock Server] Path:', path, '=> resource:', resource, 'id:', id, 'action:', action);
-  return { resource, id, action };
+  const searchParams = new URLSearchParams(query);
+  console.log('[Mock Server] Path:', path, '=> resource:', resource, 'id:', id, 'action:', action, 'query:', Object.fromEntries(searchParams));
+  return { resource, id, action, query: Object.fromEntries(searchParams) };
 }
 
 export function setupMockServer(getState, actions) {
   registerMockHandler(async (path, { method, body }) => {
-    const { resource, id, action } = parsePath(path);
+    const { resource, id, action, query } = parsePath(path);
     const state = getState();
 
     switch (path) {
@@ -32,11 +34,13 @@ export function setupMockServer(getState, actions) {
       case 'stocktaking':
       case 'returns':
       case 'disposals':
-        return handleCollection(resource, id, action, { method, body, state, actions });
+        return handleCollection(resource, id, action, { method, body, state, actions, query });
+      case 'supplier-products':
+        return handleSupplierProducts({ resource, id, action, method, body, state, actions, query });
       case 'receipts':
-        return handleReceipts({ id, action, method, body, state, actions });
+        return handleReceipts({ id, action, method, body, state, actions, query });
       case 'deliveries':
-        return handleDeliveries({ id, action, method, body, state, actions });
+        return handleDeliveries({ id, action, method, body, state, actions, query });
       case 'reports':
         return handleReports({ method, body, state });
       default:
@@ -47,6 +51,7 @@ export function setupMockServer(getState, actions) {
 
 function resolveResourceName(resource) {
   if (resource === 'warehouse') return 'warehouseLocations';
+  if (resource === 'supplier-products') return 'supplierProducts';
   return resource;
 }
 
@@ -55,8 +60,13 @@ function handleCollection(resource, id, action, ctx) {
   const collection = ctx.state[resourceName] ?? [];
 
   if (ctx.method === 'GET') {
-    if (!id) return collection;
-    return collection.find((item) => item.id === id);
+    if (id) return collection.find((item) => item.id === id);
+    if (ctx.query && Object.keys(ctx.query).length > 0) {
+      return collection.filter(item => {
+        return Object.entries(ctx.query).every(([key, val]) => String(item[key]) === val);
+      });
+    }
+    return collection;
   }
 
   if (ctx.method === 'POST' && !id) {
@@ -129,6 +139,32 @@ function handleReceipts({ id, action, method, body, state, actions }) {
   }
 
   throw new Error('Unsupported receipt operation');
+}
+
+function handleSupplierProducts({ resource, id, action, method, body, state, actions, query }) {
+  if (method === 'GET') {
+    const collection = state.supplierProducts || [];
+    let items = collection;
+    if (id) {
+      items = [collection.find(i => i.id === id)].filter(Boolean);
+    } else if (query && Object.keys(query).length > 0) {
+      items = collection.filter(item => {
+        return Object.entries(query).every(([key, val]) => String(item[key]) === val);
+      });
+    }
+
+    // Populate
+    const populated = items.map(item => ({
+      ...item,
+      supplierId: state.suppliers.find(s => s.id === item.supplierId) || item.supplierId,
+      productId: state.products.find(p => p.id === item.productId) || item.productId
+    }));
+
+    if (id) return populated[0];
+    return { data: populated };
+  }
+  // For writes, delegate to generic
+  return handleCollection(resource, id, action, { method, body, state, actions, query });
 }
 
 function handleDeliveries({ id, action, method, body, state, actions }) {
