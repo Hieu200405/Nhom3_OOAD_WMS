@@ -203,7 +203,7 @@
     "status": "Trạng thái",
     "overdueDays": "Quá hạn {{days}} ngày",
     "filterOverdue": "Chỉ hiện quá hạn",
-    "filterUnpaid": "Chưa thu đủ",
+    "filterUnpaid": "Chưa thanh toán",
     "debtSummary": "Tóm tắt công nợ",
     "debtCount": "Số phiếu nợ",
     "overdueReceipts": "Phiếu quá hạn"

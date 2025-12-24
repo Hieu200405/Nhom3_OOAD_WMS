@@ -19,7 +19,8 @@
     "total": "Total",
     "lineItems": "Lines",
     "exportPdf": "Export PDF",
-    "reset": "Reset demo data"
+    "reset": "Reset demo data",
+    "notes": "Note"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -194,7 +195,7 @@
     "totalCollected": "Total Collected (Period)",
     "totalPaidInPeriod": "Total Paid (Period)",
     "payNow": "Pay",
-    "collectNow": "Collect Now",
+    "collectNow": "Collect",
     "quickPayAmount": "Payment Amount",
     "id": "Transaction ID",
     "relatedReceipt": "Related Receipt",

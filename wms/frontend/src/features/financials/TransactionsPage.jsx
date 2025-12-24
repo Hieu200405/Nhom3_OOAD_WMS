@@ -24,7 +24,7 @@ export function TransactionsPage() {
 
     // Filters
     const [filterOverdue, setFilterOverdue] = useState(false);
-    const [filterUnpaid, setFilterUnpaid] = useState(false);
+    const [filterUnpaid, setfilterUnpaid] = useState(false);
     const [partnerId, setPartnerId] = useState('');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
@@ -159,8 +159,6 @@ export function TransactionsPage() {
                         <span>{new Date(value).toLocaleDateString('vi-VN')}</span>
                         {isOverdue && (
                             <span className="flex items-center gap-1 text-[10px] font-bold text-rose-600" title={t('financials.overdueDays', { days: diffDays })}>
-                                <ShieldAlert className="h-3 w-3" />
-                                {t('financials.overdueDays', { days: diffDays })}
                             </span>
                         )}
                     </div>
@@ -293,9 +291,9 @@ export function TransactionsPage() {
             id: generateId('ft'),
             partnerName: partner?.name || 'Unknown',
             amount: amount,
-            paidAmount: form.type === 'payment' ? amount : 0,
-            debtAmount: form.type === 'receivable' || form.type === 'payable' ? amount : 0,
-            status: form.type === 'payment' ? 'PAID' : 'UNPAID',
+            paidAmount: (form.type === 'payment' || form.type === 'refund') ? amount : 0,
+            debtAmount: (form.type === 'receivable' || form.type === 'payable') ? amount : 0,
+            status: (form.type === 'payment' || form.type === 'refund') ? 'PAID' : 'UNPAID',
         });
         setOpen(false);
     };
@@ -327,8 +325,6 @@ export function TransactionsPage() {
                         {stats.receivable.toLocaleString('vi-VN')}
                     </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                        <ArrowDownLeft className="h-3 w-3" />
-                        <span>Khách đang nợ mình</span>
                     </div>
                 </div>
 
@@ -338,8 +334,6 @@ export function TransactionsPage() {
                         {stats.payable.toLocaleString('vi-VN')}
                     </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                        <ArrowUpRight className="h-3 w-3" />
-                        <span>Mình đang nợ NCC</span>
                     </div>
                 </div>
 
@@ -349,8 +343,6 @@ export function TransactionsPage() {
                         {stats.overdueCount}
                     </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                        <ShieldAlert className="h-3 w-3" />
-                        <span>Vi phạm SLA thanh toán</span>
                     </div>
                 </div>
 
@@ -360,8 +352,6 @@ export function TransactionsPage() {
                         {stats.collected.toLocaleString('vi-VN')}
                     </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                        <ArrowDownLeft className="h-3 w-3" />
-                        <span>Tổng tiền đã thu (In)</span>
                     </div>
                 </div>
 
@@ -371,8 +361,6 @@ export function TransactionsPage() {
                         {stats.totalPaid.toLocaleString('vi-VN')}
                     </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                        <ArrowUpRight className="h-3 w-3" />
-                        <span>Tổng tiền đã trả (Out)</span>
                     </div>
                 </div>
             </div>
@@ -417,7 +405,7 @@ export function TransactionsPage() {
                         <input
                             type="checkbox"
                             checked={filterUnpaid}
-                            onChange={(e) => setFilterUnpaid(e.target.checked)}
+                            onChange={(e) => setfilterUnpaid(e.target.checked)}
                             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                         />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('financials.filterUnpaid')}</span>
