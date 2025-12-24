@@ -54,6 +54,12 @@ export function DeliveriesPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    if (!form.customerId) {
+      toast.error('Vui lòng chọn khách hàng');
+      return;
+    }
+
     const lines = form.lines
       .filter((line) => line.productId)
       .map((line) => {
@@ -65,39 +71,53 @@ export function DeliveriesPage() {
         };
       });
 
-    if (lines.length === 0) return;
+    if (lines.length === 0) {
+      toast.error('Vui lòng thêm ít nhất một sản phẩm');
+      return;
+    }
 
     const total = lines.reduce((sum, line) => sum + line.quantity * line.price, 0);
-    actions.createRecord('deliveries', {
-      id: generateId('dvy'),
-      customerId: form.customerId,
-      date: form.date,
-      expectedDate: form.expectedDate,
-      status: DeliveryStatus.DRAFT,
-      note: form.note,
-      lines,
-      total,
-      inventoryApplied: false,
-    });
-    setOpen(false);
-    setForm({
-      ...defaultForm,
-      lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
-    });
+
+    try {
+      actions.createRecord('deliveries', {
+        id: generateId('dvy'),
+        customerId: form.customerId,
+        date: form.date,
+        expectedDate: form.expectedDate,
+        status: DeliveryStatus.DRAFT,
+        note: form.note,
+        lines,
+        total,
+        inventoryApplied: false,
+      });
+
+      toast.success(t('notifications.saved'));
+      setOpen(false);
+      setForm({
+        ...defaultForm,
+        lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
+      });
+    } catch (error) {
+      toast.error(error.message || 'Lỗi khi tạo phiếu xuất');
+    }
   };
 
   const checkInventory = (lines) =>
     lines.every((line) => (inventoryMap.get(line.productId) ?? 0) >= line.quantity);
 
   const transition = (delivery, status) => {
-    if ([DeliveryStatus.PREPARED, DeliveryStatus.DELIVERED, DeliveryStatus.COMPLETED].includes(status)) {
-      if (!checkInventory(delivery.lines)) {
-        toast.error('Inventory is insufficient for this step.');
-        return;
+    try {
+      if ([DeliveryStatus.PREPARED, DeliveryStatus.DELIVERED, DeliveryStatus.COMPLETED].includes(status)) {
+        if (!checkInventory(delivery.lines)) {
+          toast.error('Kho không đủ hàng để thực hiện bước này');
+          return;
+        }
       }
+      actions.transitionDeliveryStatus(delivery.id, status);
+      toast.success(t('notifications.statusChanged'));
+    } catch (error) {
+      toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
     }
-    actions.transitionDeliveryStatus(delivery.id, status);
-    toast.success(t('notifications.statusChanged'));
   };
 
   const columns = [
