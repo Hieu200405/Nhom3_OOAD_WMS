@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import {
-  getOverviewReport,
+  getDashboardStats,
   getInventoryReport,
   getInboundReport,
   getOutboundReport,
@@ -11,7 +11,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { badRequest } from '../utils/errors.js';
 
 export const overview = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await getOverviewReport();
+  const data = await getDashboardStats();
   res.json({ data });
 });
 
@@ -36,7 +36,7 @@ export const stocktake = asyncHandler(async (_req: Request, res: Response) => {
 });
 
 const reportMap = {
-  overview: getOverviewReport,
+  overview: getDashboardStats,
   inventory: getInventoryReport,
   inbound: getInboundReport,
   receipts: getInboundReport,
