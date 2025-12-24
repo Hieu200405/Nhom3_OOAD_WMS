@@ -18,6 +18,26 @@ export const auth: RequestHandler = asyncHandler(async (req, _res, next) => {
     throw unauthorized();
   }
   const token = header.split(' ')[1];
+  /* Support for Mock Token in Development */
+  if (token.startsWith('mock-token-') && env.nodeEnv === 'development') {
+    const userId = token.replace('mock-token-', '');
+    // Mock user data mapping based on frontend constants
+    const roleMapping: Record<string, string> = {
+      'user-admin': 'Admin',
+      'user-manager': 'Manager',
+      'user-staff': 'Staff'
+    };
+    req.user = {
+      id: userId,
+      email: `${userId}@example.com`,
+      fullName: 'Mock User',
+      role: roleMapping[userId] || 'Staff'
+    };
+    req.authToken = token;
+    next();
+    return;
+  }
+
   let decoded: TokenPayload;
   try {
     decoded = jwt.verify(token, env.jwtSecret) as TokenPayload;

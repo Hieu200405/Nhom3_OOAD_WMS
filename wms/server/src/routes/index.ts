@@ -14,6 +14,7 @@ import adjustmentRoutes from './adjustment.routes.js';
 import returnRoutes from './return.routes.js';
 import disposalRoutes from './disposal.routes.js';
 import reportRoutes from './report.routes.js';
+import uploadRoutes from './upload.routes.js';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/adjustments', adjustmentRoutes);
 router.use('/returns', returnRoutes);
 router.use('/disposals', disposalRoutes);
 router.use('/reports', reportRoutes);
+router.use('/upload', uploadRoutes);
 
 export const apiRouter = router;

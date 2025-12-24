@@ -8,6 +8,7 @@ export interface Product {
   priceIn: number;
   priceOut: number;
   minStock: number;
+  image?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +23,8 @@ const productSchema = new Schema<ProductDocument>(
     unit: { type: String, required: true, trim: true },
     priceIn: { type: Number, required: true, min: 0 },
     priceOut: { type: Number, required: true, min: 0 },
-    minStock: { type: Number, required: true, min: 0 }
+    minStock: { type: Number, required: true, min: 0 },
+    image: { type: String }
   },
   { timestamps: true }
 );

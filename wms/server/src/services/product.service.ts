@@ -16,9 +16,9 @@ type ListQuery = {
 type CategoryLean =
   | Types.ObjectId
   | {
-      _id: Types.ObjectId;
-      name?: string | null;
-    };
+    _id: Types.ObjectId;
+    name?: string | null;
+  };
 
 const isPopulatedCategory = (
   category: CategoryLean | undefined
@@ -56,6 +56,7 @@ export const listProducts = async (query: ListQuery) => {
     priceIn: product.priceIn,
     priceOut: product.priceOut,
     minStock: product.minStock,
+    image: product.image,
     category: (() => {
       const categoryRef = product.categoryId as CategoryLean | undefined;
       if (!categoryRef) {
@@ -84,6 +85,7 @@ export const createProduct = async (
     priceIn: number;
     priceOut: number;
     minStock: number;
+    image?: string;
   },
   actorId: string
 ) => {
@@ -119,6 +121,7 @@ export const updateProduct = async (
     priceIn: number;
     priceOut: number;
     minStock: number;
+    image: string;
   }>,
   actorId: string
 ) => {
@@ -138,6 +141,7 @@ export const updateProduct = async (
   if (typeof payload.priceIn === 'number') product.priceIn = payload.priceIn;
   if (typeof payload.priceOut === 'number') product.priceOut = payload.priceOut;
   if (typeof payload.minStock === 'number') product.minStock = payload.minStock;
+  if (payload.image !== undefined) product.image = payload.image;
   if (payload.categoryId) {
     const category = await CategoryModel.findById(new Types.ObjectId(payload.categoryId)).exec();
     if (!category) {
