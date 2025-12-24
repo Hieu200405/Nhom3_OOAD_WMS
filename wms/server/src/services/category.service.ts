@@ -1,7 +1,8 @@
 import { Types } from 'mongoose';
 import { CategoryModel } from '../models/category.model.js';
+import { ProductModel } from '../models/product.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
-import { conflict, notFound } from '../utils/errors.js';
+import { conflict, notFound, badRequest } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 
 interface ListQuery {
@@ -15,8 +16,11 @@ export const listCategories = async (query: ListQuery) => {
   const { page, limit, sort, skip } = parsePagination(query);
   const filter = query.query
     ? {
-        name: new RegExp(query.query, 'i')
-      }
+      $or: [
+        { name: new RegExp(query.query, 'i') },
+        { code: new RegExp(query.query, 'i') }
+      ]
+    }
     : {};
   const [total, items] = await Promise.all([
     CategoryModel.countDocuments(filter),
@@ -25,8 +29,10 @@ export const listCategories = async (query: ListQuery) => {
   return buildPagedResponse(
     items.map((item) => ({
       id: item._id.toString(),
+      code: item.code,
       name: item.name,
       description: item.description,
+      isActive: item.isActive,
       createdAt: item.createdAt
     })),
     total,
@@ -35,12 +41,14 @@ export const listCategories = async (query: ListQuery) => {
 };
 
 export const createCategory = async (
-  payload: { name: string; description?: string },
+  payload: { code: string; name: string; description?: string; isActive?: boolean },
   actorId: string
 ) => {
-  const existing = await CategoryModel.findOne({ name: payload.name }).lean();
+  const existing = await CategoryModel.findOne({
+    $or: [{ code: payload.code.toUpperCase() }, { name: payload.name }]
+  }).lean();
   if (existing) {
-    throw conflict('Category name already exists');
+    throw conflict('Category code or name already exists');
   }
   const category = await CategoryModel.create(payload);
   await recordAudit({
@@ -55,23 +63,27 @@ export const createCategory = async (
 
 export const updateCategory = async (
   id: string,
-  payload: { name?: string; description?: string },
+  payload: { code?: string; name?: string; description?: string; isActive?: boolean },
   actorId: string
 ) => {
   const category = await CategoryModel.findById(new Types.ObjectId(id));
   if (!category) {
     throw notFound('Category not found');
   }
+
+  if (payload.code && payload.code !== category.code) {
+    const duplicate = await CategoryModel.findOne({ code: payload.code.toUpperCase() }).lean();
+    if (duplicate) throw conflict('Category code already exists');
+    category.code = payload.code;
+  }
+
   if (payload.name && payload.name !== category.name) {
-    const duplicate = await CategoryModel.findOne({ name: payload.name }).lean();
-    if (duplicate) {
-      throw conflict('Category name already exists');
-    }
     category.name = payload.name;
   }
-  if (typeof payload.description !== 'undefined') {
-    category.description = payload.description;
-  }
+
+  if (typeof payload.description !== 'undefined') category.description = payload.description;
+  if (typeof payload.isActive !== 'undefined') category.isActive = payload.isActive;
+
   await category.save();
   await recordAudit({
     action: 'category.updated',
@@ -84,6 +96,12 @@ export const updateCategory = async (
 };
 
 export const deleteCategory = async (id: string, actorId: string) => {
+  // Check dependency
+  const productCount = await ProductModel.countDocuments({ categoryId: new Types.ObjectId(id) });
+  if (productCount > 0) {
+    throw badRequest(`Cannot delete category. It is used by ${productCount} products.`);
+  }
+
   const category = await CategoryModel.findByIdAndDelete(new Types.ObjectId(id));
   if (!category) {
     throw notFound('Category not found');
@@ -93,7 +111,7 @@ export const deleteCategory = async (id: string, actorId: string) => {
     entity: 'Category',
     entityId: category._id,
     actorId,
-    payload: { name: category.name }
+    payload: { code: category.code, name: category.name }
   });
   return true;
 };

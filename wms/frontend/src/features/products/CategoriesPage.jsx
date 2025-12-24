@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
@@ -8,8 +8,10 @@ import { useMockData } from '../../services/mockDataContext.jsx';
 import { generateId } from '../../utils/id.js';
 
 const emptyCategory = {
+  code: '',
   name: '',
   description: '',
+  isActive: true,
 };
 
 export function CategoriesPage() {
@@ -42,6 +44,13 @@ export function CategoriesPage() {
   };
 
   const handleDelete = (category) => {
+    // Basic dependency check (frontend side mock)
+    const hasProducts = data.products.some(p => p.categoryId === category.id);
+    if (hasProducts) {
+      alert(`Không thể xóa danh mục "${category.name}" vì đang có sản phẩm.`);
+      return;
+    }
+
     if (window.confirm('Xóa danh mục này?')) {
       actions.removeRecord('categories', category.id);
     }
@@ -66,8 +75,19 @@ export function CategoriesPage() {
       <DataTable
         data={data.categories}
         columns={[
+          { key: 'code', header: 'Mã' },
           { key: 'name', header: t('products.category') },
           { key: 'description', header: 'Mô tả' },
+          {
+            key: 'isActive',
+            header: 'Trạng thái',
+            render: (val) => (
+              <span className={`inline-flex items-center gap-1 text-xs font-medium ${val ? 'text-green-600' : 'text-slate-400'}`}>
+                {val ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                {val ? 'Hoạt động' : 'Tạm ẩn'}
+              </span>
+            )
+          },
           {
             key: 'actions',
             header: t('app.actions'),
@@ -120,17 +140,42 @@ export function CategoriesPage() {
         }
       >
         <form id="category-form" className="space-y-4" onSubmit={handleSubmit}>
-          <Input
-            label={t('products.category')}
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-            required
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Mã danh mục"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))}
+              required
+              placeholder="VD: ELEC"
+            />
+            <Input
+              label={t('products.category')}
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              required
+              placeholder="VD: Điện tử"
+            />
+          </div>
+
           <Input
             label="Mô tả"
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Mô tả ngắn gọn..."
           />
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="cat-active"
+              checked={form.isActive}
+              onChange={(e) => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+            />
+            <label htmlFor="cat-active" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Đang hoạt động
+            </label>
+          </div>
         </form>
       </Modal>
     </div>

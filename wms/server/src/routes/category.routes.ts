@@ -8,8 +8,10 @@ import { validate } from '../middlewares/validate.js';
 const router = Router();
 
 const upsertSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional()
+  code: z.string().min(1).trim().toUpperCase(),
+  name: z.string().min(1).trim(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional()
 });
 
 router.use(auth);
