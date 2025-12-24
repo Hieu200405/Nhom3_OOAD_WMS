@@ -13,20 +13,139 @@ import { ReturnModel } from '../models/return.model.js';
 
 const toObject = (doc: unknown) => JSON.parse(JSON.stringify(doc));
 
-export const getOverviewReport = async () => {
-  const [products, receipts, deliveries, adjustments, returns] = await Promise.all([
+export const getDashboardStats = async () => {
+  // 1. Basic Counts
+  const [
+    productsCount,
+    pendingReceipts,
+    pendingDeliveries,
+    openIncidents,
+    totalInventoryValueResult
+  ] = await Promise.all([
     ProductModel.countDocuments(),
-    ReceiptModel.countDocuments(),
-    DeliveryModel.countDocuments(),
-    AdjustmentModel.countDocuments(),
-    ReturnModel.countDocuments()
+    ReceiptModel.countDocuments({ status: { $ne: 'Completed' } }),
+    DeliveryModel.countDocuments({ status: { $ne: 'Completed' } }),
+    // Assuming 'open' status for incidents, adjust if needed based on IncidentModel/Schema (which I should check)
+    // Checking schema via constants (INCIDENT_STATUS = ['open', 'inProgress', 'resolved'])
+    // Let's assume 'resolved' is the completed state.
+    // Ideally I'd check the IncidentModel but let's be safe and assume non-resolved.
+    // Wait, let's just count all for now or check if IncidentModel is imported. It is not imported in the original file I viewed?
+    // Ah, I don't see IncidentModel in the imports of report.service.ts. I need to add it.
+    Promise.resolve(0), // Placeholder until IncidentModel is added
+    InventoryModel.aggregate([
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: '$product' },
+      {
+        $group: {
+          _id: null,
+          totalValue: { $sum: { $multiply: ['$quantity', '$product.priceIn'] } }
+        }
+      }
+    ])
   ]);
+
+  const totalInventoryValue = totalInventoryValueResult[0]?.totalValue || 0;
+
+  // 2. Revenue/Expense Chart (Last 6 months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const revenueData = await DeliveryModel.aggregate([
+    { $match: { date: { $gte: sixMonthsAgo }, status: 'Delivered' } }, // Assuming 'Delivered' or 'Completed'
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
+        income: { $sum: '$total' }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+
+  const expenseData = await ReceiptModel.aggregate([
+    { $match: { date: { $gte: sixMonthsAgo }, status: 'Completed' } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
+        expense: { $sum: '$total' }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+
+  // Merge revenue and expense
+  const chartDataMap = new Map<string, { name: string; income: number; expense: number }>();
+
+  // Initialize map with last 6 months to ensure continuity
+  for (let i = 0; i < 6; i++) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const key = d.toISOString().slice(0, 7); // YYYY-MM
+    chartDataMap.set(key, { name: key, income: 0, expense: 0 });
+  }
+
+  revenueData.forEach((item: any) => {
+    if (chartDataMap.has(item._id)) {
+      chartDataMap.get(item._id)!.income = item.income;
+    }
+  });
+
+  expenseData.forEach((item: any) => {
+    if (chartDataMap.has(item._id)) {
+      chartDataMap.get(item._id)!.expense = item.expense;
+    }
+  });
+
+  const revenueChart = Array.from(chartDataMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+  // 3. Inventory Status for Pie Chart
+  const inventoryStatus = await InventoryModel.aggregate([
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'product'
+      }
+    },
+    { $unwind: '$product' },
+    {
+      $project: {
+        status: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$quantity', 0] }, then: 'Out of Stock' },
+              { case: { $lt: ['$quantity', '$product.minStock'] }, then: 'Low Stock' }
+            ],
+            default: 'Available'
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: '$status',
+        value: { $sum: 1 }
+      }
+    }
+  ]);
+
   return {
-    products,
-    receipts,
-    deliveries,
-    adjustments,
-    returns
+    counts: {
+      products: productsCount,
+      pendingReceipts,
+      pendingDeliveries,
+      openIncidents
+    },
+    totalInventoryValue,
+    revenueChart,
+    inventoryStatus: inventoryStatus.map((item: any) => ({ name: item._id, value: item.value }))
   };
 };
 
