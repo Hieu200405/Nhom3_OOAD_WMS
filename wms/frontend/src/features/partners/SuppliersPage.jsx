@@ -4,14 +4,27 @@ import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
+import { Select } from '../../components/forms/Select.jsx';
 import { useMockData } from '../../services/mockDataContext.jsx';
 import { generateId } from '../../utils/id.js';
 
 const emptySupplier = {
+  type: 'supplier',
+  code: '',
   name: '',
+  taxCode: '',
   contact: '',
-  contract: '',
+  address: '',
+  businessType: 'Distributor',
+  notes: '',
+  isActive: true,
 };
+
+const businessTypes = [
+  { value: 'Manufacturer', label: 'Nhà sản xuất' },
+  { value: 'Distributor', label: 'Nhà phân phối' },
+  { value: 'Retailer', label: 'Nhà bán lẻ' },
+];
 
 export function SuppliersPage() {
   const { t } = useTranslation();
@@ -67,9 +80,15 @@ export function SuppliersPage() {
       <DataTable
         data={data.suppliers}
         columns={[
-          { key: 'name', header: 'Supplier' },
-          { key: 'contact', header: 'Contact' },
-          { key: 'contract', header: 'Contract' },
+          { key: 'code', header: 'Mã NCC' },
+          { key: 'name', header: 'Tên nhà cung cấp' },
+          { key: 'contact', header: 'Liên hệ' },
+          { key: 'businessType', header: 'Loại hình' },
+          {
+            key: 'isActive',
+            header: 'Trạng thái',
+            render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
+          },
           {
             key: 'actions',
             header: t('app.actions'),
@@ -101,7 +120,7 @@ export function SuppliersPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Update supplier' : 'Create supplier'}
+        title={editing ? 'Cập nhật nhà cung cấp' : 'Thêm nhà cung cấp mới'}
         actions={
           <>
             <button
@@ -122,23 +141,61 @@ export function SuppliersPage() {
         }
       >
         <form id="supplier-form" className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Mã NCC"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))}
+              required
+              placeholder="VD: SUP001"
+            />
+            <Select
+              label="Loại hình"
+              value={form.businessType}
+              onChange={(event) => setForm((prev) => ({ ...prev, businessType: event.target.value }))}
+              options={businessTypes}
+            />
+          </div>
+
           <Input
-            label="Supplier name"
+            label="Tên nhà cung cấp"
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             required
           />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Mã số thuế"
+              value={form.taxCode}
+              onChange={(event) => setForm((prev) => ({ ...prev, taxCode: event.target.value }))}
+            />
+            <Input
+              label="Liên hệ"
+              value={form.contact}
+              onChange={(event) => setForm((prev) => ({ ...prev, contact: event.target.value }))}
+              placeholder="SĐT, Email..."
+            />
+          </div>
+
           <Input
-            label="Contact"
-            value={form.contact}
-            onChange={(event) => setForm((prev) => ({ ...prev, contact: event.target.value }))}
-            required
+            label="Địa chỉ"
+            value={form.address}
+            onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
           />
-          <Input
-            label="Contract"
-            value={form.contract}
-            onChange={(event) => setForm((prev) => ({ ...prev, contract: event.target.value }))}
-          />
+
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              id="sup-active"
+              checked={form.isActive}
+              onChange={(e) => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+            />
+            <label htmlFor="sup-active" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Đang hoạt động
+            </label>
+          </div>
         </form>
       </Modal>
     </div>
