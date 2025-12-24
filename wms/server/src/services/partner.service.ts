@@ -22,7 +22,8 @@ export const listPartners = async (query: ListQuery) => {
   if (query.query) {
     filter.$or = [
       { name: new RegExp(query.query, 'i') },
-      { contact: new RegExp(query.query, 'i') }
+      { contact: new RegExp(query.query, 'i') },
+      { code: new RegExp(query.query, 'i') }
     ];
   }
   const [total, items] = await Promise.all([
@@ -33,10 +34,17 @@ export const listPartners = async (query: ListQuery) => {
     items.map((item) => ({
       id: item._id.toString(),
       type: item.type,
+      code: item.code,
       name: item.name,
+      taxCode: item.taxCode,
       contact: item.contact,
       address: item.address,
-      notes: item.notes
+      notes: item.notes,
+      isActive: item.isActive,
+      businessType: item.businessType,
+      customerType: item.customerType,
+      creditLimit: item.creditLimit,
+      paymentTerm: item.paymentTerm
     })),
     total,
     { page, limit, sort, skip }
@@ -44,13 +52,33 @@ export const listPartners = async (query: ListQuery) => {
 };
 
 export const createPartner = async (
-  payload: { type: PartnerType; name: string; contact?: string; address?: string; notes?: string },
+  payload: {
+    type: PartnerType;
+    code: string;
+    name: string;
+    taxCode?: string;
+    contact?: string;
+    address?: string;
+    notes?: string;
+    isActive?: boolean;
+    businessType?: string;
+    customerType?: string;
+    creditLimit?: number;
+    paymentTerm?: string;
+  },
   actorId: string
 ) => {
-  const exist = await PartnerModel.findOne({ type: payload.type, name: payload.name }).lean();
+  const exist = await PartnerModel.findOne({
+    $or: [
+      { code: payload.code.toUpperCase(), type: payload.type },
+      { name: payload.name, type: payload.type } // Name unique per type
+    ]
+  }).lean();
+
   if (exist) {
-    throw conflict('Partner already exists');
+    throw conflict('Partner code or name already exists for this type');
   }
+
   const partner = await PartnerModel.create(payload);
   await recordAudit({
     action: 'partner.created',
@@ -64,23 +92,55 @@ export const createPartner = async (
 
 export const updatePartner = async (
   id: string,
-  payload: { name?: string; contact?: string; address?: string; notes?: string },
+  payload: {
+    code?: string;
+    name?: string;
+    taxCode?: string;
+    contact?: string;
+    address?: string;
+    notes?: string;
+    isActive?: boolean;
+    businessType?: string;
+    customerType?: string;
+    creditLimit?: number;
+    paymentTerm?: string;
+  },
   actorId: string
 ) => {
   const partner = await PartnerModel.findById(new Types.ObjectId(id));
   if (!partner) {
     throw notFound('Partner not found');
   }
+
+  if (payload.code && payload.code !== partner.code) {
+    const duplicate = await PartnerModel.findOne({ code: payload.code.toUpperCase(), type: partner.type }).lean();
+    if (duplicate) throw conflict('Partner code already exists');
+    partner.code = payload.code;
+  }
+
   if (payload.name && payload.name !== partner.name) {
     const duplicate = await PartnerModel.findOne({ type: partner.type, name: payload.name }).lean();
     if (duplicate) {
-      throw conflict('Partner already exists');
+      throw conflict('Partner name already exists');
     }
     partner.name = payload.name;
   }
+
   if (typeof payload.contact !== 'undefined') partner.contact = payload.contact;
   if (typeof payload.address !== 'undefined') partner.address = payload.address;
   if (typeof payload.notes !== 'undefined') partner.notes = payload.notes;
+  if (typeof payload.taxCode !== 'undefined') partner.taxCode = payload.taxCode;
+  if (typeof payload.isActive !== 'undefined') partner.isActive = payload.isActive;
+
+  // Specific fields
+  if (partner.type === 'supplier') {
+    if (payload.businessType) partner.businessType = payload.businessType as any;
+  } else if (partner.type === 'customer') {
+    if (payload.customerType) partner.customerType = payload.customerType as any;
+    if (typeof payload.creditLimit === 'number') partner.creditLimit = payload.creditLimit;
+    if (payload.paymentTerm) partner.paymentTerm = payload.paymentTerm;
+  }
+
   await partner.save();
   await recordAudit({
     action: 'partner.updated',

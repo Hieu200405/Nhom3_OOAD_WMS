@@ -5,18 +5,32 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { Select } from '../../components/forms/Select.jsx';
+import { NumberInput } from '../../components/forms/NumberInput.jsx';
 import { useMockData } from '../../services/mockDataContext.jsx';
 import { generateId } from '../../utils/id.js';
 
 const emptyCustomer = {
+  type: 'customer',
+  code: '',
   name: '',
-  type: 'Individual',
+  customerType: 'Individual',
   policy: '',
+  creditLimit: 0,
+  paymentTerm: 'Net 30', // Terms like Net 30, COD
+  contact: '',
+  isActive: true,
 };
 
 const customerTypes = [
-  { value: 'Individual', label: 'Individual' },
-  { value: 'Corporate', label: 'Corporate' },
+  { value: 'Individual', label: 'Cá nhân' },
+  { value: 'Corporate', label: 'Doanh nghiệp' },
+];
+
+const paymentTerms = [
+  { value: 'COD', label: 'Thanh toán khi nhận hàng (COD)' },
+  { value: 'Net 15', label: 'Công nợ 15 ngày' },
+  { value: 'Net 30', label: 'Công nợ 30 ngày' },
+  { value: 'Prepaid', label: 'Trả trước' },
 ];
 
 export function CustomersPage() {
@@ -73,9 +87,16 @@ export function CustomersPage() {
       <DataTable
         data={data.customers}
         columns={[
-          { key: 'name', header: 'Customer' },
-          { key: 'type', header: 'Type' },
-          { key: 'policy', header: 'Policy' },
+          { key: 'code', header: 'Mã KH' },
+          { key: 'name', header: 'Tên Khách Hàng' },
+          { key: 'customerType', header: 'Loại khách' },
+          { key: 'creditLimit', header: 'Hạn mức nợ', render: (val) => val?.toLocaleString() ?? 0 },
+          { key: 'paymentTerm', header: 'Điều khoản TT' },
+          {
+            key: 'isActive',
+            header: 'Trạng thái',
+            render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
+          },
           {
             key: 'actions',
             header: t('app.actions'),
@@ -107,7 +128,7 @@ export function CustomersPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Update customer' : 'Create customer'}
+        title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng mới'}
         actions={
           <>
             <button
@@ -128,23 +149,63 @@ export function CustomersPage() {
         }
       >
         <form id="customer-form" className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Mã KH"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))}
+              required
+              placeholder="VD: KH001"
+            />
+            <Select
+              label="Loại khách hàng"
+              value={form.customerType}
+              onChange={(event) => setForm((prev) => ({ ...prev, customerType: event.target.value }))}
+              options={customerTypes}
+            />
+          </div>
+
           <Input
-            label="Customer name"
+            label="Tên khách hàng"
             value={form.name}
             onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             required
           />
-          <Select
-            label="Customer type"
-            value={form.type}
-            onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
-            options={customerTypes}
-          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <NumberInput
+              label="Hạn mức nợ"
+              value={form.creditLimit}
+              onChange={(e) => setForm(prev => ({ ...prev, creditLimit: Number(e.target.value) }))}
+              min={0}
+            />
+            <Select
+              label="Điều khoản thanh toán"
+              value={form.paymentTerm}
+              onChange={(e) => setForm(prev => ({ ...prev, paymentTerm: e.target.value }))}
+              options={paymentTerms}
+            />
+          </div>
+
           <Input
-            label="Policy"
-            value={form.policy}
-            onChange={(event) => setForm((prev) => ({ ...prev, policy: event.target.value }))}
+            label="Liên hệ"
+            value={form.contact}
+            onChange={(event) => setForm((prev) => ({ ...prev, contact: event.target.value }))}
+            placeholder="SĐT, Email..."
           />
+
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              id="cus-active"
+              checked={form.isActive}
+              onChange={(e) => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+            />
+            <label htmlFor="cus-active" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Đang hoạt động
+            </label>
+          </div>
         </form>
       </Modal>
     </div>

@@ -10,10 +10,17 @@ const router = Router();
 
 const baseSchema = z.object({
   type: z.enum(PARTNER_TYPES),
-  name: z.string().min(1),
+  code: z.string().min(1).trim().toUpperCase(),
+  name: z.string().min(1).trim(),
+  taxCode: z.string().optional(),
   contact: z.string().optional(),
   address: z.string().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  isActive: z.boolean().optional(),
+  businessType: z.enum(['Manufacturer', 'Distributor', 'Retailer']).optional(),
+  customerType: z.enum(['Individual', 'Corporate']).optional(),
+  creditLimit: z.number().min(0).optional(),
+  paymentTerm: z.string().optional()
 });
 
 router.use(auth);
