@@ -60,7 +60,13 @@ export const listWarehouseNodes = async (query: ListQuery) => {
       code: node.code,
       parentId: node.parentId?.toString() ?? null,
       barcode: node.barcode,
-      warehouseType: (node as any).warehouseType ?? null
+      warehouseType: (node as any).warehouseType ?? null,
+      address: (node as any).address ?? null,
+      city: (node as any).city ?? null,
+      province: (node as any).province ?? null,
+      lat: (node as any).lat ?? null,
+      lng: (node as any).lng ?? null,
+      notes: (node as any).notes ?? null
     })),
     total,
     { page, limit, sort, skip }
@@ -79,6 +85,13 @@ export const getWarehouseTree = async () => {
       barcode: node.barcode,
       warehouseType: (node as any).warehouseType ?? null,
       parentId: node.parentId?.toString() ?? null,
+      // Pass location info in tree
+      address: (node as any).address,
+      city: (node as any).city,
+      province: (node as any).province,
+      lat: (node as any).lat,
+      lng: (node as any).lng,
+      notes: (node as any).notes,
       children: [] as any[]
     });
   });
@@ -94,7 +107,20 @@ export const getWarehouseTree = async () => {
 };
 
 export const createWarehouseNode = async (
-  payload: { type: WarehouseNodeType; name: string; code: string; parentId?: string; barcode?: string; warehouseType?: string | null },
+  payload: {
+    type: WarehouseNodeType;
+    name: string;
+    code: string;
+    parentId?: string;
+    barcode?: string;
+    warehouseType?: string | null;
+    address?: string;
+    city?: string;
+    province?: string;
+    lat?: number;
+    lng?: number;
+    notes?: string;
+  },
   actorId: string
 ) => {
   const existing = await WarehouseNodeModel.findOne({ code: payload.code }).lean();
@@ -121,7 +147,18 @@ export const createWarehouseNode = async (
 
 export const updateWarehouseNode = async (
   id: string,
-  payload: Partial<{ name: string; barcode: string; parentId: string | null; warehouseType?: string | null }>,
+  payload: Partial<{
+    name: string;
+    barcode: string;
+    parentId: string | null;
+    warehouseType?: string | null;
+    address?: string;
+    city?: string;
+    province?: string;
+    lat?: number;
+    lng?: number;
+    notes?: string;
+  }>,
   actorId: string
 ) => {
   const node = await WarehouseNodeModel.findById(new Types.ObjectId(id));
@@ -134,6 +171,14 @@ export const updateWarehouseNode = async (
   }
   if (payload.name) node.name = payload.name;
   if (typeof payload.barcode !== 'undefined') node.barcode = payload.barcode;
+
+  if (typeof payload.address !== 'undefined') node.address = payload.address;
+  if (typeof payload.city !== 'undefined') node.city = payload.city;
+  if (typeof payload.province !== 'undefined') node.province = payload.province;
+  if (typeof payload.lat !== 'undefined') node.lat = payload.lat;
+  if (typeof payload.lng !== 'undefined') node.lng = payload.lng;
+  if (typeof payload.notes !== 'undefined') node.notes = payload.notes;
+
   if (typeof payload.warehouseType !== 'undefined') {
     // only allow warehouseType on warehouse nodes
     if (node.type === 'warehouse') {
