@@ -69,30 +69,52 @@ function persistState(nextState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
 }
 
-function adjustInventory(nextState, productId, deltaQuantity, note) {
-  const inventoryItem = nextState.inventory.find((item) => item.productId === productId);
-  if (!inventoryItem) {
-    nextState.inventory.push({
-      id: generateId('inv'),
-      productId,
-      quantity: Math.max(deltaQuantity, 0),
-      status: deltaQuantity >= 0 ? 'Available' : 'Pending',
-      note,
-    });
+function adjustInventory(nextState, productId, deltaQuantity, options = {}) {
+  const { locationId, batch, expDate, status, note } = typeof options === 'string' ? { note: options } : options;
+
+  // Try to find exact match if location/batch provided
+  let targetItem = null;
+
+  if (locationId) {
+    targetItem = nextState.inventory.find(i =>
+      i.productId === productId &&
+      i.locationId === locationId &&
+      (i.batch === batch || (!i.batch && !batch))
+    );
+  } else {
+    // Fallback: find any existing inventory for this product to simply increment typical usage
+    targetItem = nextState.inventory.find(i => i.productId === productId);
+  }
+
+  if (targetItem) {
+    const nextQty = targetItem.quantity + deltaQuantity;
+    targetItem.quantity = Math.max(0, nextQty);
+
+    // Update properites if provided
+    if (status) targetItem.status = status;
+    if (note) targetItem.note = note;
+
+    // Auto-update status based on quantity if not strictly managed
+    if (targetItem.quantity === 0 && !status) targetItem.status = 'out_of_stock';
+
     return;
   }
 
-  const updatedQuantity = inventoryItem.quantity + deltaQuantity;
-  inventoryItem.quantity = Math.max(updatedQuantity, 0);
-  if (inventoryItem.quantity === 0) {
-    inventoryItem.status = 'Out of Stock';
-  } else if (inventoryItem.quantity < 5) {
-    inventoryItem.status = 'Low';
-  } else {
-    inventoryItem.status = 'Available';
-  }
-  if (note) {
-    inventoryItem.note = note;
+  // Create new record only if adding stock
+  if (deltaQuantity > 0) {
+    // Find a default location if none provided (e.g. first Bin)
+    const defaultLoc = nextState.warehouseLocations?.find(l => l.type === 'Bin')?.id || 'loc-unknown';
+
+    nextState.inventory.push({
+      id: generateId('inv'),
+      productId,
+      quantity: deltaQuantity,
+      locationId: locationId || defaultLoc,
+      batch: batch || null,
+      expDate: expDate || null,
+      status: status || 'available',
+      note: note || ''
+    });
   }
 }
 

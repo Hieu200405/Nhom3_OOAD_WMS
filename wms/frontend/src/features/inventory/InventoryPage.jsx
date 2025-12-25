@@ -73,6 +73,16 @@ export function InventoryPage() {
             render: (value) => formatNumber(value),
           },
           {
+            key: 'batch',
+            header: 'Batch',
+            render: (value) => value || '—',
+          },
+          {
+            key: 'expDate',
+            header: 'Expiry',
+            render: (value) => value ? new Date(value).toLocaleDateString() : '—',
+          },
+          {
             key: 'status',
             header: 'Status',
             render: (value) => <StatusBadge status={value} />,
