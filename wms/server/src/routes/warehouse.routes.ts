@@ -15,14 +15,26 @@ const createSchema = z.object({
   code: z.string().min(1),
   parentId: objectIdSchema.optional(),
   barcode: z.string().optional(),
-  warehouseType: z.string().optional()
+  warehouseType: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  province: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  notes: z.string().optional()
 });
 
 const updateSchema = z.object({
   name: z.string().optional(),
   barcode: z.string().nullable().optional(),
-  parentId: objectIdSchema.nullable().optional()
-  ,warehouseType: z.string().nullable().optional()
+  parentId: objectIdSchema.nullable().optional(),
+  warehouseType: z.string().nullable().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  province: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  notes: z.string().optional()
 });
 
 router.use(auth);

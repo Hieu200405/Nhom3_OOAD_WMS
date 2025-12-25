@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, MapPin, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMockData } from "../../services/mockDataContext.jsx";
 import { Modal } from "../../components/Modal.jsx";
@@ -30,7 +30,13 @@ const emptyNode = {
   code: "",
   barcode: "",
   warehouseType: "",
-  parentId: null
+  parentId: null,
+  address: "",
+  city: "",
+  province: "",
+  lat: "",
+  lng: "",
+  notes: ""
 };
 
 export function WarehouseStructurePage() {
@@ -43,6 +49,7 @@ export function WarehouseStructurePage() {
 
   const tree = useMemo(() => {
     const map = new Map();
+    // Use data from mock or backend (via mockDataContext wrapper usually)
     data.warehouseLocations.forEach((node) => map.set(node.id, { ...node, children: [] }));
     const roots = [];
     map.forEach((node) => {
@@ -72,13 +79,22 @@ export function WarehouseStructurePage() {
 
   const openEditModal = (node) => {
     setEditing(node);
-    setForm(node);
+    setForm({
+      ...emptyNode,
+      ...node,
+      lat: node.lat || "",
+      lng: node.lng || ""
+    });
     setOpen(true);
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const payload = { ...form };
+    const payload = {
+      ...form,
+      lat: form.lat ? Number(form.lat) : undefined,
+      lng: form.lng ? Number(form.lng) : undefined
+    };
     if (!payload.code) {
       payload.code = generateCode(payload);
     }
@@ -166,14 +182,57 @@ export function WarehouseStructurePage() {
             onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
             options={LEVELS}
           />
-          {form.type === 'Warehouse' ? (
-            <Select
-              label={"Loại kho"}
-              value={form.warehouseType}
-              onChange={(event) => setForm((prev) => ({ ...prev, warehouseType: event.target.value }))}
-              options={WAREHOUSE_TYPES}
-            />
-          ) : null}
+          {form.type === 'Warehouse' && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50 space-y-3">
+              <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Thông tin kho</h4>
+              <Select
+                label={"Loại kho"}
+                value={form.warehouseType}
+                onChange={(event) => setForm((prev) => ({ ...prev, warehouseType: event.target.value }))}
+                options={WAREHOUSE_TYPES}
+              />
+              <Input
+                label="Địa chỉ"
+                value={form.address}
+                onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
+                placeholder="VD: 123 Đường ABC"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Thành phố"
+                  value={form.city}
+                  onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
+                />
+                <Input
+                  label="Tỉnh/Thành"
+                  value={form.province}
+                  onChange={(event) => setForm((prev) => ({ ...prev, province: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Kinh độ (Lng)"
+                  type="number"
+                  step="any"
+                  value={form.lng}
+                  onChange={(event) => setForm((prev) => ({ ...prev, lng: event.target.value }))}
+                />
+                <Input
+                  label="Vĩ độ (Lat)"
+                  type="number"
+                  step="any"
+                  value={form.lat}
+                  onChange={(event) => setForm((prev) => ({ ...prev, lat: event.target.value }))}
+                />
+              </div>
+              <Input
+                label="Ghi chú (Giờ hoạt động...)"
+                value={form.notes}
+                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+              />
+            </div>
+          )}
+
           <Input
             label={t("warehouse.name")}
             value={form.name}
@@ -198,21 +257,47 @@ export function WarehouseStructurePage() {
 }
 
 function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
+  const mapUrl = node.lat && node.lng
+    ? `https://www.google.com/maps?q=${node.lat},${node.lng}`
+    : node.address
+      ? `https://www.google.com/maps?q=${encodeURIComponent(node.address + (node.city ? ', ' + node.city : ''))}`
+      : null;
+
   return (
     <div
       className={`card space-y-4 ${highlightId === node.id ? "border-indigo-500 shadow-lg shadow-indigo-200" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div>
-          <Tag label={node.type} />
-          <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+          <div className="flex items-center gap-2">
+            <Tag label={node.type} />
+            {node.warehouseType && <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">{node.warehouseType}</span>}
+          </div>
+          <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             {node.name}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {node.code} {node.barcode ? `| ${node.barcode}` : ""}
           </p>
+          {(node.address || node.city) && (
+            <div className="mt-1 flex items-start gap-1 text-xs text-slate-500">
+              <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+              <span>{node.address}{node.city ? `, ${node.city}` : ''}</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
+          {mapUrl && (
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/30"
+              title="Mở bản đồ"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
           <button
             type="button"
             onClick={() => onEdit(node)}

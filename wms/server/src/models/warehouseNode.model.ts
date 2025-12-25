@@ -8,11 +8,17 @@ export interface WarehouseNode {
   parentId?: Types.ObjectId | null;
   barcode?: string | null;
   warehouseType?: string | null;
+  address?: string;
+  city?: string;
+  province?: string;
+  lat?: number;
+  lng?: number;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface WarehouseNodeDocument extends WarehouseNode, Document {}
+export interface WarehouseNodeDocument extends WarehouseNode, Document { }
 
 const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
   {
@@ -21,7 +27,14 @@ const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
     code: { type: String, required: true, unique: true, trim: true },
     parentId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', default: null },
     barcode: { type: String, trim: true },
-    warehouseType: { type: String, trim: true, default: null }
+    warehouseType: { type: String, trim: true, default: null },
+    // Location/Map info (mostly for Warehouse type)
+    address: { type: String, trim: true },
+    city: { type: String, trim: true },
+    province: { type: String, trim: true },
+    lat: { type: Number },
+    lng: { type: Number },
+    notes: { type: String, trim: true }
   },
   { timestamps: true }
 );
