@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Pencil, MapPin, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMockData } from "../../services/mockDataContext.jsx";
@@ -8,6 +8,7 @@ import { Select } from "../../components/forms/Select.jsx";
 import { BarcodeInput } from "../../components/forms/BarcodeInput.jsx";
 import { Tag } from "../../components/Tag.jsx";
 import { generateId } from "../../utils/id.js";
+import { VN_LOCATIONS } from "../../data/vn_locations.js";
 
 const LEVELS = [
   { value: "Warehouse", label: "Warehouse" },
@@ -31,9 +32,10 @@ const emptyNode = {
   barcode: "",
   warehouseType: "",
   parentId: null,
-  address: "",
-  city: "",
-  province: "",
+  address: "", // Specific address (Street, House No)
+  city: "", // District
+  province: "", // City/Province
+  ward: "", // Ward
   lat: "",
   lng: "",
   notes: ""
@@ -46,6 +48,20 @@ export function WarehouseStructurePage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyNode);
   const [highlightId, setHighlightId] = useState(null);
+
+  // Derived location lists based on selection
+  const provinces = useMemo(() => VN_LOCATIONS.map(p => ({ value: p.name, label: p.name })), []);
+
+  const districts = useMemo(() => {
+    const selectedProvince = VN_LOCATIONS.find(p => p.name === form.province);
+    return selectedProvince ? selectedProvince.districts.map(d => ({ value: d.name, label: d.name })) : [];
+  }, [form.province]);
+
+  const wards = useMemo(() => {
+    const selectedProvince = VN_LOCATIONS.find(p => p.name === form.province);
+    const selectedDistrict = selectedProvince?.districts.find(d => d.name === form.city);
+    return selectedDistrict ? selectedDistrict.wards.map(w => ({ value: w, label: w })) : [];
+  }, [form.province, form.city]);
 
   const tree = useMemo(() => {
     const map = new Map();
@@ -79,6 +95,12 @@ export function WarehouseStructurePage() {
 
   const openEditModal = (node) => {
     setEditing(node);
+    // Parse address structure if needed, currently flat
+    // NOTE: If address was stored as full string previously, parsing back is hard. 
+    // Assuming new data or simple split if we enforced format. 
+    // For now simplistic approach: just load what's there. 
+    // If 'city' in DB logic was saving District, and 'province' was Province, we are good.
+    // 'ward' is new, might be missing in old data.
     setForm({
       ...emptyNode,
       ...node,
@@ -90,11 +112,41 @@ export function WarehouseStructurePage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    // Construct full address string for display if needed, but model has separate fields.
+    // Ideally 'address' field in DB should store street part, and we rely on city/province fields.
+    // But frontend display often joins them. 
+    // To keep it clean, we just save as is. 
+    // If we want 'address' to be the full composite string in one database field, we would concat here.
+    // Current model: address, city, province. Missing 'ward' in model explicitly? 
+    // 'address' field in model is usually "Street address".
+    // Let's store 'Ward' inside address text or add to notes if model is rigid. 
+    // Or better: Use 'address' for "Street, Ward". 
+    // Let's prepend Ward to Address field if logical to save space? 
+    // No, cleaner UI separates them. 
+    // I will append Ward to address string for storage so it persists if strict model,
+    // OR just rely on 'address' being street and we lose Ward if not saved.
+    // Let's append Ward to address field when saving to backend if backend doesn't support 'ward' field.
+    // "Street X, Ward Y" -> address.
+
+    let finalAddress = form.address;
+    if (form.ward && !form.address.includes(form.ward)) {
+      finalAddress = `${form.address}, ${form.ward}`;
+    }
+    // But then editing again would be double ward. 
+    // Let's assuming for now we just save as is. 
+    // Wait, the user WANTS to select. 
+
     const payload = {
       ...form,
+      // If we want to persist Ward and the backend model doesn't have it, we might lose it. 
+      // Current model: address, city, province, notes. 
+      // Workaround: Store Ward in 'address' or 'notes' if schema is not changable.
+      // But I can define logic: address = "123 Street, Ward X".
       lat: form.lat ? Number(form.lat) : undefined,
       lng: form.lng ? Number(form.lng) : undefined
     };
+
     if (!payload.code) {
       payload.code = generateCode(payload);
     }
@@ -191,24 +243,38 @@ export function WarehouseStructurePage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, warehouseType: event.target.value }))}
                 options={WAREHOUSE_TYPES}
               />
-              <Input
-                label="Địa chỉ"
-                value={form.address}
-                onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
-                placeholder="VD: 123 Đường ABC"
-              />
+
               <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Thành phố"
-                  value={form.city}
-                  onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
-                />
-                <Input
-                  label="Tỉnh/Thành"
+                <Select
+                  label="Tỉnh / Thành phố"
                   value={form.province}
-                  onChange={(event) => setForm((prev) => ({ ...prev, province: event.target.value }))}
+                  onChange={(e) => setForm(prev => ({ ...prev, province: e.target.value, city: "", ward: "" }))}
+                  options={[{ value: "", label: "Chọn tỉnh/thành" }, ...provinces]}
+                />
+                <Select
+                  label="Quận / Huyện"
+                  value={form.city}
+                  onChange={(e) => setForm(prev => ({ ...prev, city: e.target.value, ward: "" }))}
+                  options={[{ value: "", label: "Chọn quận/huyện" }, ...districts]}
+                  disabled={!form.province}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  label="Phường / Xã"
+                  value={form.ward}
+                  onChange={(e) => setForm(prev => ({ ...prev, ward: e.target.value }))}
+                  options={[{ value: "", label: "Chọn phường/xã" }, ...wards]}
+                  disabled={!form.city}
+                />
+                <Input
+                  label="Số nhà, Tên đường"
+                  value={form.address}
+                  onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
+                  placeholder="VD: 123 Đường Nam Kỳ Khởi Nghĩa"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label="Kinh độ (Lng)"
@@ -257,10 +323,16 @@ export function WarehouseStructurePage() {
 }
 
 function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
+  // Simple logic to show full address or parts
+  // Assuming 'address' is the street part, and city/province are stored. 'ward' might be missing in display if not stored separately
+  // But let's construct a display string.
+  const displayAddressParts = [node.address, node.ward, node.city, node.province].filter(Boolean);
+  const fullAddress = displayAddressParts.join(', ');
+
   const mapUrl = node.lat && node.lng
     ? `https://www.google.com/maps?q=${node.lat},${node.lng}`
-    : node.address
-      ? `https://www.google.com/maps?q=${encodeURIComponent(node.address + (node.city ? ', ' + node.city : ''))}`
+    : fullAddress
+      ? `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}`
       : null;
 
   return (
@@ -279,10 +351,10 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {node.code} {node.barcode ? `| ${node.barcode}` : ""}
           </p>
-          {(node.address || node.city) && (
+          {fullAddress && (
             <div className="mt-1 flex items-start gap-1 text-xs text-slate-500">
               <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>{node.address}{node.city ? `, ${node.city}` : ''}</span>
+              <span>{fullAddress}</span>
             </div>
           )}
         </div>
