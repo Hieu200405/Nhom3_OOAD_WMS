@@ -25,8 +25,10 @@ const validateParentChain = async (
   }
   const parentRank = typeRank.get(parent.type as WarehouseNodeType) ?? 0;
   const currentRank = typeRank.get(type) ?? 0;
-  if (currentRank <= parentRank) {
-    throw badRequest('Invalid parent hierarchy');
+
+  // Strict hierarchy check: Child must be exactly one level below Parent
+  if (currentRank !== parentRank + 1) {
+    throw badRequest(`Invalid hierarchy: ${type} cannot be a direct child of ${parent.type}. Expected chain: Warehouse -> Zone -> Row -> Rack -> Bin`);
   }
   return parent;
 };
@@ -131,6 +133,24 @@ export const createWarehouseNode = async (
   if (payload.type === 'warehouse' && !payload.warehouseType) {
     throw badRequest('warehouseType is required for warehouse nodes');
   }
+  if (payload.type !== 'warehouse' && payload.warehouseType) {
+    // Clean up
+    delete (payload as any).warehouseType;
+  }
+
+  // Auto-generate barcode if missing, using hierarchical pattern if parent exists
+  if (!payload.barcode) {
+    if (parent) {
+      const parentPrefix = parent.barcode || parent.code;
+      // Simple concatenation: PARENT-CHILD
+      // Use clean code part only?
+      // Let's us code.
+      (payload as any).barcode = `${parentPrefix}-${payload.code}`;
+    } else {
+      (payload as any).barcode = payload.code;
+    }
+  }
+
   const node = await WarehouseNodeModel.create({
     ...payload,
     parentId: parent ? (parent._id as Types.ObjectId) : null

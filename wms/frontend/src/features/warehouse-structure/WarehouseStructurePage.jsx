@@ -20,6 +20,8 @@ const LEVELS = [
 
 const WAREHOUSE_TYPES = [
   { value: 'Main', label: 'Kho tổng' },
+  { value: 'Branch', label: 'Chi nhánh' },
+  { value: 'Distribution', label: 'Trung tâm phân phối' },
   { value: 'Cold', label: 'Kho lạnh' },
   { value: 'Chemical', label: 'Kho hóa chất' },
   { value: 'HighValue', label: 'Kho giá trị cao' }
