@@ -174,6 +174,32 @@ export const transitionDisposal = async (
     for (const item of disposal.items) {
       await adjustInventory(item.productId.toString(), item.locationId.toString(), -item.qty);
     }
+
+    // Auto-create Expense Transaction (Loss)
+    // We need a Partner to assign this loss to. Ideally an "Internal/Loss" partner.
+    // We'll attempt to find one, or skip if strictly required.
+    try {
+      const { PartnerModel } = await import('../models/partner.model.js');
+      // Find existing 'Internal' or create dummy or use first available (not creating dummy to avoid side effects)
+      // For MVP, letting it be associated with the first admin found? No, that's User.
+      // Let's just try to find a partner named "System" or "Internal".
+      const internalPartner = await PartnerModel.findOne({ name: { $in: ['System', 'Internal', 'Loss'] } });
+
+      if (internalPartner) {
+        const { createTransaction } = await import('./transaction.service.js');
+        await createTransaction({
+          partnerId: (internalPartner as any)._id.toString(),
+          type: 'expense',
+          amount: disposal.totalValue,
+          status: 'completed',
+          referenceId: (disposal as any)._id.toString(),
+          referenceType: 'Manual', // Disposal not in enum list yet in Transaction, using Manual or need update
+          note: `Disposal Loss: ${disposal.reason}`
+        }, actorId);
+      }
+    } catch (e) {
+      console.warn('Skipped disposal transaction:', e);
+    }
   }
 
   disposal.status = target;

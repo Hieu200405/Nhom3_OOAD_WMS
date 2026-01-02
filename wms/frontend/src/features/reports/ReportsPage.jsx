@@ -41,19 +41,20 @@ export function ReportsPage() {
 
     const downloadPdf = async () => {
         try {
-            const res = await apiClient(`/reports/${activeTab}/pdf`, {
+            const blob = await apiClient(`/reports/${activeTab}/pdf`, {
                 headers: { Accept: 'application/pdf' },
+                responseType: 'blob'
             });
-            // The apiClient might parse JSON by default. 
-            // If response is blob, we handle it. 
-            // If apiClient doesn't support blob response natively, we might need to bypass it or handle raw fetch.
-            // But assuming apiClient handles generic fetch.
-            // Actually standard apiClient usually does res.json(). 
-            // If the backend returns binary, using standard apiClient might fail if it tries to parse JSON.
-            // Let's assume for now we might fail PDF download or need a raw fetch.
-            // I'll skip complex PDF download implementation details here and focus on UI data.
-            toast.success('Download started (mock)');
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `report-${activeTab}-${new Date().toISOString().slice(0, 10)}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success('Download completed');
         } catch (e) {
+            console.error(e);
             toast.error('Download failed');
         }
     };

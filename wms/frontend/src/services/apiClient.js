@@ -62,6 +62,10 @@ export async function apiClient(path, options = {}) {
     throw new Error(message || 'Request failed');
   }
 
+  if (options.responseType === 'blob') {
+    return response.blob();
+  }
+
   const contentType = response.headers.get('content-type');
   if (contentType?.includes('application/json')) {
     return response.json();

@@ -177,6 +177,23 @@ export const transitionReceipt = async (
       const locationId = line.locationId?.toString() ?? (await resolveDefaultBin());
       await adjustInventory(line.productId.toString(), locationId, line.qty);
     }
+
+    // Auto-create Payment/Expense Transaction
+    // Calculate total amount
+    const totalAmount = receipt.lines.reduce((sum, line) => sum + (line.qty * line.priceIn), 0);
+
+    // We assume 'completed' means we have incurred this expense. 
+    // Ideally user decides if it's 'paid' or 'pending', but for MVP we log it as an expense.
+    const { createTransaction } = await import('./transaction.service.js');
+    await createTransaction({
+      partnerId: receipt.supplierId.toString(),
+      type: 'expense',
+      amount: totalAmount,
+      status: 'completed', // or pending payment
+      referenceId: (receipt as any)._id.toString(),
+      referenceType: 'Receipt',
+      note: `Auto-generated expense for Receipt ${receipt.code}`
+    }, actorId);
   }
 
   receipt.status = target;

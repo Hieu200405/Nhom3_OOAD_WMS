@@ -9,7 +9,8 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ username: 'admin', password: 'admin123' });
+  // Using seeded admin credentials by default for development convenience
+  const [form, setForm] = useState({ username: 'admin@wms.local', password: '123456' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

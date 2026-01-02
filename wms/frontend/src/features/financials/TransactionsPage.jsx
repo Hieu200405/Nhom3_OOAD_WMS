@@ -1,12 +1,73 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-// Refactored to remove mock data usage and unused imports
+import { apiClient } from '../../services/apiClient.js';
+import { DataTable } from '../../components/DataTable.jsx';
+import { formatCurrency, formatDate } from '../../utils/formatters.js';
+import { StatusBadge } from '../../components/StatusBadge.jsx';
+import toast from 'react-hot-toast';
 
 export function TransactionsPage() {
     const { t } = useTranslation();
-    const [transactions] = useState([]); // Empty state
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await apiClient('/transactions');
+            setTransactions(res.data || []);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load transactions');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const columns = [
+        {
+            key: 'type',
+            header: 'Loại',
+            render: (value) => (
+                <div className="flex items-center gap-2">
+                    {['revenue', 'income'].includes(value) ? (
+                        <div className="p-1 rounded bg-emerald-100 text-emerald-600">
+                            <ArrowDownLeft size={16} />
+                        </div>
+                    ) : (
+                        <div className="p-1 rounded bg-red-100 text-red-600">
+                            <ArrowUpRight size={16} />
+                        </div>
+                    )}
+                    <span className="capitalize">{value === 'revenue' ? 'Thu (Revenue)' : value === 'expense' ? 'Chi (Expense)' : value}</span>
+                </div>
+            )
+        },
+        {
+            key: 'amount', header: 'Số tiền', render: (val, row) => (
+                <span className={['revenue', 'income'].includes(row.type) ? 'text-emerald-600 font-medium' : 'text-red-600 font-medium'}>
+                    {['revenue', 'income'].includes(row.type) ? '+' : '-'}{formatCurrency(val)}
+                </span>
+            )
+        },
+        { key: 'partnerId', header: 'Đối tác', render: (p) => p?.name || '---' }, // Backend populates partner
+        {
+            key: 'referenceType', header: 'Tham chiếu', render: (val, row) => (
+                <div className="flex flex-col">
+                    <span className="text-xs font-semibold">{val}</span>
+                    <span className="text-xs text-slate-500">{row.referenceId}</span>
+                </div>
+            )
+        },
+        { key: 'date', header: 'Ngày', render: (val) => formatDate(val) },
+        { key: 'status', header: 'Trạng thái', render: (val) => <StatusBadge status={val} /> },
+        { key: 'note', header: 'Ghi chú', render: (val) => <span className="text-xs text-slate-500 truncate max-w-[200px] inline-block" title={val}>{val}</span> }
+    ];
 
     return (
         <div className="space-y-6">
@@ -17,26 +78,23 @@ export function TransactionsPage() {
                     </h1>
                     <p className="text-sm text-slate-500">{t('financials.transactions')}</p>
                 </div>
+                {/* 
                 <button
                     type="button"
-                    disabled
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-400 px-4 py-2 text-sm font-semibold text-white shadow-sm cursor-not-allowed"
+                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
                 >
                     <Plus className="h-4 w-4" />
-                    {t('financials.createPayment')} (Pending API)
+                    {t('financials.createPayment')}
                 </button>
+                */}
             </div>
 
-            <div className="rounded-2xl bg-white p-10 text-center shadow-sm dark:bg-slate-900 border border-dashed border-slate-300">
-                <p className="text-slate-500">
-                    This module is being migrated to the real backend API.
-                    <br />
-                    Financial data will be available once the endpoints are ready.
-                </p>
-                <div className="mt-4 text-xs text-slate-400">
-                    0 transactions loaded
-                </div>
-            </div>
+            <DataTable
+                data={transactions}
+                columns={columns}
+                isLoading={loading}
+                emptyMessage="Không có giao dịch tải chính nào."
+            />
         </div>
     );
 }

@@ -70,9 +70,42 @@ export const approveAdjustment = async (id: string, actorId: string) => {
   if (adjustment.approvedBy) {
     throw badRequest('Adjustment already approved');
   }
+  let totalValueDelta = 0;
+  const { ProductModel } = await import('../models/product.model.js');
+
   for (const line of adjustment.lines) {
     await adjustInventory(line.productId.toString(), line.locationId.toString(), line.delta);
+
+    // Calculate Value
+    const product = await ProductModel.findById(line.productId);
+    if (product) {
+      totalValueDelta += line.delta * product.priceIn;
+    }
   }
+
+  // Financial Transaction
+  if (totalValueDelta !== 0) {
+    try {
+      const { PartnerModel } = await import('../models/partner.model.js');
+      const internalPartner = await PartnerModel.findOne({ name: { $in: ['System', 'Internal', 'Inventory'] } });
+
+      if (internalPartner) {
+        const { createTransaction } = await import('./transaction.service.js');
+        await createTransaction({
+          partnerId: (internalPartner as any)._id.toString(),
+          type: totalValueDelta > 0 ? 'income' : 'expense', // 'income' for gain is better than revenue
+          amount: Math.abs(totalValueDelta),
+          status: 'completed',
+          referenceId: (adjustment as any)._id.toString(),
+          referenceType: 'Manual',
+          note: `Inventory Adjustment ${adjustment.code}: ${adjustment.reason}`
+        }, actorId);
+      }
+    } catch (e) {
+      console.warn('Skipped adjustment transaction', e);
+    }
+  }
+
   adjustment.approvedBy = new Types.ObjectId(actorId);
   adjustment.approvedAt = new Date();
   await adjustment.save();

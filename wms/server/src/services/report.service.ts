@@ -10,6 +10,8 @@ import { DeliveryModel } from '../models/delivery.model.js';
 import { StocktakeModel } from '../models/stocktake.model.js';
 import { AdjustmentModel } from '../models/adjustment.model.js';
 import { ReturnModel } from '../models/return.model.js';
+import { IncidentModel } from '../models/incident.model.js';
+import { FinancialTransactionModel } from '../models/transaction.model.js';
 
 const toObject = (doc: unknown) => JSON.parse(JSON.stringify(doc));
 
@@ -23,15 +25,9 @@ export const getDashboardStats = async () => {
     totalInventoryValueResult
   ] = await Promise.all([
     ProductModel.countDocuments(),
-    ReceiptModel.countDocuments({ status: { $ne: 'Completed' } }),
-    DeliveryModel.countDocuments({ status: { $ne: 'Completed' } }),
-    // Assuming 'open' status for incidents, adjust if needed based on IncidentModel/Schema (which I should check)
-    // Checking schema via constants (INCIDENT_STATUS = ['open', 'inProgress', 'resolved'])
-    // Let's assume 'resolved' is the completed state.
-    // Ideally I'd check the IncidentModel but let's be safe and assume non-resolved.
-    // Wait, let's just count all for now or check if IncidentModel is imported. It is not imported in the original file I viewed?
-    // Ah, I don't see IncidentModel in the imports of report.service.ts. I need to add it.
-    Promise.resolve(0), // Placeholder until IncidentModel is added
+    ReceiptModel.countDocuments({ status: { $ne: 'completed' } }),
+    DeliveryModel.countDocuments({ status: { $ne: 'completed' } }),
+    IncidentModel.countDocuments({ status: { $ne: 'resolved' } }),
     InventoryModel.aggregate([
       {
         $lookup: {
@@ -57,29 +53,20 @@ export const getDashboardStats = async () => {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const revenueData = await DeliveryModel.aggregate([
-    { $match: { date: { $gte: sixMonthsAgo }, status: 'Delivered' } }, // Assuming 'Delivered' or 'Completed'
+  // Use FinancialTransactionModel for accurate financial data
+  const ftData = await FinancialTransactionModel.aggregate([
+    { $match: { date: { $gte: sixMonthsAgo } } },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
-        income: { $sum: '$total' }
+        _id: {
+          month: { $dateToString: { format: '%Y-%m', date: '$date' } },
+          type: '$type'
+        },
+        total: { $sum: '$amount' }
       }
-    },
-    { $sort: { _id: 1 } }
+    }
   ]);
 
-  const expenseData = await ReceiptModel.aggregate([
-    { $match: { date: { $gte: sixMonthsAgo }, status: 'Completed' } },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
-        expense: { $sum: '$total' }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ]);
-
-  // Merge revenue and expense
   const chartDataMap = new Map<string, { name: string; income: number; expense: number }>();
 
   // Initialize map with last 6 months to ensure continuity
@@ -90,15 +77,13 @@ export const getDashboardStats = async () => {
     chartDataMap.set(key, { name: key, income: 0, expense: 0 });
   }
 
-  revenueData.forEach((item: any) => {
-    if (chartDataMap.has(item._id)) {
-      chartDataMap.get(item._id)!.income = item.income;
-    }
-  });
-
-  expenseData.forEach((item: any) => {
-    if (chartDataMap.has(item._id)) {
-      chartDataMap.get(item._id)!.expense = item.expense;
+  // Fill data
+  ftData.forEach((item: any) => {
+    const key = item._id.month;
+    if (chartDataMap.has(key)) {
+      const entry = chartDataMap.get(key)!;
+      if (item._id.type === 'revenue' || item._id.type === 'income') entry.income += item.total;
+      if (item._id.type === 'expense' || item._id.type === 'payment') entry.expense += item.total;
     }
   });
 
