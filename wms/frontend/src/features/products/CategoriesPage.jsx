@@ -6,6 +6,7 @@ import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const emptyCategory = {
   code: '',
@@ -90,19 +91,19 @@ export function CategoriesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          {t('categories.title')}
-        </h1>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-        >
-          <Plus className="h-4 w-4" />
-          {t('categories.create')}
-        </button>
-      </div>
+      <PageHeader
+        title={t('categories.title')}
+        actions={
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            {t('categories.create')}
+          </button>
+        }
+      />
 
       <DataTable
         data={categories}

@@ -10,6 +10,7 @@ import { Select } from '../../components/forms/Select.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const emptyProduct = {
   sku: '',
@@ -29,7 +30,7 @@ const emptySupplierProduct = {
   priceIn: 0,
   currency: 'VND',
   isPreferred: false,
-  sku: '' // Supplier's SKU
+  sku: ''
 };
 
 export function ProductsPage() {
@@ -39,24 +40,23 @@ export function ProductsPage() {
   // Data States
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [suppliers, setSuppliers] = useState([]); // For dropdown
+  const [suppliers, setSuppliers] = useState([]);
 
   // UI States
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // Product being edited
-  const [activeTab, setActiveTab] = useState('general'); // general | suppliers
+  const [editing, setEditing] = useState(null);
+  const [activeTab, setActiveTab] = useState('general');
   const [form, setForm] = useState(emptyProduct);
 
   // Supplier Tab States
   const [supplierProducts, setSupplierProducts] = useState([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
-  const [supplierView, setSupplierView] = useState('list'); // list | add | edit
+  const [supplierView, setSupplierView] = useState('list');
   const [supplierForm, setSupplierForm] = useState(emptySupplierProduct);
-  const [editingSP, setEditingSP] = useState(null); // SupplierProduct being edited
+  const [editingSP, setEditingSP] = useState(null);
 
-  // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -79,7 +79,6 @@ export function ProductsPage() {
     fetchData();
   }, []);
 
-  // Fetch Supplier Products when tab is active and product is editing
   const fetchSupplierProducts = useCallback(async (productId) => {
     setLoadingSuppliers(true);
     try {
@@ -161,8 +160,6 @@ export function ProductsPage() {
     }
   };
 
-  // --- Supplier Product Handlers ---
-
   const handleSaveSupplier = async (e) => {
     e.preventDefault();
     if (!editing) return;
@@ -211,17 +208,16 @@ export function ProductsPage() {
 
   const startEditSupplier = (sp) => {
     setSupplierForm({
-      supplierId: sp.supplierId?.id || sp.supplierId, // Handle populated vs raw
+      supplierId: sp.supplierId?.id || sp.supplierId,
       priceIn: sp.priceIn,
       currency: sp.currency,
       isPreferred: sp.isPreferred,
       sku: sp.sku || ''
     });
     setEditingSP(sp);
-    setSupplierView('add'); // Re-use add form
+    setSupplierView('add');
   };
 
-  // --- Image Upload ---
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -251,32 +247,28 @@ export function ProductsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t('products.title')}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {t('products.categoryFilter')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            placeholder="Tất cả danh mục"
-            options={[{ value: '', label: 'Tất cả' }, ...categoryOptions]}
-          />
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-          >
-            <Plus className="h-4 w-4" />
-            {t('products.create')}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('products.title')}
+        description={t('products.categoryFilter')}
+        actions={
+          <div className="flex items-center gap-3">
+            <Select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              placeholder="Tất cả danh mục"
+              options={[{ value: '', label: 'Tất cả' }, ...categoryOptions]}
+            />
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            >
+              <Plus className="h-4 w-4" />
+              {t('products.create')}
+            </button>
+          </div>
+        }
+      />
 
       <DataTable
         data={filteredProducts}
@@ -537,7 +529,6 @@ export function ProductsPage() {
                 )}
               </>
             ) : (
-              // Add/Edit Supplier Form
               <form onSubmit={handleSaveSupplier} className="space-y-4 bg-slate-50 p-4 rounded-lg dark:bg-slate-800/50">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">{editingSP ? 'Cập nhật NCC' : 'Thêm NCC cho sản phẩm'}</h3>

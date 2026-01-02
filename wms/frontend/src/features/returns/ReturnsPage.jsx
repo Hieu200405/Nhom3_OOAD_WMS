@@ -12,6 +12,7 @@ import { apiClient } from '../../services/apiClient.js';
 import { formatDate } from '../../utils/formatters.js';
 import { Roles } from '../../utils/constants.js';
 import { RoleGuard } from '../../components/RoleGuard.jsx';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const defaultForm = {
   code: '',
@@ -137,24 +138,20 @@ export function ReturnsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t('returns.title')}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Capture customer returns and decide whether to restock or dispose.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-        >
-          <Plus className="h-4 w-4" />
-          {t('returns.create')}
-        </button>
-      </div>
+      <PageHeader
+        title={t('returns.title')}
+        description="Capture customer returns and decide whether to restock or dispose."
+        actions={
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            {t('returns.create')}
+          </button>
+        }
+      />
 
       <DataTable
         data={returns}

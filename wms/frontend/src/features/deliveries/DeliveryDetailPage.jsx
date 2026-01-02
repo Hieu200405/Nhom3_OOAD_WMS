@@ -1,10 +1,11 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 import { apiClient } from '../../services/apiClient.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
+import { InfoCard } from '../../components/InfoCard.jsx';
 
 export function DeliveryDetailPage() {
   const { id } = useParams();
@@ -38,7 +39,7 @@ export function DeliveryDetailPage() {
     fetchData();
   }, [id]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   if (!delivery) {
     return (
@@ -49,7 +50,7 @@ export function DeliveryDetailPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back
+          {t('app.back')}
         </button>
         <p className="text-sm text-rose-500">Delivery not found.</p>
       </div>
@@ -67,27 +68,27 @@ export function DeliveryDetailPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back
+          {t('app.back')}
         </button>
         <StatusBadge status={delivery.status} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <InfoCard title="Delivery ID" value={delivery.code || delivery.id} />
+        <InfoCard title="Code" value={delivery.code || delivery.id} />
         <InfoCard title={t('deliveries.date')} value={formatDate(delivery.date)} />
-        <InfoCard title="Ngày giao dự kiến" value={delivery.expectedDate ? formatDate(delivery.expectedDate) : '-'} />
+        <InfoCard title="Expected Date" value={delivery.expectedDate ? formatDate(delivery.expectedDate) : '-'} />
         <InfoCard title={t('deliveries.customer')} value={customerName} />
         <InfoCard title={t('app.total')} value={formatCurrency(delivery.total)} />
       </div>
 
-      <div className="card space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           {t('deliveries.deliveryNote')}
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.notes || delivery.note || '—'}</p>
       </div>
 
-      <div className="card space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           {t('app.lineItems')}
         </h2>
@@ -122,15 +123,6 @@ export function DeliveryDetailPage() {
           </table>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoCard({ title, value }) {
-  return (
-    <div className="card">
-      <p className="text-xs text-slate-500 dark:text-slate-400">{title}</p>
-      <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">{value}</p>
     </div>
   );
 }

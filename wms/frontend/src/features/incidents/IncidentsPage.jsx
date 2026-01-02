@@ -8,9 +8,9 @@ import { Input } from '../../components/forms/Input.jsx';
 import { NumberInput } from '../../components/forms/NumberInput.jsx';
 import { Select } from '../../components/forms/Select.jsx';
 import { apiClient } from '../../services/apiClient.js';
-import { generateId } from '../../utils/id.js'; // Still useful for temp IDs in form
+import { generateId } from '../../utils/id.js';
 import { formatDate } from '../../utils/formatters.js';
-import { IncidentStatus } from '../../utils/constants.js';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const emptyLine = {
   productId: '',
@@ -19,8 +19,7 @@ const emptyLine = {
 
 const createEmptyIncident = () => ({
   type: '',
-  // status: IncidentStatus.OPEN, // Backend defaults
-  refType: 'receipt', // Default
+  refType: 'receipt',
   refId: '',
   note: '',
   action: '',
@@ -80,9 +79,6 @@ export function IncidentsPage() {
     { value: 'refund', label: t('incidents.actions.refund') },
   ];
 
-  // Status mapping if needed, backend likely returns same strings
-  // const statusOptions = [ ... ]; // We display status, not create with it usually
-
   const refTypeOptions = [
     { value: 'receipt', label: t('incidents.refTypes.receipt') },
     { value: 'delivery', label: t('incidents.refTypes.delivery') },
@@ -91,30 +87,10 @@ export function IncidentsPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Prepare payload
     const payload = {
       type: form.type,
       refType: form.refType,
-      refId: form.refId, // Should be an ID object? Schema says objectIdSchema.
-      // The UI input is text. If existing system uses IDs, user should likely select from list or input valid ID.
-      // For now assuming user inputs a valid MongoDB ID or the backend allows string reference? 
-      // Schema says `refId: objectIdSchema`. 
-      // If user enters "PN-123", valid ObjectId? No.
-      // Real app would select from Receipt/Delivery list.
-      // Since I don't have that selector here, I'll assume for now user inputs a valid ID or I need to handle it.
-      // Wait, `objectIdSchema` validates strictly hex 24 chars.
-      // If user types a code, it will fail.
-      // Mock data used simple strings.
-      // I should probably allow searching receipts/deliveries.
-      // To fix this quickly without building search: 
-      // 1. Fetch all receipts/deliveries to select? Too heavy.
-      // 2. Just let it fail if invalid ID. 
-      // 3. Or maybe backend allows string? Route says `objectIdSchema`.
-      // Let's assume user pastes an ID or I should provide a selector.
-      // I'll leave it as Input but maybe warn user to paste ID.
-      // Or better: Load limited list of recent receipts/deliveries?
-      // Let's stick to Input but assume it requires ID. 
-
+      refId: form.refId,
       lines: form.lines.map(l => ({
         productId: l.productId,
         quantity: Number(l.quantity)
@@ -150,24 +126,20 @@ export function IncidentsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t('incidents.title')}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Log shortages, damages, late deliveries or customer refusals and capture the follow-up action.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-        >
-          <Plus className="h-4 w-4" />
-          {t('incidents.create')}
-        </button>
-      </div>
+      <PageHeader
+        title={t('incidents.title')}
+        description="Log shortages, damages, late deliveries or customer refusals and capture the follow-up action."
+        actions={
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            {t('incidents.create')}
+          </button>
+        }
+      />
 
       <DataTable
         data={incidents}
@@ -184,7 +156,7 @@ export function IncidentsPage() {
             render: (value) => (value ? t(`incidents.statusValues.${value}`, value) : '-'),
           },
           { key: 'refType', header: t('incidents.refType') },
-          { key: 'refId', header: t('incidents.refId') }, // Shows ID. ideally show code.
+          { key: 'refId', header: t('incidents.refId') },
           { key: 'note', header: t('incidents.note') },
           {
             key: 'action',
@@ -197,7 +169,7 @@ export function IncidentsPage() {
             render: (value) => value?.length ?? 0,
           },
           {
-            key: 'createdAt', // Backend has createdAt/updatedAt
+            key: 'createdAt',
             header: 'Date',
             render: (value) => formatDate(value),
           },
