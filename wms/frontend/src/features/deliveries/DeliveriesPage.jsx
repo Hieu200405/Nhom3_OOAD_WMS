@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Plus } from 'lucide-react';
@@ -7,26 +7,26 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Select } from '../../components/forms/Select.jsx';
 import { DatePicker } from '../../components/forms/DatePicker.jsx';
-import { LineItemsEditor } from '../../components/LineItemsEditor.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { DeliveryStatus, Roles } from '../../utils/constants.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
-import { generateId } from '../../utils/id.js';
 import { RoleGuard } from '../../components/RoleGuard.jsx';
 import { useAuth } from '../../app/auth-context.jsx';
+import { Input } from '../../components/forms/Input.jsx';
+import { NumberInput } from '../../components/forms/NumberInput.jsx';
 
 const defaultForm = {
+  code: '',
   customerId: '',
   date: new Date().toISOString().slice(0, 10),
-  expectedDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), // Default to tomorrow
   note: '',
   lines: [
     {
-      id: generateId('line'),
       productId: '',
       quantity: 1,
       price: 0,
+      locationId: ''
     },
   ],
 };
@@ -35,24 +35,74 @@ export function DeliveriesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data, actions } = useMockData();
+
+  const [loading, setLoading] = useState(false);
+  const [deliveries, setDeliveries] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [locations, setLocations] = useState([]);
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
-  const customers = useMemo(
-    () => data.customers.map((customer) => ({ value: customer.id, label: customer.name })),
-    [data.customers],
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [delRes, custRes, prodRes, invRes, locRes] = await Promise.all([
+        apiClient('/deliveries'),
+        apiClient('/partners', { params: { type: 'customer' } }),
+        apiClient('/products'),
+        apiClient('/inventory'),
+        apiClient('/warehouse')
+      ]);
+      setDeliveries(delRes.data || []);
+      setCustomers(custRes.data || []);
+      setProducts(prodRes.data || []);
+      setInventory(invRes.data || []);
+      setLocations(locRes.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load deliveries data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const customerOptions = useMemo(
+    () => customers.map((c) => ({ value: c.id, label: c.name })),
+    [customers],
   );
 
-  const products = data.products;
+  const productOptions = useMemo(
+    () => products.map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` })),
+    [products]
+  );
 
-  const inventoryMap = useMemo(() => {
+  const locationMap = useMemo(() => {
     const map = new Map();
-    data.inventory.forEach((item) => map.set(item.productId, item.quantity));
+    locations.forEach(l => map.set(l.id, l));
     return map;
-  }, [data.inventory]);
+  }, [locations]);
 
-  const handleSubmit = (event) => {
+  // Helper to get available locations for a product
+  const getProductInventory = (productId) => {
+    return inventory.filter(i => i.productId === productId && i.quantity > 0)
+      .map(i => {
+        const loc = locationMap.get(i.locationId);
+        return {
+          value: i.locationId,
+          label: `${loc ? loc.code : 'Unknown'} (Qty: ${i.quantity})`,
+          quantity: i.quantity
+        };
+      });
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.customerId) {
@@ -61,80 +111,93 @@ export function DeliveriesPage() {
     }
 
     const lines = form.lines
-      .filter((line) => line.productId)
-      .map((line) => {
-        const product = products.find((item) => item.id === line.productId);
-        return {
-          ...line,
-          sku: product?.sku ?? '',
-          name: product?.name ?? '',
-        };
-      });
+      .filter((line) => line.productId && line.locationId)
+      .map((line) => ({
+        productId: line.productId,
+        qty: Number(line.quantity),
+        priceOut: Number(line.price),
+        locationId: line.locationId
+      }));
 
     if (lines.length === 0) {
-      toast.error('Vui lòng thêm ít nhất một sản phẩm');
+      toast.error('Vui lòng thêm sản phẩm và chọn vị trí kho');
       return;
     }
 
-    const total = lines.reduce((sum, line) => sum + line.quantity * line.price, 0);
+    // Client-side stock check
+    for (const line of lines) {
+      const invItem = inventory.find(i => i.productId === line.productId && i.locationId === line.locationId);
+      if (!invItem || invItem.quantity < line.qty) {
+        toast.error(`Không đủ tồn kho cho sản phẩm ${line.productId} tại vị trí đã chọn`);
+        return;
+      }
+    }
+
+    const payload = {
+      code: form.code || `PX-${Date.now()}`,
+      customerId: form.customerId,
+      date: form.date,
+      lines,
+      notes: form.note
+    };
 
     try {
-      actions.createRecord('deliveries', {
-        id: generateId('dvy'),
-        customerId: form.customerId,
-        date: form.date,
-        expectedDate: form.expectedDate,
-        status: DeliveryStatus.DRAFT,
-        note: form.note,
-        lines,
-        total,
-        inventoryApplied: false,
-      });
-
+      await apiClient('/deliveries', { method: 'POST', body: payload });
       toast.success(t('notifications.saved'));
       setOpen(false);
-      setForm({
-        ...defaultForm,
-        lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
-      });
+      setForm(defaultForm);
+      fetchData();
     } catch (error) {
+      console.error(error);
       toast.error(error.message || 'Lỗi khi tạo phiếu xuất');
     }
   };
 
-  const checkInventory = (lines) =>
-    lines.every((line) => (inventoryMap.get(line.productId) ?? 0) >= line.quantity);
-
-  const transition = (delivery, status) => {
+  const transition = async (delivery, status) => {
     try {
-      if ([DeliveryStatus.PREPARED, DeliveryStatus.DELIVERED, DeliveryStatus.COMPLETED].includes(status)) {
-        if (!checkInventory(delivery.lines)) {
-          toast.error('Kho không đủ hàng để thực hiện bước này');
-          return;
-        }
-      }
-      actions.transitionDeliveryStatus(delivery.id, status);
+      await apiClient(`/deliveries/${delivery.id}/transition`, {
+        method: 'POST',
+        body: { to: status }
+      });
       toast.success(t('notifications.statusChanged'));
+      fetchData();
     } catch (error) {
+      console.error(error);
       toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
     }
   };
 
+  const updateLine = (index, changes) => {
+    setForm(prev => ({
+      ...prev,
+      lines: prev.lines.map((l, i) => i === index ? { ...l, ...changes } : l)
+    }));
+  };
+
+  const addLine = () => {
+    setForm(prev => ({
+      ...prev,
+      lines: [...prev.lines, { productId: '', quantity: 1, price: 0, locationId: '' }]
+    }));
+  };
+
+  const removeLine = (index) => {
+    setForm(prev => ({
+      ...prev,
+      lines: prev.lines.filter((_, i) => i !== index)
+    }));
+  };
+
   const columns = [
-    { key: 'id', header: 'Delivery' },
+    { key: 'code', header: 'Mã' },
     {
       key: 'customerId',
       header: t('deliveries.customer'),
-      render: (value) => data.customers.find((customer) => customer.id === value)?.name ?? value,
+      render: (value) => customers.find((customer) => customer.id === value)?.name ?? value,
     },
     {
       key: 'date',
       header: t('deliveries.date'),
-      render: (value) => formatDate(value),
-    },
-    {
-      key: 'expectedDate',
-      header: t('deliveries.expectedDate'),
       render: (value) => formatDate(value),
     },
     {
@@ -143,9 +206,9 @@ export function DeliveriesPage() {
       render: (value) => <StatusBadge status={value} />,
     },
     {
-      key: 'total',
+      key: 'totalAmount',
       header: t('app.total'),
-      render: (value) => formatCurrency(value),
+      render: (value) => formatCurrency(value || 0),
     },
     {
       key: 'actions',
@@ -200,12 +263,13 @@ export function DeliveriesPage() {
         </RoleGuard>
       </div>
 
-      <DataTable data={data.deliveries} columns={columns} />
+      <DataTable data={deliveries} columns={columns} isLoading={loading} />
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         title={t('deliveries.create')}
+        maxWidth="max-w-4xl"
         actions={
           <>
             <button
@@ -226,33 +290,75 @@ export function DeliveriesPage() {
         }
       >
         <form id="delivery-form" className="space-y-4" onSubmit={handleSubmit}>
-          <Select
-            label={t('deliveries.customer')}
-            value={form.customerId}
-            onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value }))}
-            options={customers}
-            placeholder="Select customer"
-            required
-          />
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Mã phiếu (Tự động)"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+              placeholder="PX-..."
+            />
             <DatePicker
               label={t('deliveries.date')}
               value={form.date}
               onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
               required
             />
-            <DatePicker
-              label="Ngày giao dự kiến"
-              value={form.expectedDate}
-              onChange={(event) => setForm((prev) => ({ ...prev, expectedDate: event.target.value }))}
-              required
-            />
           </div>
-          <LineItemsEditor
-            products={products}
-            value={form.lines}
-            onChange={(lines) => setForm((prev) => ({ ...prev, lines }))}
+          <Select
+            label={t('deliveries.customer')}
+            value={form.customerId}
+            onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value }))}
+            options={customerOptions}
+            placeholder="Select customer"
+            required
           />
+
+          <div className="space-y-3">
+            <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Chi tiết sản phẩm</div>
+            {form.lines.map((line, index) => (
+              <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-4 gap-3">
+                <div className="md:col-span-2">
+                  <Select
+                    label="Sản phẩm"
+                    value={line.productId}
+                    onChange={(e) => updateLine(index, { productId: e.target.value, locationId: '' })}
+                    options={productOptions}
+                    placeholder="Chọn sản phẩm"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Select
+                    label="Vị trí / Lô (Tồn kho)"
+                    value={line.locationId}
+                    onChange={(e) => updateLine(index, { locationId: e.target.value })}
+                    options={getProductInventory(line.productId)}
+                    placeholder={line.productId ? "Chọn vị trí" : "Chọn sản phẩm trước"}
+                    disabled={!line.productId}
+                    required
+                  />
+                </div>
+                <NumberInput
+                  label="Số lượng"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(index, { quantity: Number(e.target.value) })}
+                  min={1}
+                  required
+                />
+                <NumberInput
+                  label="Giá xuất"
+                  value={line.price}
+                  onChange={(e) => updateLine(index, { price: Number(e.target.value) })}
+                  min={0}
+                />
+                <div className="flex items-end">
+                  <button type="button" onClick={() => removeLine(index)} className="text-red-500 text-sm mb-2 hover:underline">Xóa dòng</button>
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={addLine} className="text-sm text-indigo-600 font-medium hover:underline">+ Thêm dòng</button>
+          </div>
+
           <textarea
             value={form.note}
             onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
@@ -272,6 +378,7 @@ function availableActions(delivery) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
   const staffRoles = [Roles.ADMIN, Roles.MANAGER, Roles.STAFF];
 
+  // Backend statuses: approved, prepared, delivered, completed
   switch (delivery.status) {
     case DeliveryStatus.DRAFT:
       return [{ status: DeliveryStatus.APPROVED, label: 'Approve', roles: managerRoles }];

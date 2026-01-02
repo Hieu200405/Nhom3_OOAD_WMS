@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
+import { apiClient } from '../../services/apiClient.js';
+import toast from 'react-hot-toast';
 
 const emptyCategory = {
   code: '',
@@ -16,10 +16,28 @@ const emptyCategory = {
 
 export function CategoriesPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyCategory);
+
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient('/categories');
+      setCategories(res.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Không thể tải danh sách danh mục');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const openCreateModal = () => {
     setForm(emptyCategory);
@@ -33,26 +51,40 @@ export function CategoriesPage() {
     setOpen(true);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (editing) {
-      actions.updateRecord('categories', editing.id, form);
-    } else {
-      actions.createRecord('categories', { ...form, id: generateId('cat') });
+    try {
+      if (editing) {
+        await apiClient(`/categories/${editing.id}`, {
+          method: 'PUT',
+          body: form
+        });
+        toast.success('Cập nhật thành công');
+      } else {
+        await apiClient('/categories', {
+          method: 'POST',
+          body: form
+        });
+        toast.success('Tạo danh mục thành công');
+      }
+      setOpen(false);
+      fetchCategories();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi xảy ra');
     }
-    setOpen(false);
   };
 
-  const handleDelete = (category) => {
-    // Basic dependency check (frontend side mock)
-    const hasProducts = data.products.some(p => p.categoryId === category.id);
-    if (hasProducts) {
-      alert(`Không thể xóa danh mục "${category.name}" vì đang có sản phẩm.`);
-      return;
-    }
-
+  const handleDelete = async (category) => {
     if (window.confirm('Xóa danh mục này?')) {
-      actions.removeRecord('categories', category.id);
+      try {
+        await apiClient(`/categories/${category.id}`, { method: 'DELETE' });
+        toast.success('Xóa danh mục thành công');
+        fetchCategories();
+      } catch (error) {
+        console.error(error);
+        toast.error(error.message || 'Không thể xóa danh mục (có thể đang được sử dụng)');
+      }
     }
   };
 
@@ -73,7 +105,7 @@ export function CategoriesPage() {
       </div>
 
       <DataTable
-        data={data.categories}
+        data={categories}
         columns={[
           { key: 'code', header: 'Mã' },
           { key: 'name', header: t('products.category') },

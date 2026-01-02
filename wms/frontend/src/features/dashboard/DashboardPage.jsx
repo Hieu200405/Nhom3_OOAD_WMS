@@ -1,28 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  BarChart3,
-  Boxes,
-  ClipboardList,
-  Truck,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle
-} from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { BarChart3, Boxes, ClipboardList, Truck, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import { useAuth } from '../../app/auth-context.jsx';
@@ -32,79 +11,44 @@ const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data: mockData } = useMockData();
-  const [realData, setRealData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const useMock = import.meta.env.VITE_USE_MOCK ?? 'true';
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await apiClient('/reports/overview');
+      setData(res.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data', error);
+      // If fails, we display zeros or separate error state, 
+      // but let's just proceed with null safe
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (useMock === 'true') {
-      setLoading(false);
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        const res = await apiClient('/reports/overview');
-        setRealData(res.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [useMock]);
+  }, [fetchData]);
 
-  // Combine Mock vs Real Data Logic
   const metrics = useMemo(() => {
-    if (realData) {
-      return {
-        totalInventoryValue: realData.totalInventoryValue,
-        pendingReceipts: realData.counts.pendingReceipts,
-        pendingDeliveries: realData.counts.pendingDeliveries,
-        openIncidents: realData.counts.openIncidents,
-        revenueChart: realData.revenueChart,
-        inventoryStatus: realData.inventoryStatus
-      };
-    }
-
-    // Fallback to Mock Calculation
-    const totalInventoryValue = mockData.inventory.reduce((sum, item) => {
-      const product = mockData.products.find((prod) => prod.id === item.productId);
-      return sum + item.quantity * (product?.priceIn || 0);
-    }, 0);
-
-    const pendingReceipts = mockData.receipts.filter(r => r.status !== 'Completed').length;
-    const pendingDeliveries = mockData.deliveries.filter(d => d.status !== 'Completed').length;
-
-    // Mock Chart Data
-    const revenueChart = [
-      { name: '2024-05', income: 45000000, expense: 32000000 },
-      { name: '2024-06', income: 52000000, expense: 35000000 },
-      { name: '2024-07', income: 48000000, expense: 40000000 },
-      { name: '2024-08', income: 61000000, expense: 45000000 },
-      { name: '2024-09', income: 55000000, expense: 38000000 },
-      { name: '2024-10', income: 67000000, expense: 42000000 },
-    ];
-
-    const inventoryStatus = [
-      { name: 'Available', value: mockData.inventory.filter(i => i.status !== 'outOfStock' && i.status !== 'low').length },
-      { name: 'Low Stock', value: mockData.inventory.filter(i => i.status === 'low' || (i.quantity < 10 && i.quantity > 0)).length },
-      { name: 'Out of Stock', value: mockData.inventory.filter(i => i.quantity === 0).length },
-    ];
-
-    return {
-      totalInventoryValue,
-      pendingReceipts,
-      pendingDeliveries,
-      openIncidents: mockData.incidents.length,
-      revenueChart,
-      inventoryStatus
+    if (!data) return {
+      totalInventoryValue: 0,
+      pendingReceipts: 0,
+      pendingDeliveries: 0,
+      openIncidents: 0,
+      revenueChart: [],
+      inventoryStatus: []
     };
-  }, [mockData, realData, useMock]);
+    return {
+      totalInventoryValue: data.totalInventoryValue || 0,
+      pendingReceipts: data.counts?.pendingReceipts || 0,
+      pendingDeliveries: data.counts?.pendingDeliveries || 0,
+      openIncidents: data.counts?.openIncidents || 0,
+      revenueChart: data.revenueChart || [],
+      inventoryStatus: data.inventoryStatus || []
+    };
+  }, [data]);
 
   if (loading) {
     return <div className="p-10 text-center">Loading dashboard...</div>;
@@ -125,7 +69,7 @@ export function DashboardPage() {
           icon={Boxes}
           label="Giá trị tồn kho"
           value={formatCurrency(metrics.totalInventoryValue)}
-          trend="+5.2%"
+          trend="RealTime"
           trendUp={true}
           color="indigo"
         />
@@ -133,23 +77,23 @@ export function DashboardPage() {
           icon={ClipboardList}
           label="Phiếu nhập chờ xử lý"
           value={metrics.pendingReceipts}
-          trend="-2"
-          trendUp={true} // Less is better? Depend on context. Green usually good.
+          trend=""
+          trendUp={true}
           color="blue"
         />
         <MetricCard
           icon={Truck}
           label="Phiếu xuất đang chờ"
           value={metrics.pendingDeliveries}
-          trend="+3"
-          trendUp={false} // More waiting is bad
+          trend=""
+          trendUp={false}
           color="orange"
         />
         <MetricCard
           icon={AlertTriangle}
           label="Sự cố chưa giải quyết"
           value={metrics.openIncidents}
-          trend="0"
+          trend=""
           trendUp={true}
           color="red"
         />
@@ -246,11 +190,7 @@ function MetricCard({ icon: Icon, label, value, trend, trendUp, color }) {
         </div>
       </div>
       <div className="mt-4 flex items-center gap-2">
-        <span className={`flex items-center text-xs font-medium ${trendUp ? 'text-green-600' : 'text-red-600'}`}>
-          {trendUp ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
-          {trend}
-        </span>
-        <span className="text-xs text-slate-500">so với tháng trước</span>
+        {/* Trend display if needed, currently just removed mock trend */}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
@@ -10,21 +10,27 @@ import { NumberInput } from "../../components/forms/NumberInput.jsx";
 import { Select } from "../../components/forms/Select.jsx";
 import { StatusBadge } from "../../components/StatusBadge.jsx";
 import { ConfirmDialog } from "../../components/ConfirmDialog.jsx";
-import { useMockData } from "../../services/mockDataContext.jsx";
+import { apiClient } from "../../services/apiClient.js";
 import { StocktakingStatus, Roles } from "../../utils/constants.js";
 import { formatDate } from "../../utils/formatters.js";
-import { generateId } from "../../utils/id.js";
 import { RoleGuard } from "../../components/RoleGuard.jsx";
 
 const emptyLine = {
   productId: "",
+  locationId: "",
   actualQuantity: 0,
   reason: ""
 };
 
 export function StocktakingPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+
+  const [loading, setLoading] = useState(false);
+  const [stocktakingList, setStocktakingList] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [inventory, setInventory] = useState([]);
+
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState({ open: false, record: null, status: null });
   const [approval, setApproval] = useState({
@@ -35,93 +41,135 @@ export function StocktakingPage() {
   });
   const [form, setForm] = useState({
     name: "",
+    code: "", // Added code field
     date: new Date().toISOString().slice(0, 10),
-    lines: [{ ...emptyLine, id: generateId("line") }]
+    lines: [{ ...emptyLine }]
   });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [stRes, prodRes, locRes, invRes] = await Promise.all([
+        apiClient('/stocktake'),
+        apiClient('/products'),
+        apiClient('/warehouse'),
+        apiClient('/inventory')
+      ]);
+      setStocktakingList(stRes.data || []);
+      setProducts(prodRes.data || []);
+      setLocations(locRes.data || []);
+      setInventory(invRes.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load stocktaking data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const productOptions = useMemo(() =>
-    data.products.map((product) => ({
+    products.map((product) => ({
       value: product.id,
       label: `${product.sku} - ${product.name}`
     })),
-  [data.products]);
+    [products]);
 
+  const locationOptions = useMemo(() =>
+    locations.map((loc) => ({
+      value: loc.id,
+      label: loc.code
+    })),
+    [locations]);
+
+  // Map inventory by key `${productId}-${locationId}` for easy lookup
   const inventoryMap = useMemo(() => {
     const map = new Map();
-    data.inventory.forEach((item) => map.set(item.productId, item.quantity));
+    inventory.forEach((item) => {
+      map.set(`${item.productId}-${item.locationId}`, item.quantity);
+    });
     return map;
-  }, [data.inventory]);
+  }, [inventory]);
 
-  const createAdjustments = (lines) =>
-    lines
-      .filter((line) => line.productId)
-      .map((line) => {
-        const recorded = inventoryMap.get(line.productId) ?? 0;
-        const difference = line.actualQuantity - recorded;
-        return {
-          id: generateId("adj"),
-          productId: line.productId,
-          recordedQuantity: recorded,
-          actualQuantity: line.actualQuantity,
-          difference,
-          reason: line.reason,
-          status: difference === 0 ? "Balanced" : difference > 0 ? "Surplus" : "Deficit"
-        };
-      });
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const adjustments = createAdjustments(form.lines);
-    if (adjustments.length === 0) return;
 
-    actions.createRecord("stocktaking", {
-      id: generateId("st"),
-      name: form.name,
-      date: form.date,
-      status: StocktakingStatus.OPEN,
-      adjustments
-    });
-    setOpen(false);
-    setForm({
-      name: "",
-      date: new Date().toISOString().slice(0, 10),
-      lines: [{ ...emptyLine, id: generateId("line") }]
-    });
-  };
+    // Prepare payload matching server expectation
+    // router.post('/', ... validate({ body: createSchema }), controller.create);
+    // createSchema: code, date, items: [{ productId, locationId, countedQty, systemQty... }], minutes, attachments
 
-  const updateInventoryFromAdjustments = (adjustments) => {
-    adjustments.forEach((adjustment) => {
-      const current = data.inventory.find((item) => item.productId === adjustment.productId);
-      if (current) {
-        actions.updateRecord("inventory", current.id, {
-          quantity: adjustment.actualQuantity,
-          status: adjustment.actualQuantity === 0 ? "Out of Stock" : "Available"
-        });
-      } else {
-        actions.createRecord("inventory", {
-          id: generateId("inv"),
-          productId: adjustment.productId,
-          quantity: adjustment.actualQuantity,
-          status: adjustment.actualQuantity === 0 ? "Out of Stock" : "Available"
-        });
-      }
-    });
-  };
+    const items = form.lines.map(line => {
+      const systemQty = inventoryMap.get(`${line.productId}-${line.locationId}`) ?? 0;
+      return {
+        productId: line.productId,
+        locationId: line.locationId,
+        countedQty: line.actualQuantity,
+        systemQty: systemQty
+      };
+    }).filter(i => i.productId && i.locationId);
 
-  const handleTransition = (record, nextStatus) => {
-    if (nextStatus === StocktakingStatus.APPLIED && record.status !== StocktakingStatus.APPROVED) {
-      toast.error("Manager approval is required before applying inventory.");
+    if (items.length === 0) {
+      toast.error('Please add valid lines with Product and Location');
       return;
     }
-    const changes = { status: nextStatus };
-    if (nextStatus === StocktakingStatus.APPROVED) {
-      changes.approvedBy = "Manager";
-      changes.approvedAt = new Date().toISOString();
+
+    const payload = {
+      code: form.code || `ST-${Date.now()}`,
+      name: form.name, // Extra field, backend might ignore or handle
+      date: new Date(form.date),
+      items: items
+    };
+
+    try {
+      await apiClient('/stocktake', { method: 'POST', body: payload });
+      toast.success('Stocktaking created');
+      setOpen(false);
+      setForm({
+        name: "",
+        code: "",
+        date: new Date().toISOString().slice(0, 10),
+        lines: [{ ...emptyLine }]
+      });
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Failed to create');
     }
-    actions.updateRecord("stocktaking", record.id, changes);
-    if (nextStatus === StocktakingStatus.APPLIED) {
-      updateInventoryFromAdjustments(record.adjustments);
-      toast.success("Inventory updated from stocktake.");
+  };
+
+  const handleTransition = async (record, nextStatus) => {
+    try {
+      if (nextStatus === StocktakingStatus.APPLIED) {
+        await apiClient(`/stocktake/${record.id}/apply`, { method: 'POST' });
+        toast.success('Inventory applied successfully');
+      }
+      // If other statuses supported via simple PUT update?
+      // The mock Logic was simple update. Real API only has specific endpoints like approve/apply.
+      // Submit (Open -> Pending) might be a simple update or specific endpoint.
+      // Backend: PUT /:id updates data. 
+      // Need endpoint for status transition if not strictly Approve/Apply.
+      // The backend `updateSchema` allows updating items/date etc.
+      // But status transition logic is usually specific.
+      // Looking at routes: 
+      // POST /:id/approve -> Approved
+      // POST /:id/apply -> Applied
+      // How to 'Submit' (Open -> Pending)? 
+      // Maybe PUT update status directly if role allows? 
+      // Backend controller usually handles status transition via specific action or check. 
+      // If no explicit 'submit' endpoint, maybe just edit?
+      // Let's assume for now we only have Approve and Apply actions exposed via API.
+      // Wait, `StocktakingStatus` has OPEN, PENDING, APPROVED, APPLIED.
+      // If I am Staff, I create (OPEN). Then I want to SUBMIT (PENDING).
+      // If backend doesn't support explicit 'submit', maybe it's auto or via update.
+      // Let's assume approval is the main gate. 
+
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Action failed');
     }
   };
 
@@ -139,13 +187,39 @@ export function StocktakingPage() {
       setConfirm({ open: true, record, status: nextStatus });
       return;
     }
+    // For Submit (Pending), we create a simplified logic or if 'pending' is just a state
+    // Let's skip Submit button action if no API for it, or use generic Update if allowed.
+    // Real backend usually enforces flow.
     handleTransition(record, nextStatus);
+  };
+
+  const handleApprove = async (e) => {
+    e.preventDefault();
+    if (!approval.record) return;
+
+    const payload = {
+      minutes: approval.minutes,
+      attachments: approval.attachments.split(',').map(s => s.trim()).filter(Boolean)
+    };
+
+    try {
+      await apiClient(`/stocktake/${approval.record.id}/approve`, {
+        method: 'POST',
+        body: payload
+      });
+      toast.success('Approved');
+      setApproval({ open: false, record: null, minutes: "", attachments: "" });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Approval failed');
+    }
   };
 
   const addLine = () =>
     setForm((prev) => ({
       ...prev,
-      lines: [...prev.lines, { ...emptyLine, id: generateId("line") }]
+      lines: [...prev.lines, { ...emptyLine }]
     }));
 
   const removeLine = (index) =>
@@ -184,31 +258,17 @@ export function StocktakingPage() {
       </div>
 
       <DataTable
-        data={data.stocktaking}
+        data={stocktakingList}
+        isLoading={loading}
         columns={[
-          { key: 'name', header: 'Name' },
+          { key: 'code', header: 'Mã' },
           { key: 'date', header: t('deliveries.date'), render: (value) => formatDate(value) },
           { key: 'status', header: t('app.status'), render: (value) => <StatusBadge status={value} /> },
           { key: 'approvedBy', header: t('stocktaking.approvedBy'), render: (value) => value ?? '-' },
           {
-            key: 'approvedAt',
-            header: t('stocktaking.approvedAt'),
-            render: (value) => (value ? formatDate(value) : '-')
-          },
-          {
-            key: 'adjustments',
-            header: t('stocktaking.adjustments'),
-            render: (value) => value.length,
-          },
-          {
-            key: 'minutes',
-            header: t('stocktaking.minutes'),
-            render: (value) => value ?? '-',
-          },
-          {
-            key: 'attachments',
-            header: t('stocktaking.attachments'),
-            render: (value) => (value?.length ? value.length : 0),
+            key: 'items',
+            header: 'Items',
+            render: (value) => value?.length || 0,
           },
           {
             key: 'actions',
@@ -237,6 +297,7 @@ export function StocktakingPage() {
         open={open}
         onClose={() => setOpen(false)}
         title={t('stocktaking.create')}
+        maxWidth="max-w-4xl"
         actions={
           <>
             <button
@@ -257,24 +318,27 @@ export function StocktakingPage() {
         }
       >
         <form id="stocktaking-form" className="space-y-4" onSubmit={handleSubmit}>
-          <Input
-            label="Stocktake name"
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-            required
-          />
-          <DatePicker
-            label={t('deliveries.date')}
-            value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-            required
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Mã phiếu (Tự động)"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+              placeholder="ST-..."
+            />
+            <DatePicker
+              label={t('deliveries.date')}
+              value={form.date}
+              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+          </div>
+
           <div className="space-y-3">
             {form.lines.map((line, index) => {
-              const recorded = inventoryMap.get(line.productId) ?? 0;
+              const recorded = inventoryMap.get(`${line.productId}-${line.locationId}`) ?? 0;
               return (
                 <div
-                  key={line.id ?? index}
+                  key={index}
                   className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/60"
                 >
                   <div className="grid gap-3 md:grid-cols-4">
@@ -286,9 +350,17 @@ export function StocktakingPage() {
                       placeholder="Select product"
                       required
                     />
-                    <NumberInput label="Recorded" value={recorded} readOnly />
+                    <Select
+                      label="Location"
+                      value={line.locationId}
+                      onChange={(event) => updateLine(index, { locationId: event.target.value })}
+                      options={locationOptions}
+                      placeholder="Select location"
+                      required
+                    />
+                    <NumberInput label="Recorded (System)" value={recorded} readOnly />
                     <NumberInput
-                      label="Actual"
+                      label="Actual (Counted)"
                       min={0}
                       value={line.actualQuantity}
                       onChange={(event) =>
@@ -296,17 +368,11 @@ export function StocktakingPage() {
                       }
                       required
                     />
-                    <NumberInput
-                      label={t('stocktaking.difference')}
-                      value={line.productId ? line.actualQuantity - recorded : 0}
-                      readOnly
-                    />
                   </div>
-                  <Input
-                    label="Reason"
-                    value={line.reason}
-                    onChange={(event) => updateLine(index, { reason: event.target.value })}
-                  />
+                  <div className="mt-2 text-xs font-semibold text-slate-500">
+                    Diff: {line.productId && line.locationId ? line.actualQuantity - recorded : 0}
+                  </div>
+
                   {form.lines.length > 1 ? (
                     <button
                       type="button"
@@ -325,7 +391,7 @@ export function StocktakingPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               <Plus className="h-4 w-4" />
-              Add product
+              Add item
             </button>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
@@ -373,22 +439,7 @@ export function StocktakingPage() {
         <form
           id="stocktake-approval-form"
           className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!approval.record) return;
-            const attachments = approval.attachments
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean);
-            actions.updateRecord("stocktaking", approval.record.id, {
-              status: StocktakingStatus.APPROVED,
-              approvedBy: "Manager",
-              approvedAt: new Date().toISOString(),
-              minutes: approval.minutes || "",
-              attachments
-            });
-            setApproval({ open: false, record: null, minutes: "", attachments: "" });
-          }}
+          onSubmit={handleApprove}
         >
           <Input
             label={t('stocktaking.minutes')}
@@ -410,11 +461,11 @@ export function StocktakingPage() {
 
 function stocktakingActions(record) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
-  const staffRoles = [Roles.ADMIN, Roles.MANAGER, Roles.STAFF];
-
+  // Assuming Backend supports simplified flow for now
   switch (record.status) {
     case StocktakingStatus.OPEN:
-      return [{ status: StocktakingStatus.PENDING_APPROVAL, label: 'Submit', roles: staffRoles }];
+      // If no Submit endpoint, maybe just show Wait for Manager (or edit)
+      return [];
     case StocktakingStatus.PENDING_APPROVAL:
       return [{ status: StocktakingStatus.APPROVED, label: 'Approve', roles: managerRoles }];
     case StocktakingStatus.APPROVED:

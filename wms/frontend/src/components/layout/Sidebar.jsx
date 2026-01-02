@@ -2,26 +2,16 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useAuth } from '../../app/auth-context.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { ReceiptStatus, DeliveryStatus, Roles } from '../../utils/constants.js';
+// Removed useMockData import and badge logic for now
+import { Roles } from '../../utils/constants.js';
 
 export function Sidebar({ routes = [], collapsed = false }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data } = useMockData();
 
-  const isManager = [Roles.ADMIN, Roles.MANAGER].includes(user?.role);
-
-  const getBadgeCount = (labelKey) => {
-    if (!isManager) return 0;
-    if (labelKey === 'navigation.receipts') {
-      return data.receipts.filter((r) => r.status === ReceiptStatus.DRAFT).length;
-    }
-    if (labelKey === 'navigation.deliveries') {
-      return data.deliveries.filter((d) => d.status === DeliveryStatus.DRAFT).length;
-    }
-    return 0;
-  };
+  // Badge logic removed to decouple mock data.
+  // Ideally, we fetch badge counts from a real API endpoint (e.g. /notifications/counts).
+  // For this transition, we will remove the badges.
 
   const visibleRoutes = routes.filter((route) => {
     if (route.hiddenInMenu) return false;
@@ -55,7 +45,6 @@ export function Sidebar({ routes = [], collapsed = false }) {
       <nav className="space-y-1">
         {visibleRoutes.map((route) => {
           const Icon = route.icon;
-          const badgeCount = getBadgeCount(route.labelKey);
 
           return (
             <NavLink
@@ -75,15 +64,6 @@ export function Sidebar({ routes = [], collapsed = false }) {
                 {Icon ? <Icon className="h-4 w-4" /> : null}
                 {!collapsed ? <span>{t(route.labelKey)}</span> : null}
               </div>
-              {badgeCount > 0 && (
-                <span className={clsx(
-                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
-                  collapsed ? "absolute right-1 top-1" : "",
-                  "bg-rose-500 text-white shadow-sm ring-2 ring-white dark:ring-slate-950"
-                )}>
-                  {badgeCount}
-                </span>
-              )}
             </NavLink>
           );
         })}

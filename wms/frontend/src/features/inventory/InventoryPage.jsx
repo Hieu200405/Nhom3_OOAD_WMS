@@ -1,34 +1,63 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { formatNumber } from '../../utils/formatters.js';
+import toast from 'react-hot-toast';
 
 export function InventoryPage() {
   const { t } = useTranslation();
-  const { data } = useMockData();
+  const [loading, setLoading] = useState(false);
+  const [inventory, setInventory] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [invRes, prodRes, locRes, catRes] = await Promise.all([
+          apiClient('/inventory'),
+          apiClient('/products'),
+          apiClient('/warehouse'),
+          apiClient('/categories')
+        ]);
+        setInventory(invRes.data || []);
+        setProducts(prodRes.data || []);
+        setLocations(locRes.data || []);
+        setCategories(catRes.data || []);
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load inventory data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const productMap = useMemo(() => {
     const map = new Map();
-    data.products.forEach((product) => map.set(product.id, product));
+    products.forEach((product) => map.set(product.id, product));
     return map;
-  }, [data.products]);
+  }, [products]);
 
   const locationMap = useMemo(() => {
     const map = new Map();
-    data.warehouseLocations.forEach((node) => map.set(node.id, node));
+    locations.forEach((node) => map.set(node.id, node));
     return map;
-  }, [data.warehouseLocations]);
+  }, [locations]);
 
-  const inventory = useMemo(() => {
-    return data.inventory.filter((item) => {
+  const filteredInventory = useMemo(() => {
+    return inventory.filter((item) => {
       if (!categoryFilter) return true;
       const product = productMap.get(item.productId);
       return product?.categoryId === categoryFilter;
     });
-  }, [data.inventory, categoryFilter, productMap]);
+  }, [inventory, categoryFilter, productMap]);
 
   return (
     <div className="space-y-5">
@@ -47,7 +76,7 @@ export function InventoryPage() {
           onChange={(event) => setCategoryFilter(event.target.value)}
         >
           <option value="">All categories</option>
-          {data.categories.map((category) => (
+          {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
@@ -56,7 +85,8 @@ export function InventoryPage() {
       </div>
 
       <DataTable
-        data={inventory}
+        data={filteredInventory}
+        isLoading={loading}
         columns={[
           {
             key: 'productId',
@@ -64,13 +94,19 @@ export function InventoryPage() {
             render: (value) => {
               const product = productMap.get(value);
               if (!product) return value;
-              return `${product.sku} - ${product.name}`;
+              return (
+                <div>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">{product.name}</div>
+                  <div className="text-xs text-slate-500">{product.sku}</div>
+                </div>
+              );
             },
           },
           {
             key: 'quantity',
             header: 'Quantity',
-            render: (value) => formatNumber(value),
+            headerAlign: 'right',
+            render: (value) => <div className="text-right font-medium">{formatNumber(value)}</div>,
           },
           {
             key: 'batch',
@@ -90,7 +126,10 @@ export function InventoryPage() {
           {
             key: 'locationId',
             header: 'Location',
-            render: (value) => locationMap.get(value)?.code ?? 'N/A',
+            render: (value) => {
+              const loc = locationMap.get(value);
+              return loc ? `${loc.name} (${loc.code})` : 'N/A';
+            },
           },
         ]}
       />

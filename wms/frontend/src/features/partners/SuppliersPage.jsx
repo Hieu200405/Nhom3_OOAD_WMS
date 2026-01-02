@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { Select } from '../../components/forms/Select.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
+import { apiClient } from '../../services/apiClient.js';
+import toast from 'react-hot-toast';
 
 const emptySupplier = {
   type: 'supplier',
@@ -28,10 +28,28 @@ const businessTypes = [
 
 export function SuppliersPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptySupplier);
+
+  const fetchSuppliers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient('/partners', { params: { type: 'supplier' } });
+      setSuppliers(res.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Không thể tải danh sách nhà cung cấp');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
   const openCreateModal = () => {
     setForm(emptySupplier);
@@ -45,19 +63,41 @@ export function SuppliersPage() {
     setOpen(true);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (editing) {
-      actions.updateRecord('suppliers', editing.id, form);
-    } else {
-      actions.createRecord('suppliers', { ...form, id: generateId('sup') });
+    try {
+      const payload = { ...form, type: 'supplier' };
+      if (editing) {
+        await apiClient(`/partners/${editing.id}`, {
+          method: 'PUT',
+          body: payload
+        });
+        toast.success('Cập nhật thành công');
+      } else {
+        await apiClient('/partners', {
+          method: 'POST',
+          body: payload
+        });
+        toast.success('Thêm nhà cung cấp thành công');
+      }
+      setOpen(false);
+      fetchSuppliers();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi xảy ra');
     }
-    setOpen(false);
   };
 
-  const handleDelete = (supplier) => {
-    if (window.confirm('Delete this supplier?')) {
-      actions.removeRecord('suppliers', supplier.id);
+  const handleDelete = async (supplier) => {
+    if (window.confirm('Xóa nhà cung cấp này?')) {
+      try {
+        await apiClient(`/partners/${supplier.id}`, { method: 'DELETE' });
+        toast.success('Xóa thành công');
+        fetchSuppliers();
+      } catch (error) {
+        console.error(error);
+        toast.error(error.message || 'Không thể xóa nhà cung cấp');
+      }
     }
   };
 
@@ -78,7 +118,7 @@ export function SuppliersPage() {
       </div>
 
       <DataTable
-        data={data.suppliers}
+        data={suppliers}
         columns={[
           { key: 'code', header: 'Mã NCC' },
           { key: 'name', header: 'Tên nhà cung cấp' },
@@ -88,30 +128,6 @@ export function SuppliersPage() {
             key: 'isActive',
             header: 'Trạng thái',
             render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
-          },
-          {
-            key: 'debt',
-            header: t('financials.debtAmount'),
-            render: (_, row) => {
-              const transactions = data.financialTransactions.filter(t => t.partnerId === row.id);
-              const remainingDebt = transactions.reduce((acc, curr) => acc + (curr.debtAmount || 0), 0);
-              const overdueCount = transactions.filter(t => {
-                const dueDate = t.paymentDueDate ? new Date(t.paymentDueDate) : null;
-                return dueDate && dueDate < new Date() && t.debtAmount > 0;
-              }).length;
-
-              return (
-                <div className="flex flex-col text-xs">
-                  <span className="font-bold text-amber-600">{remainingDebt.toLocaleString('vi-VN')}</span>
-                  {overdueCount > 0 && (
-                    <span className="text-[10px] text-rose-500 font-bold flex items-center gap-0.5">
-                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
-                      {t('financials.overdueReceipts')}: {overdueCount}
-                    </span>
-                  )}
-                </div>
-              );
-            }
           },
           {
             key: 'actions',

@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 
@@ -10,12 +10,35 @@ export function DeliveryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { data } = useMockData();
 
-  const delivery = useMemo(
-    () => data.deliveries.find((item) => item.id === id),
-    [data.deliveries, id],
-  );
+  const [loading, setLoading] = useState(true);
+  const [delivery, setDelivery] = useState(null);
+  const [customer, setCustomer] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await apiClient(`/deliveries/${id}`);
+        setDelivery(res.data);
+
+        if (res.data.customerId) {
+          try {
+            const custRes = await apiClient(`/partners?type=customer&id=${res.data.customerId}`);
+            if (Array.isArray(custRes.data)) {
+              setCustomer(custRes.data.find(c => c.id === res.data.customerId));
+            }
+          } catch (e) { console.error('Failed to load customer', e); }
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  if (loading) return <div>Loading...</div>;
 
   if (!delivery) {
     return (
@@ -33,7 +56,7 @@ export function DeliveryDetailPage() {
     );
   }
 
-  const customer = data.customers.find((item) => item.id === delivery.customerId);
+  const customerName = customer?.name ?? delivery.customerName ?? delivery.customerId;
 
   return (
     <div className="space-y-6">
@@ -50,10 +73,10 @@ export function DeliveryDetailPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <InfoCard title="Delivery ID" value={delivery.id} />
+        <InfoCard title="Delivery ID" value={delivery.code || delivery.id} />
         <InfoCard title={t('deliveries.date')} value={formatDate(delivery.date)} />
-        <InfoCard title="Ngày giao dự kiến" value={formatDate(delivery.expectedDate)} />
-        <InfoCard title={t('deliveries.customer')} value={customer?.name ?? delivery.customerId} />
+        <InfoCard title="Ngày giao dự kiến" value={delivery.expectedDate ? formatDate(delivery.expectedDate) : '-'} />
+        <InfoCard title={t('deliveries.customer')} value={customerName} />
         <InfoCard title={t('app.total')} value={formatCurrency(delivery.total)} />
       </div>
 
@@ -61,7 +84,7 @@ export function DeliveryDetailPage() {
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           {t('deliveries.deliveryNote')}
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.note || '—'}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.notes || delivery.note || '—'}</p>
       </div>
 
       <div className="card space-y-4">
@@ -80,18 +103,18 @@ export function DeliveryDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {delivery.lines.map((line) => (
-                <tr key={line.id}>
-                  <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.sku}</td>
-                  <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.name}</td>
+              {delivery.lines.map((line, idx) => (
+                <tr key={line.id || idx}>
+                  <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.sku || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.name || line.productName || 'Product'}</td>
                   <td className="px-4 py-2 text-right text-sm text-slate-600 dark:text-slate-300">
-                    {line.quantity}
+                    {line.quantity || line.qty}
                   </td>
                   <td className="px-4 py-2 text-right text-sm text-slate-600 dark:text-slate-300">
-                    {formatCurrency(line.price)}
+                    {formatCurrency(line.price || line.priceOut)}
                   </td>
                   <td className="px-4 py-2 text-right text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {formatCurrency(line.quantity * line.price)}
+                    {formatCurrency((line.quantity || line.qty) * (line.price || line.priceOut))}
                   </td>
                 </tr>
               ))}
