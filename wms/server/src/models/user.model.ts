@@ -11,7 +11,7 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface UserDocument extends User, Document {}
+export interface UserDocument extends User, Document { }
 
 const userSchema = new Schema<UserDocument>(
   {

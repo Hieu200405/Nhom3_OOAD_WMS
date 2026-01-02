@@ -50,7 +50,7 @@ export function StocktakingPage() {
     setLoading(true);
     try {
       const [stRes, prodRes, locRes, invRes] = await Promise.all([
-        apiClient('/stocktake'),
+        apiClient('/stocktakes'),
         apiClient('/products'),
         apiClient('/warehouse'),
         apiClient('/inventory')
@@ -124,7 +124,7 @@ export function StocktakingPage() {
     };
 
     try {
-      await apiClient('/stocktake', { method: 'POST', body: payload });
+      await apiClient('/stocktakes', { method: 'POST', body: payload });
       toast.success('Stocktaking created');
       setOpen(false);
       setForm({
@@ -143,7 +143,7 @@ export function StocktakingPage() {
   const handleTransition = async (record, nextStatus) => {
     try {
       if (nextStatus === StocktakingStatus.APPLIED) {
-        await apiClient(`/stocktake/${record.id}/apply`, { method: 'POST' });
+        await apiClient(`/stocktakes/${record.id}/apply`, { method: 'POST' });
         toast.success('Inventory applied successfully');
       }
       // If other statuses supported via simple PUT update?
@@ -203,7 +203,7 @@ export function StocktakingPage() {
     };
 
     try {
-      await apiClient(`/stocktake/${approval.record.id}/approve`, {
+      await apiClient(`/stocktakes/${approval.record.id}/approve`, {
         method: 'POST',
         body: payload
       });
