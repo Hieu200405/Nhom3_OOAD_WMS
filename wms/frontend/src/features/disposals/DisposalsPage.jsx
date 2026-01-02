@@ -328,7 +328,7 @@ export function DisposalsPage() {
                 label={t('disposals.attachment')}
                 value={form.attachment}
                 onChange={(event) => setForm((prev) => ({ ...prev, attachment: event.target.value }))}
-                placeholder="Disposal report link (mock)" // We pass this? Schema expects file upload or nothing? Not handled in current UI.
+                placeholder="Disposal report link (optional)"
               />
             </div>
           ) : null}

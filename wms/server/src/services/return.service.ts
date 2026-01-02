@@ -218,6 +218,46 @@ export const transitionReturn = async (
     actorId,
     payload: { status: target, disposalId: returnDoc.disposalId }
   });
+
+  if (target === 'completed') {
+    try {
+      const { createTransaction } = await import('./transaction.service.js');
+      let partnerId = null;
+      let amount = 0;
+
+      for (const item of returnDoc.items) {
+        const p = await ProductModel.findById(item.productId);
+        if (p) amount += item.qty * (returnDoc.from === 'customer' ? p.priceOut : p.priceIn);
+      }
+
+      if (returnDoc.refId) {
+        if (returnDoc.from === 'customer') {
+          const { DeliveryModel } = await import('../models/delivery.model.js');
+          const d = await DeliveryModel.findById(returnDoc.refId);
+          if (d) partnerId = d.customerId;
+        } else {
+          const { ReceiptModel } = await import('../models/receipt.model.js');
+          const r = await ReceiptModel.findById(returnDoc.refId);
+          if (r) partnerId = r.supplierId;
+        }
+      }
+
+      if (partnerId && amount > 0) {
+        await createTransaction({
+          partnerId: partnerId.toString(),
+          type: returnDoc.from === 'customer' ? 'expense' : 'revenue',
+          amount: amount,
+          status: 'completed',
+          referenceId: (returnDoc as any)._id.toString(),
+          referenceType: 'Return',
+          note: `Auto-generated for Return ${returnDoc.code}`
+        }, actorId);
+      }
+    } catch (e) {
+      console.error("Auto-transaction failed", e);
+    }
+  }
+
   return returnDoc.toObject();
 };
 

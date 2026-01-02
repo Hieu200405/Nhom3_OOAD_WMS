@@ -241,6 +241,20 @@ export const transitionDelivery = async (
       }
       await adjustInventory(line.productId.toString(), line.locationId.toString(), -line.qty);
     }
+
+    // Auto-create Revenue Transaction
+    const totalAmount = delivery.lines.reduce((sum, line) => sum + (line.qty * line.priceOut), 0);
+
+    const { createTransaction } = await import('./transaction.service.js');
+    await createTransaction({
+      partnerId: delivery.customerId.toString(),
+      type: 'revenue',
+      amount: totalAmount,
+      status: 'completed',
+      referenceId: (delivery as any)._id.toString(),
+      referenceType: 'Delivery',
+      note: `Auto-generated revenue for Delivery ${delivery.code}`
+    }, actorId);
   }
 
   delivery.status = target;
