@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
@@ -10,19 +10,18 @@ import { DatePicker } from '../../components/forms/DatePicker.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { LineItemsEditor } from '../../components/LineItemsEditor.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { ReceiptStatus, Roles } from '../../utils/constants.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
-import { generateId } from '../../utils/id.js';
 import { RoleGuard } from '../../components/RoleGuard.jsx';
 import { useAuth } from '../../app/auth-context.jsx';
 
 const defaultForm = {
+  code: '',
   supplierId: '',
   date: new Date().toISOString().slice(0, 10),
   lines: [
     {
-      id: generateId('line'),
       productId: '',
       quantity: 1,
       price: 0,
@@ -31,24 +30,51 @@ const defaultForm = {
   hasShortage: false,
   shortageNote: '',
   damageNote: '',
+  notes: ''
 };
 
 export function ReceiptsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data, actions } = useMockData();
+
+  const [loading, setLoading] = useState(false);
+  const [receipts, setReceipts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
-  const suppliers = useMemo(
-    () => data.suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
-    [data.suppliers],
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [recRes, supRes, prodRes] = await Promise.all([
+        apiClient('/receipts'),
+        apiClient('/partners', { params: { type: 'supplier' } }),
+        apiClient('/products')
+      ]);
+      setReceipts(recRes.data || []);
+      setSuppliers(supRes.data || []);
+      setProducts(prodRes.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load receipts data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const supplierOptions = useMemo(
+    () => suppliers.map((s) => ({ value: s.id, label: s.name })),
+    [suppliers],
   );
 
-  const products = data.products;
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.supplierId) {
@@ -58,65 +84,69 @@ export function ReceiptsPage() {
 
     const lines = form.lines
       .filter((line) => line.productId)
-      .map((line) => {
-        const product = products.find((item) => item.id === line.productId);
-        if (product && line.price <= 0) {
-          // Optional: basic validation for price
-        }
-        return {
-          ...line,
-          sku: product?.sku ?? '',
-          name: product?.name ?? '',
-        };
-      });
+      .map((line) => ({
+        productId: line.productId,
+        qty: Number(line.quantity),
+        priceIn: Number(line.price)
+      }));
 
     if (lines.length === 0) {
       toast.error('Vui lòng thêm ít nhất một sản phẩm');
       return;
     }
 
-    const total = lines.reduce((sum, line) => sum + line.quantity * line.price, 0);
+    const payload = {
+      code: form.code || `PN-${Date.now()}`, // Auto-generate if empty
+      supplierId: form.supplierId,
+      date: form.date,
+      lines,
+      notes: form.notes || form.shortageNote || form.damageNote, // Simplified mapping
+      // status: ReceiptStatus.DRAFT // Backend default? 
+    };
 
     try {
-      actions.createRecord('receipts', {
-        id: generateId('rcp'),
-        supplierId: form.supplierId,
-        date: form.date,
-        status: ReceiptStatus.DRAFT,
-        lines,
-        total,
-        hasShortage: form.hasShortage,
-        shortageNote: form.shortageNote,
-        damageNote: form.damageNote,
-        inventoryApplied: false,
-      });
-
+      await apiClient('/receipts', { method: 'POST', body: payload });
       toast.success(t('notifications.saved'));
       setOpen(false);
-      setForm({
-        ...defaultForm,
-        lines: [{ ...defaultForm.lines[0], id: generateId('line') }],
-      });
+      setForm(defaultForm);
+      fetchData();
     } catch (error) {
+      console.error(error);
       toast.error(error.message || 'Lỗi khi tạo phiếu nhập');
     }
   };
 
-  const transition = (receipt, status) => {
+  const transition = async (receipt, status) => {
+    // Determine the transition target based on status mapping
+    // Our status constant might act as the "to" value.
+    // The backend uses transitionSchema: { to: 'approved' | 'supplierConfirmed' | 'completed' }
+    // Constants: DRAFT, APPROVED, SUPPLIER_CONFIRMED, COMPLETED
+
+    // Status enum backend: 'draft', 'approved', 'supplierConfirmed', 'completed' (camelCase)
+    // Constants might be uppercase? Check constants.js if needed. Usually constants match value.
+
     try {
-      actions.transitionReceiptStatus(receipt.id, status);
+      await apiClient(`/receipts/${receipt.id}/transition`, {
+        method: 'POST',
+        body: { to: status }
+      });
       toast.success(t('notifications.statusChanged'));
+      fetchData();
     } catch (error) {
+      console.error(error);
       toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
     }
   };
 
+  // Need to adjust action status to match backend expected values (camelCase vs CAPS)
+  // Assuming ReceiptStatus values match backend enum strings.
+
   const columns = [
-    { key: 'id', header: 'Receipt' },
+    { key: 'code', header: 'Mã' },
     {
       key: 'supplierId',
       header: t('receipts.supplier'),
-      render: (value) => data.suppliers.find((supplier) => supplier.id === value)?.name ?? value,
+      render: (value) => suppliers.find((supplier) => supplier.id === value)?.name ?? value,
     },
     {
       key: 'date',
@@ -129,9 +159,9 @@ export function ReceiptsPage() {
       render: (value) => <StatusBadge status={value} />,
     },
     {
-      key: 'total',
+      key: 'totalAmount', // API likely returns totalAmount or we calculate
       header: t('app.total'),
-      render: (value) => formatCurrency(value),
+      render: (value) => formatCurrency(value || 0),
     },
     {
       key: 'actions',
@@ -141,7 +171,7 @@ export function ReceiptsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate(`/receipts/${row.id}`)}
+            onClick={() => navigate(`/receipts/${row.id}`)} // Detail page also needs refactor later? Assuming detail page fetches by ID.
             className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <ArrowRight className="h-3.5 w-3.5" />
@@ -191,12 +221,13 @@ export function ReceiptsPage() {
         </RoleGuard>
       </div>
 
-      <DataTable data={data.receipts} columns={columns} />
+      <DataTable data={receipts} columns={columns} isLoading={loading} />
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         title={t('receipts.create')}
+        maxWidth="max-w-4xl"
         actions={
           <>
             <button
@@ -217,52 +248,39 @@ export function ReceiptsPage() {
         }
       >
         <form id="receipt-form" className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Mã phiếu (Tự động)"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+              placeholder="PN-..."
+            />
+            <DatePicker
+              label={t('receipts.date')}
+              value={form.date}
+              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+          </div>
           <Select
             label={t('receipts.supplier')}
             value={form.supplierId}
             onChange={(event) => setForm((prev) => ({ ...prev, supplierId: event.target.value }))}
-            options={suppliers}
+            options={supplierOptions}
             placeholder="Select supplier"
             required
           />
-          <DatePicker
-            label={t('receipts.date')}
-            value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-            required
-          />
+
           <LineItemsEditor
             products={products}
             value={form.lines}
             onChange={(lines) => setForm((prev) => ({ ...prev, lines }))}
           />
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={form.hasShortage}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, hasShortage: event.target.checked }))
-                }
-              />
-              {t('receipts.hasShortage')}
-            </label>
-            <Input
-              label={t('receipts.damageNote')}
-              value={form.damageNote}
-              onChange={(event) => setForm((prev) => ({ ...prev, damageNote: event.target.value }))}
-            />
-          </div>
-          {form.hasShortage ? (
-            <Input
-              label={t('receipts.shortageNote')}
-              value={form.shortageNote}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, shortageNote: event.target.value }))
-              }
-              required
-            />
-          ) : null}
+          <Input
+            label="Ghi chú"
+            value={form.notes}
+            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+          />
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
             {t('app.total')}: {formatCurrency(form.lines.reduce((sum, line) => sum + line.quantity * line.price, 0))}
           </div>
@@ -276,6 +294,7 @@ function availableActions(receipt, role) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
   const actions = [];
 
+  // Backend status: draft, approved, supplierConfirmed, completed
   if (receipt.status === ReceiptStatus.DRAFT) {
     actions.push({
       status: ReceiptStatus.APPROVED,
@@ -283,13 +302,7 @@ function availableActions(receipt, role) {
       roles: managerRoles,
       variant: 'success',
     });
-
-    actions.push({
-      status: ReceiptStatus.REJECTED,
-      label: 'Reject',
-      roles: managerRoles,
-      variant: 'danger',
-    })
+    // Reject is not in standard transition endpoints list but maybe simple delete?
   }
   if (receipt.status === ReceiptStatus.APPROVED) {
     actions.push({

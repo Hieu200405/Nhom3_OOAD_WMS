@@ -1,89 +1,138 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Select } from '../../components/forms/Select.jsx';
-import { DatePicker } from '../../components/forms/DatePicker.jsx';
-import { LineItemsEditor } from '../../components/LineItemsEditor.jsx';
+import { Input } from '../../components/forms/Input.jsx';
+import { NumberInput } from '../../components/forms/NumberInput.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
+import { apiClient } from '../../services/apiClient.js';
 import { formatDate } from '../../utils/formatters.js';
-import { generateId } from '../../utils/id.js';
 import { Roles } from '../../utils/constants.js';
 import { RoleGuard } from '../../components/RoleGuard.jsx';
 
-const ReturnStatus = {
-  AWAITING: 'Awaiting Inspection',
-  RESTOCKED: 'Restocked',
-  DISPOSED: 'Disposed',
-};
-
 const defaultForm = {
+  code: '',
   customerId: '',
-  date: new Date().toISOString().slice(0, 10),
-  reason: '',
   items: [
     {
-      id: generateId('ret-line'),
       productId: '',
       quantity: 1,
-      price: 0,
+      reason: '',
     },
   ],
 };
 
 export function ReturnsPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+
+  const [loading, setLoading] = useState(false);
+  const [returns, setReturns] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
-  const customers = useMemo(
-    () => data.customers.map((customer) => ({ value: customer.id, label: customer.name })),
-    [data.customers],
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [retRes, custRes, prodRes] = await Promise.all([
+        apiClient('/returns'),
+        apiClient('/partners', { params: { type: 'customer' } }),
+        apiClient('/products')
+      ]);
+      setReturns(retRes.data || []);
+      setCustomers(custRes.data || []);
+      setProducts(prodRes.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load returns data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const customerOptions = useMemo(
+    () => customers.map((customer) => ({ value: customer.id, label: customer.name })),
+    [customers],
   );
 
-  const products = data.products;
+  const productOptions = useMemo(
+    () => products.map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` })),
+    [products]
+  );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const items = form.items.filter((item) => item.productId);
+    const items = form.items
+      .filter((item) => item.productId)
+      .map(item => ({
+        productId: item.productId,
+        qty: Number(item.quantity),
+        reason: item.reason || 'Return',
+      }));
+
     if (items.length === 0) return;
 
-    actions.createRecord('returns', {
-      id: generateId('ret'),
-      customerId: form.customerId,
-      date: form.date,
-      reason: form.reason,
-      items,
-      status: ReturnStatus.AWAITING,
-    });
-    setOpen(false);
-    setForm(defaultForm);
+    const payload = {
+      code: form.code || `RT-${Date.now()}`,
+      from: 'customer',
+      refId: form.customerId || undefined,
+      items: items
+    };
+
+    try {
+      await apiClient('/returns', { method: 'POST', body: payload });
+      toast.success(t('notifications.saved'));
+      setOpen(false);
+      setForm(defaultForm);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Failed to create return');
+    }
   };
 
-  const handleTransition = (record, status) => {
-    actions.updateRecord('returns', record.id, { status });
-    if (status === ReturnStatus.RESTOCKED) {
-      record.items.forEach((item) => {
-        const inventoryItem = data.inventory.find((entry) => entry.productId === item.productId);
-        if (inventoryItem) {
-          actions.updateRecord('inventory', inventoryItem.id, {
-            quantity: inventoryItem.quantity + item.quantity,
-          });
-        } else {
-          actions.createRecord('inventory', {
-            id: generateId('inv'),
-            productId: item.productId,
-            quantity: item.quantity,
-            status: 'Available',
-          });
-        }
+  const handleTransition = async (record, status) => {
+    try {
+      await apiClient(`/returns/${record.id}/transition`, {
+        method: 'POST',
+        body: { to: status }
       });
-      toast.success('Return items restocked into inventory');
+      toast.success('Status updated');
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Failed to update status');
     }
+  };
+
+  const updateItem = (index, changes) => {
+    setForm(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => i === index ? { ...item, ...changes } : item)
+    }));
+  };
+
+  const removeItem = (index) => {
+    setForm(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addItem = () => {
+    setForm(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1, reason: '' }]
+    }));
   };
 
   return (
@@ -108,20 +157,25 @@ export function ReturnsPage() {
       </div>
 
       <DataTable
-        data={data.returns}
+        data={returns}
+        isLoading={loading}
         columns={[
-          { key: 'id', header: 'Return' },
+          { key: 'code', header: 'Return' },
           {
-            key: 'customerId',
-            header: t('deliveries.customer'),
-            render: (value) => data.customers.find((customer) => customer.id === value)?.name ?? value,
+            key: 'refId',
+            header: t('returns.from'),
+            render: (value) => customers.find(c => c.id === value)?.name || value || 'Customer'
           },
-          { key: 'date', header: t('deliveries.date'), render: (value) => formatDate(value) },
-          { key: 'reason', header: t('returns.reason') },
+          { key: 'createdAt', header: t('deliveries.date'), render: (value) => formatDate(value) },
           {
             key: 'status',
             header: t('app.status'),
             render: (value) => <StatusBadge status={value} />,
+          },
+          {
+            key: 'items',
+            header: 'Items',
+            render: (items) => items?.length || 0
           },
           {
             key: 'actions',
@@ -129,28 +183,28 @@ export function ReturnsPage() {
             sortable: false,
             render: (_, row) => (
               <div className="flex items-center gap-2">
-                {row.status === ReturnStatus.AWAITING ? (
-                  <>
-                    <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER]}>
-                      <button
-                        type="button"
-                        onClick={() => handleTransition(row, ReturnStatus.RESTOCKED)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
-                      >
-                        Restock
-                      </button>
-                    </RoleGuard>
-                    <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER]}>
-                      <button
-                        type="button"
-                        onClick={() => handleTransition(row, ReturnStatus.DISPOSED)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-500"
-                      >
-                        Dispose
-                      </button>
-                    </RoleGuard>
-                  </>
-                ) : null}
+                {(row.status !== 'approved' && row.status !== 'completed') && (
+                  <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER]}>
+                    <button
+                      type="button"
+                      onClick={() => handleTransition(row, 'approved')}
+                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+                    >
+                      Approve
+                    </button>
+                  </RoleGuard>
+                )}
+                {(row.status === 'approved') && (
+                  <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER]}>
+                    <button
+                      type="button"
+                      onClick={() => handleTransition(row, 'completed')}
+                      className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                    >
+                      Complete
+                    </button>
+                  </RoleGuard>
+                )}
               </div>
             ),
           },
@@ -181,33 +235,54 @@ export function ReturnsPage() {
         }
       >
         <form id="return-form" className="space-y-4" onSubmit={handleSubmit}>
-          <Select
-            label={t('deliveries.customer')}
-            value={form.customerId}
-            onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value }))}
-            options={customers}
-            placeholder="Select customer"
-            required
-          />
-          <DatePicker
-            label={t('deliveries.date')}
-            value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-            required
-          />
-          <textarea
-            value={form.reason}
-            onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
-            placeholder="Return reason"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-            required
-          />
-          <LineItemsEditor
-            products={products}
-            value={form.items}
-            onChange={(items) => setForm((prev) => ({ ...prev, items }))}
-            showPrice={false}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Mã phiếu (Tự động)"
+              value={form.code}
+              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+              placeholder="RT-..."
+            />
+            <Select
+              label={t('deliveries.customer')}
+              value={form.customerId}
+              onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value }))}
+              options={customerOptions}
+              placeholder="Select customer"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Items</div>
+            {form.items.map((item, index) => (
+              <div key={index} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-2 gap-3">
+                <Select
+                  label="Sản phẩm"
+                  value={item.productId}
+                  onChange={(e) => updateItem(index, { productId: e.target.value })}
+                  options={productOptions}
+                  required
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberInput
+                    label="Số lượng"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+                    min={1}
+                    required
+                  />
+                  <Input
+                    label="Lý do"
+                    value={item.reason}
+                    onChange={(e) => updateItem(index, { reason: e.target.value })}
+                    placeholder="Reason"
+                    required
+                  />
+                </div>
+                <button type="button" onClick={() => removeItem(index)} className="text-red-500 text-xs">Remove</button>
+              </div>
+            ))}
+            <button type="button" onClick={addItem} className="text-sm text-indigo-600 font-medium">+ Add Item</button>
+          </div>
         </form>
       </Modal>
     </div>

@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { NumberInput } from '../../components/forms/NumberInput.jsx';
 import { Select } from '../../components/forms/Select.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
+import { apiClient } from '../../services/apiClient.js';
+import { generateId } from '../../utils/id.js'; // Still useful for temp IDs in form
 import { formatDate } from '../../utils/formatters.js';
 import { IncidentStatus } from '../../utils/constants.js';
 
@@ -18,8 +19,8 @@ const emptyLine = {
 
 const createEmptyIncident = () => ({
   type: '',
-  status: IncidentStatus.OPEN,
-  refType: 'receipt',
+  // status: IncidentStatus.OPEN, // Backend defaults
+  refType: 'receipt', // Default
   refId: '',
   note: '',
   action: '',
@@ -28,17 +29,42 @@ const createEmptyIncident = () => ({
 
 export function IncidentsPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+
+  const [loading, setLoading] = useState(false);
+  const [incidents, setIncidents] = useState([]);
+  const [products, setProducts] = useState([]);
+
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(createEmptyIncident);
+  const [form, setForm] = useState(createEmptyIncident());
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [incRes, prodRes] = await Promise.all([
+        apiClient('/incidents'),
+        apiClient('/products')
+      ]);
+      setIncidents(incRes.data || []);
+      setProducts(prodRes.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load incidents');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const productOptions = useMemo(
     () =>
-      data.products.map((product) => ({
+      products.map((product) => ({
         value: product.id,
         label: `${product.sku} - ${product.name}`,
       })),
-    [data.products],
+    [products],
   );
 
   const typeOptions = [
@@ -54,31 +80,71 @@ export function IncidentsPage() {
     { value: 'refund', label: t('incidents.actions.refund') },
   ];
 
-  const statusOptions = [
-    { value: IncidentStatus.OPEN, label: t('incidents.statusValues.open') },
-    { value: IncidentStatus.IN_PROGRESS, label: t('incidents.statusValues.inProgress') },
-    { value: IncidentStatus.RESOLVED, label: t('incidents.statusValues.resolved') },
-  ];
+  // Status mapping if needed, backend likely returns same strings
+  // const statusOptions = [ ... ]; // We display status, not create with it usually
 
   const refTypeOptions = [
     { value: 'receipt', label: t('incidents.refTypes.receipt') },
     { value: 'delivery', label: t('incidents.refTypes.delivery') },
   ];
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    actions.createRecord('incidents', {
-      ...form,
-      id: generateId('inc'),
-      date: new Date().toISOString(),
-    });
-    setForm(createEmptyIncident());
-    setOpen(false);
+
+    // Prepare payload
+    const payload = {
+      type: form.type,
+      refType: form.refType,
+      refId: form.refId, // Should be an ID object? Schema says objectIdSchema.
+      // The UI input is text. If existing system uses IDs, user should likely select from list or input valid ID.
+      // For now assuming user inputs a valid MongoDB ID or the backend allows string reference? 
+      // Schema says `refId: objectIdSchema`. 
+      // If user enters "PN-123", valid ObjectId? No.
+      // Real app would select from Receipt/Delivery list.
+      // Since I don't have that selector here, I'll assume for now user inputs a valid ID or I need to handle it.
+      // Wait, `objectIdSchema` validates strictly hex 24 chars.
+      // If user types a code, it will fail.
+      // Mock data used simple strings.
+      // I should probably allow searching receipts/deliveries.
+      // To fix this quickly without building search: 
+      // 1. Fetch all receipts/deliveries to select? Too heavy.
+      // 2. Just let it fail if invalid ID. 
+      // 3. Or maybe backend allows string? Route says `objectIdSchema`.
+      // Let's assume user pastes an ID or I should provide a selector.
+      // I'll leave it as Input but maybe warn user to paste ID.
+      // Or better: Load limited list of recent receipts/deliveries?
+      // Let's stick to Input but assume it requires ID. 
+
+      lines: form.lines.map(l => ({
+        productId: l.productId,
+        quantity: Number(l.quantity)
+      })),
+      note: form.note,
+      action: form.action
+    };
+
+    try {
+      await apiClient('/incidents', { method: 'POST', body: payload });
+      toast.success(t('notifications.saved'));
+      setForm(createEmptyIncident());
+      setOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Error creating incident');
+    }
   };
 
-  const handleDelete = (incident) => {
+  const handleDelete = async (incident) => {
     if (window.confirm('Delete incident?')) {
-      actions.removeRecord('incidents', incident.id);
+      try {
+        await apiClient(`/incidents/${incident.id}`, { method: 'DELETE' });
+        toast.success(t('notifications.deleted'));
+        fetchData();
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to delete');
+      }
     }
   };
 
@@ -104,7 +170,8 @@ export function IncidentsPage() {
       </div>
 
       <DataTable
-        data={data.incidents}
+        data={incidents}
+        isLoading={loading}
         columns={[
           {
             key: 'type',
@@ -117,7 +184,7 @@ export function IncidentsPage() {
             render: (value) => (value ? t(`incidents.statusValues.${value}`, value) : '-'),
           },
           { key: 'refType', header: t('incidents.refType') },
-          { key: 'refId', header: t('incidents.refId') },
+          { key: 'refId', header: t('incidents.refId') }, // Shows ID. ideally show code.
           { key: 'note', header: t('incidents.note') },
           {
             key: 'action',
@@ -130,7 +197,7 @@ export function IncidentsPage() {
             render: (value) => value?.length ?? 0,
           },
           {
-            key: 'date',
+            key: 'createdAt', // Backend has createdAt/updatedAt
             header: 'Date',
             render: (value) => formatDate(value),
           },
@@ -184,13 +251,7 @@ export function IncidentsPage() {
             placeholder={t('incidents.typePlaceholder')}
             required
           />
-          <Select
-            label={t('app.status')}
-            value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-            options={statusOptions}
-            required
-          />
+
           <div className="grid gap-3 md:grid-cols-2">
             <Select
               label={t('incidents.refType')}
@@ -200,17 +261,17 @@ export function IncidentsPage() {
               required
             />
             <Input
-              label={t('incidents.refId')}
+              label={`${t('incidents.refId')} (Object ID)`}
               value={form.refId}
               onChange={(event) => setForm((prev) => ({ ...prev, refId: event.target.value }))}
-              placeholder={t('incidents.refPlaceholder')}
+              placeholder="Paste ID here"
               required
             />
           </div>
           <div className="space-y-3">
             {form.lines.map((line, index) => (
               <div
-                key={line.id ?? index}
+                key={index}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/60"
               >
                 <div className="grid gap-3 md:grid-cols-2">

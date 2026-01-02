@@ -1,12 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Check, X, Shield, User } from 'lucide-react';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { Select } from '../../components/forms/Select.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
+import { apiClient } from '../../services/apiClient.js';
 import toast from 'react-hot-toast';
 
 const emptyUser = {
@@ -25,13 +24,30 @@ const ROLES = [
 
 export function UsersPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyUser);
 
-  // Fallback to local data if mock hook is not yet populated
-  const users = data.users || [];
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient('/users');
+      // Backend returns { data: [...], meta: ... } or just array? 
+      // Controller list calls buildPagedResponse which returns { data, meta }.
+      setUsers(res.data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể tải danh sách người dùng');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const openCreateModal = () => {
     setForm(emptyUser);
@@ -41,11 +57,11 @@ export function UsersPage() {
 
   const openEditModal = (user) => {
     setEditing(user);
-    setForm({ ...user, password: '' });
+    setForm({ ...user, password: '' }); // Don't show numeric hash or actual password
     setOpen(true);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!form.email || !form.fullName) {
@@ -53,28 +69,45 @@ export function UsersPage() {
       return;
     }
 
-    if (editing) {
-      actions.updateRecord('users', editing.id, form);
-      toast.success('Cập nhật thành công');
-    } else {
-      if (!form.password) {
-        toast.error('Vui lòng nhập mật khẩu');
-        return;
+    try {
+      if (editing) {
+        const payload = { ...form };
+        if (!payload.password) delete payload.password; // Don't send empty password
+
+        await apiClient(`/users/${editing.id}`, {
+          method: 'PUT',
+          body: payload
+        });
+        toast.success('Cập nhật thành công');
+      } else {
+        if (!form.password) {
+          toast.error('Vui lòng nhập mật khẩu');
+          return;
+        }
+        await apiClient('/users', {
+          method: 'POST',
+          body: form
+        });
+        toast.success('Tạo tài khoản thành công');
       }
-      actions.createRecord('users', {
-        ...form,
-        username: form.email.split('@')[0],
-        id: generateId('user'),
-      });
-      toast.success('Tạo tài khoản thành công');
+      setOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi xảy ra');
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Bạn có chắc muốn xóa tài khoản này?')) {
-      actions.removeRecord('users', id);
-      toast.success('Xóa tài khoản thành công');
+      try {
+        await apiClient(`/users/${id}`, { method: 'DELETE' });
+        toast.success('Xóa tài khoản thành công');
+        fetchUsers();
+      } catch (error) {
+        console.error(error);
+        toast.error(error.message || 'Không thể xóa tài khoản');
+      }
     }
   };
 
@@ -99,10 +132,10 @@ export function UsersPage() {
       header: 'Phân quyền',
       render: (value) => (
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium border ${value === 'Admin'
-            ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
-            : value === 'Manager'
-              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
-              : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+          ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
+          : value === 'Manager'
+            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+            : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
           }`}>
           <Shield className="h-3 w-3" />
           {value}
@@ -227,6 +260,16 @@ export function UsersPage() {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
+              placeholder="********"
+            />
+          )}
+
+          {editing && (
+            <Input
+              label="Mật khẩu mới (Để trống nếu không đổi)"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="********"
             />
           )}

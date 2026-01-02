@@ -1,14 +1,14 @@
-import { useMemo, useState, useEffect } from "react";
-import { Plus, Pencil, MapPin, ExternalLink } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Plus, Pencil, MapPin, ExternalLink, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useMockData } from "../../services/mockDataContext.jsx";
 import { Modal } from "../../components/Modal.jsx";
 import { Input } from "../../components/forms/Input.jsx";
 import { Select } from "../../components/forms/Select.jsx";
 import { BarcodeInput } from "../../components/forms/BarcodeInput.jsx";
 import { Tag } from "../../components/Tag.jsx";
-import { generateId } from "../../utils/id.js";
 import { VN_LOCATIONS } from "../../data/vn_locations.js";
+import { apiClient } from "../../services/apiClient.js";
+import toast from "react-hot-toast";
 
 const LEVELS = [
   { value: "Warehouse", label: "Warehouse" },
@@ -34,10 +34,10 @@ const emptyNode = {
   barcode: "",
   warehouseType: "",
   parentId: null,
-  address: "", // Specific address (Street, House No)
-  city: "", // District
-  province: "", // City/Province
-  ward: "", // Ward
+  address: "",
+  city: "",
+  province: "",
+  ward: "",
   lat: "",
   lng: "",
   notes: ""
@@ -45,11 +45,29 @@ const emptyNode = {
 
 export function WarehouseStructurePage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+  const [nodes, setNodes] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyNode);
   const [highlightId, setHighlightId] = useState(null);
+
+  const fetchNodes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient('/warehouse');
+      setNodes(res.data || res || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load warehouse structure');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNodes();
+  }, [fetchNodes]);
 
   // Derived location lists based on selection
   const provinces = useMemo(() => VN_LOCATIONS.map(p => ({ value: p.name, label: p.name })), []);
@@ -67,8 +85,8 @@ export function WarehouseStructurePage() {
 
   const tree = useMemo(() => {
     const map = new Map();
-    // Use data from mock or backend (via mockDataContext wrapper usually)
-    data.warehouseLocations.forEach((node) => map.set(node.id, { ...node, children: [] }));
+    // Assuming backend returns flat list with parentId
+    nodes.forEach((node) => map.set(node.id, { ...node, children: [] }));
     const roots = [];
     map.forEach((node) => {
       if (node.parentId) {
@@ -76,6 +94,8 @@ export function WarehouseStructurePage() {
         if (parent) {
           parent.children.push(node);
         } else {
+          // If parent not found (e.g. filtered out or error), treat as root or orphan?
+          // For now, treat as root to be safe, or skip. Let's push to roots if parent missing in dataset.
           roots.push(node);
         }
       } else {
@@ -83,7 +103,7 @@ export function WarehouseStructurePage() {
       }
     });
     return roots;
-  }, [data.warehouseLocations]);
+  }, [nodes]);
 
   const openCreateModal = (parent) => {
     setEditing(null);
@@ -97,12 +117,6 @@ export function WarehouseStructurePage() {
 
   const openEditModal = (node) => {
     setEditing(node);
-    // Parse address structure if needed, currently flat
-    // NOTE: If address was stored as full string previously, parsing back is hard. 
-    // Assuming new data or simple split if we enforced format. 
-    // For now simplistic approach: just load what's there. 
-    // If 'city' in DB logic was saving District, and 'province' was Province, we are good.
-    // 'ward' is new, might be missing in old data.
     setForm({
       ...emptyNode,
       ...node,
@@ -112,61 +126,54 @@ export function WarehouseStructurePage() {
     setOpen(true);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // Construct full address string for display if needed, but model has separate fields.
-    // Ideally 'address' field in DB should store street part, and we rely on city/province fields.
-    // But frontend display often joins them. 
-    // To keep it clean, we just save as is. 
-    // If we want 'address' to be the full composite string in one database field, we would concat here.
-    // Current model: address, city, province. Missing 'ward' in model explicitly? 
-    // 'address' field in model is usually "Street address".
-    // Let's store 'Ward' inside address text or add to notes if model is rigid. 
-    // Or better: Use 'address' for "Street, Ward". 
-    // Let's prepend Ward to Address field if logical to save space? 
-    // No, cleaner UI separates them. 
-    // I will append Ward to address string for storage so it persists if strict model,
-    // OR just rely on 'address' being street and we lose Ward if not saved.
-    // Let's append Ward to address field when saving to backend if backend doesn't support 'ward' field.
-    // "Street X, Ward Y" -> address.
-
-    let finalAddress = form.address;
-    if (form.ward && !form.address.includes(form.ward)) {
-      finalAddress = `${form.address}, ${form.ward}`;
-    }
-    // But then editing again would be double ward. 
-    // Let's assuming for now we just save as is. 
-    // Wait, the user WANTS to select. 
 
     const payload = {
       ...form,
-      // If we want to persist Ward and the backend model doesn't have it, we might lose it. 
-      // Current model: address, city, province, notes. 
-      // Workaround: Store Ward in 'address' or 'notes' if schema is not changable.
-      // But I can define logic: address = "123 Street, Ward X".
       lat: form.lat ? Number(form.lat) : undefined,
       lng: form.lng ? Number(form.lng) : undefined
     };
 
-    if (!payload.code) {
-      payload.code = generateCode(payload);
+    try {
+      if (editing) {
+        await apiClient(`/warehouse/${editing.id}`, { method: 'PUT', body: payload });
+        toast.success('Updated successfully');
+      } else {
+        await apiClient('/warehouse', { method: 'POST', body: payload });
+        toast.success('Created successfully');
+      }
+      setOpen(false);
+      fetchNodes();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Operation failed');
     }
-    if (editing) {
-      actions.updateRecord("warehouseLocations", editing.id, payload);
-    } else {
-      actions.createRecord("warehouseLocations", { ...payload, id: generateId("loc") });
-    }
-    setOpen(false);
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this warehouse node?')) return;
+    try {
+      await apiClient(`/warehouse/${id}`, { method: 'DELETE' });
+      toast.success('Deleted');
+      fetchNodes();
+    } catch (error) {
+      console.error(error);
+      toast.error('Delete failed');
+    }
+  }
+
   const handleBarcodeScan = (value) => {
-    const node = data.warehouseLocations.find((item) => item.barcode === value);
+    const node = nodes.find((item) => item.barcode === value);
     if (node) {
       setHighlightId(node.id);
       setTimeout(() => setHighlightId(null), 2000);
+      const element = document.getElementById(`node-${node.id}`);
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else if (editing) {
       setForm((prev) => ({ ...prev, barcode: value }));
+    } else {
+      toast('Location not found');
     }
   };
 
@@ -194,17 +201,22 @@ export function WarehouseStructurePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tree.map((node) => (
-          <WarehouseNodeCard
-            key={node.id}
-            node={node}
-            onAddChild={openCreateModal}
-            onEdit={openEditModal}
-            highlightId={highlightId}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-10 text-slate-500">Loading structure...</div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {tree.map((node) => (
+            <WarehouseNodeCard
+              key={node.id}
+              node={node}
+              onAddChild={openCreateModal}
+              onEdit={openEditModal}
+              onDelete={handleDelete}
+              highlightId={highlightId}
+            />
+          ))}
+        </div>
+      )}
 
       <Modal
         open={open}
@@ -324,10 +336,7 @@ export function WarehouseStructurePage() {
   );
 }
 
-function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
-  // Simple logic to show full address or parts
-  // Assuming 'address' is the street part, and city/province are stored. 'ward' might be missing in display if not stored separately
-  // But let's construct a display string.
+function WarehouseNodeCard({ node, onAddChild, onEdit, onDelete, highlightId }) {
   const displayAddressParts = [node.address, node.ward, node.city, node.province].filter(Boolean);
   const fullAddress = displayAddressParts.join(', ');
 
@@ -339,6 +348,7 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
 
   return (
     <div
+      id={`node-${node.id}`}
       className={`card space-y-4 ${highlightId === node.id ? "border-indigo-500 shadow-lg shadow-indigo-200" : ""}`}
     >
       <div className="flex items-start justify-between">
@@ -379,6 +389,13 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
           >
             <Pencil className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => onDelete(node.id)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-300 text-rose-600 transition hover:bg-rose-100 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
           {node.type !== "Bin" ? (
             <button
               type="button"
@@ -390,7 +407,7 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
           ) : null}
         </div>
       </div>
-      {node.children.length > 0 ? (
+      {node.children && node.children.length > 0 ? (
         <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
           {node.children.map((child) => (
             <WarehouseNodeCard
@@ -398,6 +415,7 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
               node={child}
               onAddChild={onAddChild}
               onEdit={onEdit}
+              onDelete={onDelete}
               highlightId={highlightId}
             />
           ))}
@@ -410,9 +428,4 @@ function WarehouseNodeCard({ node, onAddChild, onEdit, highlightId }) {
 function nextLevel(type) {
   const index = LEVELS.findIndex((level) => level.value === type);
   return LEVELS[Math.min(index + 1, LEVELS.length - 1)].value;
-}
-
-function generateCode(form) {
-  const prefix = form.type.slice(0, 2).toUpperCase();
-  return `${prefix}-${Date.now().toString(36)}`;
 }

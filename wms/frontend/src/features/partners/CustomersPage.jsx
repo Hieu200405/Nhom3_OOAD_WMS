@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
@@ -6,8 +6,8 @@ import { Modal } from '../../components/Modal.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { Select } from '../../components/forms/Select.jsx';
 import { NumberInput } from '../../components/forms/NumberInput.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
+import { apiClient } from '../../services/apiClient.js';
+import toast from 'react-hot-toast';
 
 const emptyCustomer = {
   type: 'customer',
@@ -16,7 +16,7 @@ const emptyCustomer = {
   customerType: 'Individual',
   policy: '',
   creditLimit: 0,
-  paymentTerm: 'Net 30', // Terms like Net 30, COD
+  paymentTerm: 'Net 30',
   contact: '',
   isActive: true,
 };
@@ -35,10 +35,28 @@ const paymentTerms = [
 
 export function CustomersPage() {
   const { t } = useTranslation();
-  const { data, actions } = useMockData();
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyCustomer);
+
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient('/partners', { params: { type: 'customer' } });
+      setCustomers(res.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Không thể tải danh sách khách hàng');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const openCreateModal = () => {
     setForm(emptyCustomer);
@@ -52,19 +70,41 @@ export function CustomersPage() {
     setOpen(true);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (editing) {
-      actions.updateRecord('customers', editing.id, form);
-    } else {
-      actions.createRecord('customers', { ...form, id: generateId('cus') });
+    try {
+      const payload = { ...form, type: 'customer' };
+      if (editing) {
+        await apiClient(`/partners/${editing.id}`, {
+          method: 'PUT',
+          body: payload
+        });
+        toast.success('Cập nhật thành công');
+      } else {
+        await apiClient('/partners', {
+          method: 'POST',
+          body: payload
+        });
+        toast.success('Thêm khách hàng thành công');
+      }
+      setOpen(false);
+      fetchCustomers();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi xảy ra');
     }
-    setOpen(false);
   };
 
-  const handleDelete = (customer) => {
-    if (window.confirm('Delete this customer?')) {
-      actions.removeRecord('customers', customer.id);
+  const handleDelete = async (customer) => {
+    if (window.confirm('Xóa khách hàng này?')) {
+      try {
+        await apiClient(`/partners/${customer.id}`, { method: 'DELETE' });
+        toast.success('Xóa thành công');
+        fetchCustomers();
+      } catch (error) {
+        console.error(error);
+        toast.error(error.message || 'Không thể xóa khách hàng');
+      }
     }
   };
 
@@ -85,7 +125,7 @@ export function CustomersPage() {
       </div>
 
       <DataTable
-        data={data.customers}
+        data={customers}
         columns={[
           { key: 'code', header: 'Mã KH' },
           { key: 'name', header: 'Tên Khách Hàng' },
@@ -96,32 +136,6 @@ export function CustomersPage() {
             key: 'isActive',
             header: 'Trạng thái',
             render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
-          },
-          {
-            key: 'debt',
-            header: t('financials.debtAmount'),
-            render: (_, row) => {
-              const transactions = data.financialTransactions.filter(t => t.partnerId === row.id);
-              const totalReceivable = transactions.reduce((acc, curr) => acc + (curr.type === 'receivable' ? curr.amount : 0), 0);
-              const totalPaid = transactions.reduce((acc, curr) => acc + (curr.paidAmount || 0), 0);
-              const remainingDebt = transactions.reduce((acc, curr) => acc + (curr.debtAmount || 0), 0);
-              const overdueCount = transactions.filter(t => {
-                const dueDate = t.paymentDueDate ? new Date(t.paymentDueDate) : null;
-                return dueDate && dueDate < new Date() && t.debtAmount > 0;
-              }).length;
-
-              return (
-                <div className="flex flex-col text-xs">
-                  <span className="font-bold text-rose-600">{remainingDebt.toLocaleString('vi-VN')}</span>
-                  {overdueCount > 0 && (
-                    <span className="text-[10px] text-rose-500 font-bold flex items-center gap-0.5">
-                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
-                      {t('financials.overdueReceipts')}: {overdueCount}
-                    </span>
-                  )}
-                </div>
-              );
-            }
           },
           {
             key: 'actions',
