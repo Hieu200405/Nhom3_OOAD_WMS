@@ -1,27 +1,12 @@
-import { useState, useMemo } from 'react';
-import { Plus, Wallet, ArrowUpRight, ArrowDownLeft, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { DataTable } from '../../components/DataTable.jsx';
-import { Modal } from '../../components/Modal.jsx';
-import { Input } from '../../components/forms/Input.jsx';
-import { Select } from '../../components/forms/Select.jsx';
-import { useMockData } from '../../services/mockDataContext.jsx';
-import { generateId } from '../../utils/id.js';
 
-// TEMP: Mocking inside component until backend is ready or we just use simple placeholder.
-// Ideally, we fetch /transactions and create with POST /transactions.
-// Since backend might not have this endpoint yet, I will create a "Placeholder" view 
-// that renders a "Feature under construction with API" or simple empty table
-// BUT user asked to REMOVE file dependency.
-// So I will convert this to use empty state or dummy local state, 
-// REMOVING useMockData entirely.
+// Refactored to remove mock data usage and unused imports
 
 export function TransactionsPage() {
     const { t } = useTranslation();
-    const [transactions, setTransactions] = useState([]); // Empty for now as no API
-    const [open, setOpen] = useState(false);
-
-    // ... UI Logic that doesn't depend on mock data import ...
+    const [transactions] = useState([]); // Empty state
 
     return (
         <div className="space-y-6">
@@ -34,7 +19,7 @@ export function TransactionsPage() {
                 </div>
                 <button
                     type="button"
-                    onClick={() => { }} // Disabled
+                    disabled
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-400 px-4 py-2 text-sm font-semibold text-white shadow-sm cursor-not-allowed"
                 >
                     <Plus className="h-4 w-4" />
@@ -48,6 +33,9 @@ export function TransactionsPage() {
                     <br />
                     Financial data will be available once the endpoints are ready.
                 </p>
+                <div className="mt-4 text-xs text-slate-400">
+                    0 transactions loaded
+                </div>
             </div>
         </div>
     );

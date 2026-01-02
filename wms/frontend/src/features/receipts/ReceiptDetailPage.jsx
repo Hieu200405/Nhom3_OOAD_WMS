@@ -2,10 +2,10 @@ import { useMemo, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
-import { apiClient } from '../../services/apiClient.js'; // Use apiClient
+import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
-// import { AuditTrail } from '../../components/AuditTrail.jsx'; // Disabling mock audit trail
+import { InfoCard } from '../../components/InfoCard.jsx';
 
 export function ReceiptDetailPage() {
   const { id } = useParams();
@@ -22,20 +22,9 @@ export function ReceiptDetailPage() {
         const res = await apiClient(`/receipts/${id}`);
         setReceipt(res.data);
 
-        // Fetch supplier info if needed (or backend populates it?)
-        // If backend populates `supplier` field as object, great. 
-        // If just ID, fetch supplier.
-        // Assuming backend might not populate, let's fetch carefully.
         if (res.data.supplierId) {
           try {
-            // Assuming partners endpoint can fetch by ID or we list all. 
-            // Currently mock partners handled list. 
-            // Real API typically has /partners/:id. 
-            // If not, we might need to filter list.
-            // Let's assume we load details. 
-            // Or simplified: display ID if name not available.
             const supRes = await apiClient(`/partners?type=supplier&id=${res.data.supplierId}`);
-            // If query returns list:
             if (Array.isArray(supRes.data)) {
               setSupplier(supRes.data.find(s => s.id === res.data.supplierId));
             }
@@ -50,7 +39,7 @@ export function ReceiptDetailPage() {
     fetchData();
   }, [id]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   if (!receipt) {
     return (
@@ -68,7 +57,6 @@ export function ReceiptDetailPage() {
     );
   }
 
-  // Use populated name or fetched supplier or just ID
   const supplierName = supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
 
   return (
@@ -80,19 +68,19 @@ export function ReceiptDetailPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <ChevronLeft className="h-4 w-4" />
-          Quay lại
+          {t('app.back')}
         </button>
         <StatusBadge status={receipt.status} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <InfoCard title="Receipt ID" value={receipt.code || receipt.id} />
         <InfoCard title={t('receipts.date')} value={formatDate(receipt.date)} />
         <InfoCard title={t('receipts.supplier')} value={supplierName} />
         <InfoCard title={t('app.total')} value={formatCurrency(receipt.total)} />
       </div>
 
-      <div className="card space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           {t('app.lineItems')}
         </h2>
@@ -129,20 +117,8 @@ export function ReceiptDetailPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Mapping backend notes field for now */}
         {receipt.notes ? <InfoCard title={t('app.notes')} value={receipt.notes} /> : null}
       </div>
-
-      {/* AuditTrail mock removed. Real backend would provide logs if implemented. */}
-    </div>
-  );
-}
-
-function InfoCard({ title, value }) {
-  return (
-    <div className="card">
-      <p className="text-xs text-slate-500 dark:text-slate-400">{title}</p>
-      <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">{value}</p>
     </div>
   );
 }

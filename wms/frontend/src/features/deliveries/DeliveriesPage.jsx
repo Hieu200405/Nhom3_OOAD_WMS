@@ -15,6 +15,7 @@ import { RoleGuard } from '../../components/RoleGuard.jsx';
 import { useAuth } from '../../app/auth-context.jsx';
 import { Input } from '../../components/forms/Input.jsx';
 import { NumberInput } from '../../components/forms/NumberInput.jsx';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const defaultForm = {
   code: '',
@@ -242,27 +243,22 @@ export function DeliveriesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            {t('deliveries.title')}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Monitor delivery statuses and stock availability.
-          </p>
-        </div>
-        <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-          >
-            <Plus className="h-4 w-4" />
-            {t('deliveries.create')}
-          </button>
-        </RoleGuard>
-      </div>
-
+      <PageHeader
+        title={t('deliveries.title')}
+        description="Monitor delivery statuses and stock availability."
+        actions={
+          <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            >
+              <Plus className="h-4 w-4" />
+              {t('deliveries.create')}
+            </button>
+          </RoleGuard>
+        }
+      />
       <DataTable data={deliveries} columns={columns} isLoading={loading} />
 
       <Modal
@@ -378,7 +374,6 @@ function availableActions(delivery) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
   const staffRoles = [Roles.ADMIN, Roles.MANAGER, Roles.STAFF];
 
-  // Backend statuses: approved, prepared, delivered, completed
   switch (delivery.status) {
     case DeliveryStatus.DRAFT:
       return [{ status: DeliveryStatus.APPROVED, label: 'Approve', roles: managerRoles }];
