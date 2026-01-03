@@ -1,97 +1,79 @@
-# Hệ thống Quản lý Kho (WMS)
-Monorepo gồm frontend Vite/React, backend Express + TypeScript/MongoDB và gói dùng chung `shared`. Ứng dụng hỗ trợ quản lý nhập/xuất, kiểm kê, điều chỉnh tồn, báo cáo và phân quyền (Admin/Manager/Staff) với xác thực JWT.
+# Hệ thống Quản lý Kho (WMS) - Nâng Cao
 
-## Cấu trúc thư mục
+Hệ thống quản lý kho toàn diện được xây dựng theo kiến trúc Monorepo hiện đại, tối ưu hóa cho hiệu suất, khả năng mở rộng và trải nghiệm người dùng.
+
+## 🚀 Tính năng nổi bật
+
+*   **Quản lý tồn kho thời gian thực:** Theo dõi chính xác số lượng hàng hóa tại từng vị trí (Zone, Aisle, Rack, Bin).
+*   **Quy trình vận hành chuẩn:** Nhập hàng, Xuất hàng, Kiểm kê, Điều chỉnh tồn kho, Trả hàng, Hủy hàng.
+*   **Tài chính tích hợp:** Tự động ghi nhận doanh thu, chi phí từ các hoạt động nhập xuất và thanh toán.
+*   **Báo cáo thông minh:** Dashboard trực quan, biểu đồ thống kê, xuất báo cáo PDF.
+*   **Hệ thống thông báo:** Cảnh báo tồn kho thấp, thông báo trạng thái đơn hàng realtime.
+*   **Phân quyền chặt chẽ:** Admin, Manager, Staff với quyền hạn được kiểm soát chi tiết (RBAC).
+*   **Bảo mật cao:** Xác thực JWT, Refresh Token, mã hóa mật khẩu Bcrypt.
+
+## 🛠 Công nghệ sử dụng
+
+*   **Frontend:** React (Vite), TailwindCSS, Recharts, Lucide Icons.
+*   **Backend:** Node.js, Express, TypeScript, Mongoose (MongoDB).
+*   **Shared:** Gói thư viện chia sẻ type, enum, schema validation (Zod) giữa FE và BE.
+*   **DevOps:** Docker, Docker Compose, ESLint, Prettier, Husky.
+
+## 📂 Cấu trúc dự án (Monorepo)
+
 ```
 wms/
- ├─ frontend/   # Ứng dụng React (Vite + Tailwind)
- ├─ server/     # API Express + MongoDB, Swagger, Jest
- ├─ shared/     # Hằng số / schema dùng chung
+ ├─ frontend/   # Giao diện người dùng (React 18)
+ ├─ server/     # API Server (Express + TypeScript)
+ ├─ shared/     # Thư viện dùng chung (Types, Schemas, Constants)
  ├─ docker-compose.yml
- ├─ scripts/    # setup-env, tiện ích
+ ├─ scripts/    # Scripts tiện ích
  └─ package.json
 ```
 
-## Yêu cầu
-- Node.js >= 18, npm 9+.
-- Docker Desktop (tùy chọn, nếu chạy qua docker-compose).
-- Nếu chạy local không dùng Docker: cần MongoDB đang lắng nghe `mongodb://127.0.0.1:27017`.
+## ⚙️ Cài đặt và Chạy ứng dụng
 
-## Chuẩn bị biến môi trường
-Chạy một lần để tạo file `.env` từ mẫu:
+### 1. Chuẩn bị môi trường
+*   Node.js >= 18
+*   MongoDB (hoặc Docker)
+
+### 2. Cài đặt dependencies
 ```bash
 cd wms
 npm install
-npm run setup
+npm run setup # Tạo file .env từ mẫu .env.example
 ```
-Sau đó sửa các file:
-- `server/.env` — cấu hình backend.
-- `frontend/.env` — cấu hình URL API cho frontend.
 
-### server/.env (mẫu có sẵn)
-- `PORT` (mặc định 4000) — cổng API.
-- `MONGODB_URI` — chuỗi kết nối MongoDB.
-- `CLIENT_URL` — origin cho CORS, mặc định `http://localhost:5173`.
-- `JWT_SECRET`, `JWT_REFRESH_SECRET` — **phải** đổi thành chuỗi bí mật riêng.
-- `JWT_EXPIRES`, `JWT_REFRESH_EXPIRES` — thời gian sống access/refresh token (ví dụ `1h`, `7d`).
-- `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` — giới hạn tốc độ request.
-- `BCRYPT_ROUNDS` — số vòng băm mật khẩu.
-- `UPLOAD_DIR` — thư mục lưu file upload (tự tạo nếu chưa có).
-- `DISPOSAL_BOARD_THRESHOLD` — ngưỡng giá trị yêu cầu duyệt hủy bởi hội đồng.
-- `DEFAULT_PAGE`, `DEFAULT_LIMIT` — phân trang mặc định.
+### 3. Cấu hình
+Kiểm tra file `server/src/config/env.ts` hoặc `.env` để điều chỉnh các thông số:
+*   **Rate Limit:** Đã được tối ưu lên 1000 req/15p cho môi trường phát triển.
+*   **Cổng API:** Mặc định 4001 (hoặc theo file .env).
 
-### frontend/.env (mẫu có sẵn)
-- `VITE_API_BASE_URL` — URL gốc của API, ví dụ `http://localhost:4000/api/v1`.
-- `VITE_API_URL` — fallback tùy chọn (để trống nếu không dùng).
-- `VITE_USE_MOCK` — `false` để gọi API thật, `true` để dùng mock handler.
-
-## Chạy nhanh với Docker
-```bash
-cd wms
-npm run docker:up        # build & start mongo + server + frontend
-```
-Dịch vụ:
-- API: http://localhost:4000/api/v1
-- Swagger UI: http://localhost:4000/api-docs
-- Web app: http://localhost:5173
-
-Dừng stack: `npm run docker:down`. Xem log: `npm run docker:logs`.
-
-## Chạy local (không Docker)
-```bash
-cd wms
-npm install
-npm run setup            # tạo .env từ .env.example nếu chưa có
-npm run dev              # song song server (4000) + frontend (5173)
-```
-Chạy riêng lẻ:
-- Backend: `npm run dev:server`
-- Frontend: `npm run dev:frontend`
-
-## Seed dữ liệu demo
+### 4. Khởi tạo dữ liệu mẫu (Seed Data)
+Để có dữ liệu ban đầu (Sản phẩm, Kho, Đối tác, Tài chính, Thông báo...):
 ```bash
 npm run seed
 ```
-Tài khoản mẫu được tạo:
-- Admin: `admin@wms.local` / `123456`
-- Manager: `manager@wms.local` / `123456`
-- Staff: `staff@wms.local` / `123456`
+*Tài khoản mặc định:*
+*   **Admin:** `admin@wms.local` / `123456`
+*   **Manager:** `manager@wms.local` / `123456`
+*   **Staff:** `staff@wms.local` / `123456`
 
-## Kiểm thử & lint
-- Chạy toàn bộ test trong workspace backend: `npm run test --workspace server`
-- Lint tất cả workspace: `npm run lint`
+### 5. Chạy ứng dụng (Dev Mode)
+```bash
+npm run dev
+```
+*   **Frontend:** http://localhost:5173
+*   **Backend API:** http://localhost:4001/api/v1
+*   **Swagger Docs:** http://localhost:4001/api-docs
 
-## Tài liệu & endpoints
-- Health check: `GET /health`
-- API gốc: `/api/v1`
-- Swagger UI: `http://localhost:4000/api-docs`
-- Uploads tĩnh: `/uploads/*`
+## 🐳 Chạy với Docker
+```bash
+npm run docker:up
+```
 
-## Triển khai nhanh
-- Backend: `npm --prefix server run build` sau đó chạy `node server/dist/index.js` (cần biến môi trường như trong `server/.env`).
-- Frontend: `npm --prefix frontend run build`, deploy thư mục `frontend/dist`.
+## 📚 Tài liệu API
+Hệ thống cung cấp tài liệu API chuẩn OpenAPI (Swagger) tại đường dẫn `/api-docs` khi server đang chạy.
 
-## Script hữu ích
-- `npm run build` — build tất cả workspace.
-- `npm run docker:up|down|logs` — tiện ích Docker Compose.
-- `npm run prepare` — cài đặt husky (tự chạy khi `npm install`).
+## 🛡️ Tác giả & Bản quyền
+Dự án được thực hiện bởi Nhóm 3 - OOAD.

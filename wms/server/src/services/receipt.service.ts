@@ -205,6 +205,15 @@ export const transitionReceipt = async (
     actorId,
     payload: { status: target }
   });
+  // Create notification
+  const { createNotification } = await import('./notification.service.js');
+  await createNotification({
+    userId: actorId,
+    type: 'success',
+    title: 'Receipt Completed',
+    message: `Receipt ${receipt.code} has been fully processed and added to inventory.`,
+  });
+
   return receipt.toObject();
 };
 

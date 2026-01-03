@@ -3,6 +3,7 @@ import { Sun, Moon, LogOut } from 'lucide-react';
 import { useTheme } from '../../app/theme-context.jsx';
 import { useAuth } from '../../app/auth-context.jsx';
 import { Input } from '../forms/Input.jsx';
+import { NotificationDropdown } from './NotificationDropdown.jsx';
 
 export function Header({ onSearch }) {
   const { theme, toggleTheme } = useTheme();
@@ -38,6 +39,7 @@ export function Header({ onSearch }) {
             EN
           </button>
         </div>
+        <NotificationDropdown />
         <button
           type="button"
           onClick={toggleTheme}

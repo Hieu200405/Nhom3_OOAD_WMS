@@ -17,6 +17,7 @@ import disposalRoutes from './disposal.routes.js';
 import reportRoutes from './report.routes.js';
 import uploadRoutes from './upload.routes.js';
 import transactionRoutes from './transaction.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use('/disposals', disposalRoutes);
 router.use('/reports', reportRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/transactions', transactionRoutes);
+router.use('/notifications', notificationRoutes);
 
 export const apiRouter = router;
