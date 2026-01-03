@@ -55,7 +55,7 @@ export function TransactionsPage() {
                 </span>
             )
         },
-        { key: 'partnerId', header: 'Đối tác', render: (p) => p?.name || '---' }, // Backend populates partner
+        { key: 'partner', header: 'Đối tác', render: (p) => p?.name || '---' }, // Backend populates partner
         {
             key: 'referenceType', header: 'Tham chiếu', render: (val, row) => (
                 <div className="flex flex-col">
