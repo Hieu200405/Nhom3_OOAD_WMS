@@ -5,27 +5,24 @@ export const Roles = {
 };
 
 export const ReceiptStatus = {
-  DRAFT: 'Draft',
-  APPROVED: 'Approved',
-  SUPPLIER_CONFIRMED: 'Supplier Confirmed',
-  COMPLETED: 'Completed',
-  REJECTED: 'Rejected',
+  DRAFT: 'draft',
+  APPROVED: 'approved',
+  SUPPLIER_CONFIRMED: 'supplierConfirmed',
+  COMPLETED: 'completed',
 };
 
 export const DeliveryStatus = {
-  DRAFT: 'Draft',
-  APPROVED: 'Approved',
-  PREPARED: 'Prepared',
-  DELIVERED: 'Delivered',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  DRAFT: 'draft',
+  APPROVED: 'approved',
+  PREPARED: 'prepared',
+  DELIVERED: 'delivered',
+  COMPLETED: 'completed',
 };
 
 export const StocktakingStatus = {
-  OPEN: 'Open',
-  PENDING_APPROVAL: 'Pending Approval',
-  APPROVED: 'Approved',
-  APPLIED: 'Applied',
+  DRAFT: 'draft',
+  APPROVED: 'approved',
+  APPLIED: 'applied',
 };
 
 export const IncidentStatus = {
@@ -34,4 +31,4 @@ export const IncidentStatus = {
   RESOLVED: 'resolved',
 };
 
-export const DisposalReasons = ['Expired', 'Damaged', 'Lost'];
+export const DisposalReasons = ['expired', 'damaged', 'lost'];
