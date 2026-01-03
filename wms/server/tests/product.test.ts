@@ -23,7 +23,7 @@ describe('Product API', () => {
       password: 'Admin123!'
     });
     token = login.body.data.accessToken;
-    const category = await CategoryModel.create({ name: 'Beverages' });
+    const category = await CategoryModel.create({ name: 'Beverages', code: 'BEV-001' });
     categoryId = category.id;
   });
 

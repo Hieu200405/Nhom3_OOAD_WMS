@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 
 export interface Product {
   sku: string;
@@ -36,4 +36,4 @@ const productSchema = new Schema<ProductDocument>(
 productSchema.index({ sku: 1 }, { unique: true });
 productSchema.index({ name: 'text', sku: 'text' });
 
-export const ProductModel: Model<ProductDocument> = model<ProductDocument>('Product', productSchema);
+export const ProductModel: Model<ProductDocument> = (models.Product as Model<ProductDocument>) || model<ProductDocument>('Product', productSchema);

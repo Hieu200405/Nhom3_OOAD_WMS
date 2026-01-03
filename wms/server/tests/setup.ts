@@ -4,6 +4,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 let mongod: MongoMemoryServer;
 
 beforeAll(async () => {
+  jest.setTimeout(300000); // 5 minutes for download
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
   process.env.MONGODB_URI = uri;

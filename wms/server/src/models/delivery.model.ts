@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { DELIVERY_STATUS, type DeliveryStatus } from '@wms/shared';
 
 export interface DeliveryLine {
@@ -48,7 +48,4 @@ const deliverySchema = new Schema<DeliveryDocument>(
 deliverySchema.index({ code: 1 }, { unique: true });
 deliverySchema.index({ customerId: 1, date: -1 });
 
-export const DeliveryModel: Model<DeliveryDocument> = model<DeliveryDocument>(
-  'Delivery',
-  deliverySchema
-);
+export const DeliveryModel: Model<DeliveryDocument> = (models.Delivery as Model<DeliveryDocument>) || model<DeliveryDocument>('Delivery', deliverySchema);

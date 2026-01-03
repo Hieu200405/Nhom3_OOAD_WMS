@@ -230,12 +230,10 @@ export const getStocktakeReport = async () => {
   return rows.map(toObject);
 };
 
-const currentDirname = typeof __dirname !== 'undefined'
-  ? __dirname
-  : path.dirname(fileURLToPath(import.meta.url));
+const fontDir = path.resolve(process.cwd(), 'src/assets/fonts');
 
-const fontRegularPath = path.resolve(currentDirname, '../assets/fonts/NotoSans-Regular.ttf');
-const fontBoldPath = path.resolve(currentDirname, '../assets/fonts/NotoSans-Bold.ttf');
+const fontRegularPath = path.join(fontDir, 'NotoSans-Regular.ttf');
+const fontBoldPath = path.join(fontDir, 'NotoSans-Bold.ttf');
 
 export const createPdfBuffer = async (title: string, data: any) => {
   const doc = new PDFDocument({ margin: 40 });

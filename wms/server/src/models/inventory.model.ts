@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 
 export interface Inventory {
   productId: Types.ObjectId;
@@ -27,7 +27,4 @@ const inventorySchema = new Schema<InventoryDocument>(
 
 inventorySchema.index({ productId: 1, locationId: 1, batch: 1 }, { unique: true, sparse: true });
 
-export const InventoryModel: Model<InventoryDocument> = model<InventoryDocument>(
-  'Inventory',
-  inventorySchema
-);
+export const InventoryModel: Model<InventoryDocument> = (models.Inventory as Model<InventoryDocument>) || model<InventoryDocument>('Inventory', inventorySchema);

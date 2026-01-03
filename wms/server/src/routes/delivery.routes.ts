@@ -19,6 +19,7 @@ const createSchema = z.object({
   code: z.string().min(1),
   customerId: objectIdSchema,
   date: z.coerce.date(),
+  expectedDate: z.coerce.date(),
   lines: z.array(lineSchema).min(1),
   notes: z.string().optional()
 });

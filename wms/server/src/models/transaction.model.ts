@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { FINANCIAL_TRANSACTION_TYPES, FINANCIAL_TRANSACTION_STATUS, type FinancialTransactionType, type FinancialTransactionStatus } from '@wms/shared';
 
 export interface FinancialTransaction {
@@ -33,7 +33,4 @@ const financialTransactionSchema = new Schema<FinancialTransactionDocument>(
 financialTransactionSchema.index({ partnerId: 1, date: -1 });
 financialTransactionSchema.index({ referenceId: 1 });
 
-export const FinancialTransactionModel: Model<FinancialTransactionDocument> = model<FinancialTransactionDocument>(
-    'FinancialTransaction',
-    financialTransactionSchema
-);
+export const FinancialTransactionModel: Model<FinancialTransactionDocument> = (models.FinancialTransaction as Model<FinancialTransactionDocument>) || model<FinancialTransactionDocument>('FinancialTransaction', financialTransactionSchema);

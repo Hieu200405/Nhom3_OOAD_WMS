@@ -22,12 +22,12 @@ const CUSTOMER_CONSTRAINTS = {
 };
 
 const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate = false) => {
-  const tier = customer.type === 'Corporate' ? CUSTOMER_CONSTRAINTS.Corporate : CUSTOMER_CONSTRAINTS.Individual;
+  const tier = customer.customerType === 'Corporate' ? CUSTOMER_CONSTRAINTS.Corporate : CUSTOMER_CONSTRAINTS.Individual;
 
   // 1. Total quantity validation
   const totalQty = deliveryData.lines.reduce((sum: number, line: any) => sum + line.qty, 0);
   if (totalQty > tier.maxQty) {
-    throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customer.type} customers (${tier.maxQty})`);
+    throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customer.customerType ?? 'Individual'} customers (${tier.maxQty})`);
   }
 
   // 2. SLA validation: Expected Date - Export Date
@@ -116,14 +116,14 @@ export const createDelivery = async (
     }
   }
 
-  // Ensure stock is available before creating the delivery
-  await ensureStock(
-    payload.lines.map((line) => ({
-      productId: line.productId,
-      locationId: line.locationId,
-      qty: line.qty
-    }))
-  );
+  // Ensure stock is available before creating the delivery - REMOVED to allow Drafts
+  // await ensureStock(
+  //   payload.lines.map((line) => ({
+  //     productId: line.productId,
+  //     locationId: line.locationId,
+  //     qty: line.qty
+  //   }))
+  // );
 
   // Validate additional constraints (Qty limit, SLA)
   await validateDeliveryRules(payload, customer);
@@ -248,7 +248,7 @@ export const transitionDelivery = async (
     const { createTransaction } = await import('./transaction.service.js');
     await createTransaction({
       partnerId: delivery.customerId.toString(),
-      type: 'revenue',
+      type: 'income',
       amount: totalAmount,
       status: 'completed',
       referenceId: (delivery as any)._id.toString(),
