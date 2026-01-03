@@ -11,5 +11,6 @@ export * from './stocktake.model.js';
 export * from './adjustment.model.js';
 export * from './return.model.js';
 export * from './disposal.model.js';
+export * from './notification.model.js';
 export * from './auditLog.model.js';
 export * from './transaction.model.js';

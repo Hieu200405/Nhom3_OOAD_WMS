@@ -22,7 +22,7 @@ export const env = {
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
   uploadDir: process.env.UPLOAD_DIR ?? path.resolve(process.cwd(), 'uploads'),
   rateLimitWindowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-  rateLimitMax: toNumber(process.env.RATE_LIMIT_MAX, 100),
+  rateLimitMax: toNumber(process.env.RATE_LIMIT_MAX, 1000),
   saltRounds: toNumber(process.env.BCRYPT_ROUNDS, 10),
   highValueDisposalThreshold: toNumber(process.env.DISPOSAL_BOARD_THRESHOLD, 50_000),
   defaultPage: toNumber(process.env.DEFAULT_PAGE, 1),

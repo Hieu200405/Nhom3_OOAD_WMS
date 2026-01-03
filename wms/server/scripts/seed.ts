@@ -25,7 +25,7 @@ const wipeCollections = async () => {
     InventoryModel
   ];
 
-  await Promise.all(collections.map((model) => model.deleteMany({})));
+  await Promise.all(collections.map((model) => (model as any).deleteMany({})));
 };
 
 const seedUsers = async () => {
@@ -49,11 +49,12 @@ const seedCategories = async () => {
   const categories = ['Beverages', 'Electronics', 'Furniture', 'Groceries', 'Pharmaceuticals'].map(
     (name) => ({
       name,
+      code: name.toUpperCase().slice(0, 3) + '-001',
       description: `${name} category`
     })
   );
   const inserted = await CategoryModel.insertMany(categories);
-  return inserted.map((cat) => cat._id);
+  return inserted.map((cat) => cat._id as Types.ObjectId);
 };
 
 const seedProducts = async (categoryIds: Types.ObjectId[]) => {
@@ -77,10 +78,10 @@ const seedProducts = async (categoryIds: Types.ObjectId[]) => {
 
 const seedPartners = async () => {
   const partners = [
-    { type: 'supplier' as const, name: 'Supplier Alpha' },
-    { type: 'supplier' as const, name: 'Supplier Beta' },
-    { type: 'customer' as const, name: 'Customer Gamma' },
-    { type: 'customer' as const, name: 'Customer Delta' }
+    { type: 'supplier' as const, name: 'Supplier Alpha', code: 'SUP-001', contact: '0900000001' },
+    { type: 'supplier' as const, name: 'Supplier Beta', code: 'SUP-002', contact: '0900000002' },
+    { type: 'customer' as const, name: 'Customer Gamma', code: 'CUST-001', contact: '0900000003' },
+    { type: 'customer' as const, name: 'Customer Delta', code: 'CUST-002', contact: '0900000004' }
   ];
   await PartnerModel.insertMany(partners);
 };
@@ -111,7 +112,7 @@ const createWarehouseTree = async () => {
         parentId: zone._id
       }))
     );
-    aisles.push(...created.map((doc) => doc._id));
+    aisles.push(...created.map((doc) => doc._id as Types.ObjectId));
   }
 
   const racks: Types.ObjectId[] = [];
@@ -126,7 +127,7 @@ const createWarehouseTree = async () => {
         parentId: aisleId
       }))
     );
-    racks.push(...created.map((doc) => doc._id));
+    racks.push(...created.map((doc) => doc._id as Types.ObjectId));
   }
 
   const bins = [];
@@ -146,12 +147,11 @@ const createWarehouseTree = async () => {
 
   return bins;
 };
-
-type Identifiable = { _id: Types.ObjectId };
-
-const seedInventory = async (products: Identifiable[], bins: Identifiable[]) => {
+// Use loose typing for seeding script simplification
+const seedInventory = async (products: any[], bins: any[]) => {
   const items = [];
   const targetProducts = products.slice(0, 10);
+
 
   for (const product of targetProducts) {
     const selectedBins = bins.sort(() => 0.5 - Math.random()).slice(0, 3);
@@ -170,18 +170,125 @@ const seedInventory = async (products: Identifiable[], bins: Identifiable[]) => 
   }
 };
 
+const seedNotifications = async (users: any[]) => {
+  const notifications = [];
+  const admin = users.find(u => u.role === 'Admin');
+
+  if (admin) {
+    notifications.push({
+      userId: admin._id,
+      type: 'info',
+      title: 'Hệ thống sẵn sàng',
+      message: 'Chào mừng bạn đến với WMS. Cơ sở dữ liệu đã được khởi tạo thành công.',
+      isRead: false
+    });
+
+    notifications.push({
+      userId: admin._id,
+      type: 'warning',
+      title: 'Cần kiểm tra kho',
+      message: 'Một số sản phẩm đang có mức tồn kho thấp dưới mức tối thiểu.',
+      isRead: false
+    });
+  }
+
+  // Dynamic import to avoid static import issues if file is new
+  const { NotificationModel } = await import('../src/models/notification.model.js');
+  if (NotificationModel) {
+    await NotificationModel.insertMany(notifications);
+  }
+};
+
+const seedFinancials = async (partners: any[]) => {
+  const transactions = [];
+  // Use first supplier
+  const supplier = partners.find(p => p.type === 'supplier');
+  // Use first customer
+  const customer = partners.find(p => p.type === 'customer');
+
+  // Dynamic import
+  const { FinancialTransactionModel } = await import('../src/models/transaction.model.js');
+
+  if (supplier && FinancialTransactionModel) {
+    transactions.push({
+      partnerId: supplier._id,
+      type: 'expense',
+      status: 'completed',
+      amount: 15000000,
+      referenceType: 'Manual',
+      note: 'Thanh toán tiền nhập hàng tháng trước',
+      date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+    });
+  }
+
+  if (customer && FinancialTransactionModel) {
+    transactions.push({
+      partnerId: customer._id,
+      type: 'income',
+      status: 'completed',
+      amount: 8500000,
+      referenceType: 'Manual',
+      note: 'Khách hàng thanh toán công nợ',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
+    });
+  }
+
+  if (FinancialTransactionModel && transactions.length > 0) {
+    await FinancialTransactionModel.insertMany(transactions);
+  }
+};
+
+
 const seed = async () => {
   await connectMongo();
-  await wipeCollections();
+
+  // Wipe including new collections
+  const collections = [
+    UserModel,
+    CategoryModel,
+    ProductModel,
+    PartnerModel,
+    WarehouseNodeModel,
+    InventoryModel
+  ];
+
+  // Try to wipe optional/new collections gracefully
+  try {
+    const { NotificationModel } = await import('../src/models/notification.model.js');
+    if (NotificationModel) await NotificationModel.deleteMany({});
+
+    const { FinancialTransactionModel } = await import('../src/models/transaction.model.js');
+    if (FinancialTransactionModel) await FinancialTransactionModel.deleteMany({});
+
+    const { ReceiptModel } = await import('../src/models/receipt.model.js');
+    if (ReceiptModel) await ReceiptModel.deleteMany({});
+
+    const { DeliveryModel } = await import('../src/models/delivery.model.js');
+    if (DeliveryModel) await DeliveryModel.deleteMany({});
+  } catch (e) { console.log('Partial wipe skipped', e); }
+
+  await Promise.all(collections.map((model) => (model as any).deleteMany({})));
 
   await seedUsers();
-  const categoryIds = await seedCategories();
-  const products = await seedProducts(categoryIds);
-  await seedPartners();
-  const bins = await createWarehouseTree();
-  await seedInventory(products, bins);
+  const users = await UserModel.find({});
 
-  logger.info('Seed completed successfully');
+  const categoryIds = await seedCategories();
+  const products = await seedProducts(categoryIds); // Ensure products returned are Documents
+  const productDocs = await ProductModel.find({}); // Refetch to be sure
+
+  await seedPartners();
+  const partners = await PartnerModel.find({});
+
+  const bins = await createWarehouseTree();
+  // Refetch bins to ensure we have _ids correct if needed, or use returned array
+
+  await seedInventory(productDocs, bins);
+
+  // New Seeds
+  await seedNotifications(users);
+  await seedFinancials(partners);
+
+  logger.info('Seed completed successfully with comprehensive data');
 };
 
 seed()
