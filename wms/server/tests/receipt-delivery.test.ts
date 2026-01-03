@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { createApp } from '../src/app.js';
 import { UserModel } from '../src/models/user.model.js';
@@ -7,6 +8,7 @@ import { ProductModel } from '../src/models/product.model.js';
 import { PartnerModel } from '../src/models/partner.model.js';
 import { WarehouseNodeModel } from '../src/models/warehouseNode.model.js';
 import { InventoryModel } from '../src/models/inventory.model.js';
+import { FinancialTransactionModel } from '../src/models/transaction.model.js';
 import { env } from '../src/config/env.js';
 
 describe('Receipt & Delivery flows', () => {
@@ -32,7 +34,7 @@ describe('Receipt & Delivery flows', () => {
     });
     token = login.body.data.accessToken;
 
-    const category = await CategoryModel.create({ name: 'General' });
+    const category = await CategoryModel.create({ name: 'General', code: 'CAT-GEN' });
     const product = await ProductModel.create({
       sku: 'SKU-100',
       name: 'Receipt Product',
@@ -44,9 +46,9 @@ describe('Receipt & Delivery flows', () => {
     });
     productId = product.id;
 
-    const supplier = await PartnerModel.create({ type: 'supplier', name: 'Supplier Seed' });
+    const supplier = await PartnerModel.create({ type: 'supplier', name: 'Supplier Seed', code: 'SUP-TEST', contact: '0900' });
     supplierId = supplier.id;
-    const customer = await PartnerModel.create({ type: 'customer', name: 'Customer Seed' });
+    const customer = await PartnerModel.create({ type: 'customer', name: 'Customer Seed', code: 'CUST-TEST', contact: '0901', customerType: 'Corporate' });
     customerId = customer.id;
 
     const warehouse = await WarehouseNodeModel.create({
@@ -97,22 +99,24 @@ describe('Receipt & Delivery flows', () => {
     }).lean();
     expect(inventoryAfterReceipt?.quantity).toBe(100);
 
+    const deliveryPayload = {
+      code: 'DL-100',
+      customerId,
+      date: new Date().toISOString(),
+      expectedDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      lines: [
+        {
+          productId,
+          qty: 60,
+          priceOut: 30,
+          locationId: binId
+        }
+      ]
+    };
     const deliveryRes = await request(app)
       .post('/api/v1/deliveries')
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        code: 'DL-100',
-        customerId,
-        date: new Date().toISOString(),
-        lines: [
-          {
-            productId,
-            qty: 60,
-            priceOut: 30,
-            locationId: binId
-          }
-        ]
-      });
+      .send(deliveryPayload);
     expect(deliveryRes.status).toBe(201);
     const deliveryId = deliveryRes.body.data._id ?? deliveryRes.body.data.id;
 
@@ -130,6 +134,15 @@ describe('Receipt & Delivery flows', () => {
     }).lean();
     expect(inventoryAfterDelivery?.quantity).toBe(40);
 
+    // Verify Financial Transaction creation
+    const transaction = await FinancialTransactionModel.findOne({
+      referenceId: new Types.ObjectId(deliveryId),
+      referenceType: 'Delivery'
+    }).lean();
+    expect(transaction).toBeDefined();
+    expect(transaction?.type).toBe('income'); // Should be 'income', not 'revenue'
+    expect(transaction?.amount).toBe(1800); // 60 qty * 30 priceOut
+
     const insufficientDelivery = await request(app)
       .post('/api/v1/deliveries')
       .set('Authorization', `Bearer ${token}`)
@@ -137,6 +150,7 @@ describe('Receipt & Delivery flows', () => {
         code: 'DL-101',
         customerId,
         date: new Date().toISOString(),
+        expectedDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         lines: [
           {
             productId,

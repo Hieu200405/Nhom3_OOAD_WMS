@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { Schema, model, models, type Document, type Model } from 'mongoose';
 
 export interface Category {
   code: string;
@@ -24,7 +24,7 @@ const categorySchema = new Schema<CategoryDocument>(
 categorySchema.index({ code: 1 }, { unique: true });
 categorySchema.index({ name: 1 });
 
-export const CategoryModel: Model<CategoryDocument> = model<CategoryDocument>(
+export const CategoryModel: Model<CategoryDocument> = (models.Category as Model<CategoryDocument>) || model<CategoryDocument>(
   'Category',
   categorySchema
 );

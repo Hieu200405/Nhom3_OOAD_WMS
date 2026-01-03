@@ -11,6 +11,8 @@ export const notFoundHandler = (req: Request, _res: Response, next: NextFunction
   next(notFoundError(`Route ${req.originalUrl} not found`));
 };
 
+import { Error as MongooseError } from 'mongoose';
+
 export const errorHandler = (
   err: unknown,
   _req: Request,
@@ -21,6 +23,14 @@ export const errorHandler = (
 
   if (error instanceof ZodError) {
     error = new AppError(400, 'VALIDATION_ERROR', 'Invalid request data', error.issues);
+  }
+
+  if (error instanceof MongooseError.ValidationError) {
+    error = new AppError(400, 'VALIDATION_ERROR', error.message, error.errors);
+  }
+
+  if (error instanceof MongooseError.CastError) {
+    error = new AppError(400, 'INVALID_ID', `Invalid ${error.path}: ${error.value}`);
   }
 
   if (!(error instanceof AppError)) {

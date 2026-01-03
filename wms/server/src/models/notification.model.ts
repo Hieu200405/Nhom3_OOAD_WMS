@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 
 export interface Notification {
     userId: Types.ObjectId;
@@ -28,7 +28,4 @@ const notificationSchema = new Schema<NotificationDocument>(
 notificationSchema.index({ userId: 1, isRead: 1 });
 notificationSchema.index({ createdAt: -1 });
 
-export const NotificationModel: Model<NotificationDocument> = model<NotificationDocument>(
-    'Notification',
-    notificationSchema
-);
+export const NotificationModel: Model<NotificationDocument> = (models.Notification as Model<NotificationDocument>) || model<NotificationDocument>('Notification', notificationSchema);

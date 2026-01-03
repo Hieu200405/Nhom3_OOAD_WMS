@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { RETURN_STATUS, RETURN_FROM, type ReturnStatus, type ReturnFrom } from '@wms/shared';
 
 export interface ReturnItem {
@@ -45,4 +45,4 @@ const returnSchema = new Schema<ReturnDocument>(
 
 returnSchema.index({ code: 1 }, { unique: true });
 
-export const ReturnModel: Model<ReturnDocument> = model<ReturnDocument>('Return', returnSchema);
+export const ReturnModel: Model<ReturnDocument> = (models.Return as Model<ReturnDocument>) || model<ReturnDocument>('Return', returnSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { WAREHOUSE_NODE_TYPES, type WarehouseNodeType } from '@wms/shared';
 
 export interface WarehouseNode {
@@ -42,7 +42,4 @@ const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
 warehouseNodeSchema.index({ code: 1 }, { unique: true });
 warehouseNodeSchema.index({ parentId: 1 });
 
-export const WarehouseNodeModel: Model<WarehouseNodeDocument> = model<WarehouseNodeDocument>(
-  'WarehouseNode',
-  warehouseNodeSchema
-);
+export const WarehouseNodeModel: Model<WarehouseNodeDocument> = (models.WarehouseNode as Model<WarehouseNodeDocument>) || model<WarehouseNodeDocument>('WarehouseNode', warehouseNodeSchema);

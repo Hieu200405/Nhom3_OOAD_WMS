@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import {
   INCIDENT_TYPES,
   INCIDENT_ACTIONS,
@@ -54,7 +54,4 @@ const incidentSchema = new Schema<IncidentDocument>(
 
 incidentSchema.index({ refType: 1, refId: 1 });
 
-export const IncidentModel: Model<IncidentDocument> = model<IncidentDocument>(
-  'Incident',
-  incidentSchema
-);
+export const IncidentModel: Model<IncidentDocument> = (models.Incident as Model<IncidentDocument>) || model<IncidentDocument>('Incident', incidentSchema);

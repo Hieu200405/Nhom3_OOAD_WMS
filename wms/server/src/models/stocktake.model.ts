@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { STOCKTAKE_STATUS, type StocktakeStatus } from '@wms/shared';
 
 export interface StocktakeItem {
@@ -51,7 +51,4 @@ const stocktakeSchema = new Schema<StocktakeDocument>(
 
 stocktakeSchema.index({ code: 1 }, { unique: true });
 
-export const StocktakeModel: Model<StocktakeDocument> = model<StocktakeDocument>(
-  'Stocktake',
-  stocktakeSchema
-);
+export const StocktakeModel: Model<StocktakeDocument> = (models.Stocktake as Model<StocktakeDocument>) || model<StocktakeDocument>('Stocktake', stocktakeSchema);

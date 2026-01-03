@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 import { RECEIPT_STATUS, type ReceiptStatus } from '@wms/shared';
 
 export interface ReceiptLine {
@@ -48,7 +48,4 @@ const receiptSchema = new Schema<ReceiptDocument>(
 receiptSchema.index({ code: 1 }, { unique: true });
 receiptSchema.index({ supplierId: 1, date: -1 });
 
-export const ReceiptModel: Model<ReceiptDocument> = model<ReceiptDocument>(
-  'Receipt',
-  receiptSchema
-);
+export const ReceiptModel: Model<ReceiptDocument> = (models.Receipt as Model<ReceiptDocument>) || model<ReceiptDocument>('Receipt', receiptSchema);

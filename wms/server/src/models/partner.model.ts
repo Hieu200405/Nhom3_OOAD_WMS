@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { Schema, model, type Document, type Model, models } from 'mongoose';
 import { PARTNER_TYPES, type PartnerType } from '@wms/shared';
 
 export interface Partner {
@@ -43,4 +43,4 @@ const partnerSchema = new Schema<PartnerDocument>(
 partnerSchema.index({ code: 1, type: 1 }, { unique: true });
 partnerSchema.index({ name: 'text', code: 'text' });
 
-export const PartnerModel: Model<PartnerDocument> = model<PartnerDocument>('Partner', partnerSchema);
+export const PartnerModel: Model<PartnerDocument> = (models.Partner as Model<PartnerDocument>) || model<PartnerDocument>('Partner', partnerSchema);

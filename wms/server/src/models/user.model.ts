@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { Schema, model, models, type Document, type Model } from 'mongoose';
 import { USER_ROLES, type UserRole } from '@wms/shared';
 
 export interface User {
@@ -26,4 +26,4 @@ const userSchema = new Schema<UserDocument>(
 
 userSchema.index({ email: 1 }, { unique: true });
 
-export const UserModel: Model<UserDocument> = model<UserDocument>('User', userSchema);
+export const UserModel: Model<UserDocument> = (models.User as Model<UserDocument>) || model<UserDocument>('User', userSchema);

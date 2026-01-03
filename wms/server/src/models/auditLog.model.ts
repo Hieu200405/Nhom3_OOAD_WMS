@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types } from 'mongoose';
+import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
 
 export interface AuditLog {
   actorId: Types.ObjectId | null;
@@ -24,7 +24,4 @@ const auditLogSchema = new Schema<AuditLogDocument>(
 
 auditLogSchema.index({ entity: 1, entityId: 1, createdAt: -1 });
 
-export const AuditLogModel: Model<AuditLogDocument> = model<AuditLogDocument>(
-  'AuditLog',
-  auditLogSchema
-);
+export const AuditLogModel: Model<AuditLogDocument> = (models.AuditLog as Model<AuditLogDocument>) || model<AuditLogDocument>('AuditLog', auditLogSchema);
