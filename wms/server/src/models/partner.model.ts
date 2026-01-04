@@ -40,7 +40,11 @@ const partnerSchema = new Schema<PartnerDocument>(
   { timestamps: true }
 );
 
-partnerSchema.index({ code: 1, type: 1 }, { unique: true });
-partnerSchema.index({ name: 'text', code: 'text' });
+
+// Optimized indexes
+partnerSchema.index({ name: 'text', code: 'text' }); // Text search
+partnerSchema.index({ type: 1, isActive: 1 }); // Filter by type and active status
+partnerSchema.index({ type: 1, createdAt: -1 }); // List by type, sorted by date
+
 
 export const PartnerModel: Model<PartnerDocument> = (mongoose.models.Partner as Model<PartnerDocument>) || model<PartnerDocument>('Partner', partnerSchema);

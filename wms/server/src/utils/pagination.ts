@@ -15,7 +15,7 @@ export interface PaginationOptions {
 
 export const parsePagination = (query: PaginationQuery): PaginationOptions => {
   const page = Math.max(Number(query.page ?? env.defaultPage) || env.defaultPage, 1);
-  const limit = Math.max(Number(query.limit ?? env.defaultLimit) || env.defaultLimit, 1);
+  const limit = Math.min(Math.max(Number(query.limit ?? env.defaultLimit) || env.defaultLimit, 1), 1000); // Max 1000
   const sort = query.sort ?? '-createdAt';
   const skip = (page - 1) * limit;
   return { page, limit, sort, skip };

@@ -106,10 +106,8 @@ npm test
 ### Tài Liệu Kiểm Thử
 
 Xem chi tiết tại:
-- 📋 [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) - Chiến lược kiểm thử
-- 📊 [VERIFICATION_REPORT.md](./VERIFICATION_REPORT.md) - Báo cáo chi tiết
-- ✅ [VERIFICATION_CHECKLIST.md](./VERIFICATION_CHECKLIST.md) - Checklist kiểm tra
-- 📝 [VERIFICATION_SUMMARY.md](./VERIFICATION_SUMMARY.md) - Tóm tắt kết quả
+- 📚 [PROJECT_GUIDE.md](./PROJECT_GUIDE.md) - Hướng dẫn toàn diện về dự án, testing, E2E
+- 📊 [SEED_DATA.md](./SEED_DATA.md) - Tài liệu dữ liệu seed chi tiết
 
 ## 📚 Tài liệu API
 Hệ thống cung cấp tài liệu API chuẩn OpenAPI (Swagger) tại đường dẫn `/api-docs` khi server đang chạy.

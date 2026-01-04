@@ -33,7 +33,13 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true }
 );
 
-productSchema.index({ sku: 1 }, { unique: true });
-productSchema.index({ name: 'text', sku: 'text' });
+
+// Optimized indexes for common queries
+productSchema.index({ name: 'text', sku: 'text' }); // Text search
+productSchema.index({ categoryId: 1, createdAt: -1 }); // List products by category, sorted by date
+productSchema.index({ categoryId: 1, priceOut: 1 }); // Filter by category and price
+productSchema.index({ minStock: 1 }); // Find low stock products
+productSchema.index({ createdAt: -1 }); // Sort by newest
+
 
 export const ProductModel: Model<ProductDocument> = (mongoose.models.Product as Model<ProductDocument>) || model<ProductDocument>('Product', productSchema);

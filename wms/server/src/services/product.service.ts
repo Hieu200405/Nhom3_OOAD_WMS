@@ -41,11 +41,12 @@ export const listProducts = async (query: ListQuery) => {
   const [total, items] = await Promise.all([
     ProductModel.countDocuments(filter),
     ProductModel.find(filter)
-      .populate('categoryId', 'name')
+      .populate('categoryId', 'name code') // Only select needed fields
+      .select('-__v') // Exclude version field
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .lean()
+      .lean() // Return plain objects for better performance
   ]);
 
   const data = items.map((product) => ({

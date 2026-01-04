@@ -11,7 +11,7 @@ export interface Inventory {
   createdAt: Date;
 }
 
-export interface InventoryDocument extends Inventory, Document {}
+export interface InventoryDocument extends Inventory, Document { }
 
 const inventorySchema = new Schema<InventoryDocument>(
   {
@@ -25,6 +25,13 @@ const inventorySchema = new Schema<InventoryDocument>(
   { timestamps: true }
 );
 
+
+// Critical indexes for inventory queries
 inventorySchema.index({ productId: 1, locationId: 1, batch: 1 }, { unique: true, sparse: true });
+inventorySchema.index({ productId: 1, status: 1 }); // Get available inventory for product
+inventorySchema.index({ locationId: 1, status: 1 }); // Get inventory at location
+inventorySchema.index({ productId: 1, quantity: 1 }); // Find low stock
+inventorySchema.index({ expDate: 1 }, { sparse: true }); // Find expiring items
+
 
 export const InventoryModel: Model<InventoryDocument> = (mongoose.models.Inventory as Model<InventoryDocument>) || model<InventoryDocument>('Inventory', inventorySchema);
