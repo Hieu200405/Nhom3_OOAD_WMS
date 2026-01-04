@@ -15,265 +15,340 @@ import { logger } from '../src/utils/logger.js';
 const ADMIN_EMAIL = 'admin@wms.local';
 const DEFAULT_PASSWORD = '123456';
 
-// ============================================================================
-// REALISTIC DATA SETS
-// ============================================================================
+// Vietnamese name generators
+const VIETNAMESE_FIRST_NAMES = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
+const VIETNAMESE_MIDDLE_NAMES = ['Văn', 'Thị', 'Minh', 'Hoàng', 'Quốc', 'Hữu', 'Đức', 'Anh', 'Thanh', 'Tuấn', 'Hải', 'Phương'];
+const VIETNAMESE_LAST_NAMES = ['An', 'Bình', 'Cường', 'Dũng', 'Hoa', 'Hùng', 'Khánh', 'Linh', 'Long', 'Mai', 'Nam', 'Phúc', 'Quân', 'Tâm', 'Thắng', 'Tú', 'Vân', 'Yến'];
 
-const REALISTIC_USERS = [
-  { email: ADMIN_EMAIL, fullName: 'Nguyễn Văn An', role: 'Admin' as const },
-  { email: 'manager@wms.local', fullName: 'Trần Thị Bình', role: 'Manager' as const },
-  { email: 'manager2@wms.local', fullName: 'Lê Hoàng Cường', role: 'Manager' as const },
-  { email: 'staff@wms.local', fullName: 'Phạm Minh Đức', role: 'Staff' as const },
-  { email: 'staff2@wms.local', fullName: 'Võ Thị Hoa', role: 'Staff' as const },
-  { email: 'staff3@wms.local', fullName: 'Đặng Quốc Khánh', role: 'Staff' as const },
+const COMPANY_TYPES = ['Công ty TNHH', 'Công ty CP', 'Công ty Cổ phần', 'Tập đoàn', 'Doanh nghiệp'];
+const COMPANY_SUFFIXES = ['Việt Nam', 'Quốc Tế', 'Á Châu', 'Thái Bình Dương', 'Đông Nam Á', 'Toàn Cầu', 'Miền Bắc', 'Miền Nam', 'Trung Ương'];
+
+const CITIES = ['Hà Nội', 'TP.HCM', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Biên Hòa', 'Nha Trang', 'Huế', 'Vũng Tàu', 'Quy Nhơn'];
+const DISTRICTS = ['Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 7', 'Quận 10', 'Hoàn Kiếm', 'Ba Đình', 'Cầu Giấy', 'Thanh Xuân', 'Hải Châu', 'Sơn Trà'];
+const STREETS = ['Nguyễn Huệ', 'Lê Lợi', 'Trần Hưng Đạo', 'Hai Bà Trưng', 'Lý Thường Kiệt', 'Điện Biên Phủ', 'Võ Văn Kiệt', 'Phan Chu Trinh'];
+
+function randomElement<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateVietnameseName(): string {
+  return `${randomElement(VIETNAMESE_FIRST_NAMES)} ${randomElement(VIETNAMESE_MIDDLE_NAMES)} ${randomElement(VIETNAMESE_LAST_NAMES)}`;
+}
+
+function generateCompanyName(industry: string): string {
+  return `${randomElement(COMPANY_TYPES)} ${industry} ${randomElement(COMPANY_SUFFIXES)}`;
+}
+
+function generateAddress(): string {
+  return `${randomInt(1, 999)} ${randomElement(STREETS)}, ${randomElement(DISTRICTS)}, ${randomElement(CITIES)}`;
+}
+
+function generatePhone(): string {
+  return `09${randomInt(10000000, 99999999)}`;
+}
+
+function generateTaxCode(): string {
+  return `${randomInt(1000000000, 9999999999)}`;
+}
+
+function generateProductImage(category: string): string {
+  // Generate placeholder image URL
+  const colors = ['3498db', 'e74c3c', '2ecc71', 'f39c12', '9b59b6', '1abc9c'];
+  const color = randomElement(colors);
+  return `https://via.placeholder.com/400x400/${color}/ffffff?text=${encodeURIComponent(category)}`;
+}
+
+// Categories
+const CATEGORIES = [
+  { name: 'Điện tử - Máy tính', code: 'COMP', description: 'Máy tính, laptop, linh kiện PC' },
+  { name: 'Điện tử - Di động', code: 'MOBI', description: 'Điện thoại, tablet, phụ kiện di động' },
+  { name: 'Điện tử - Âm thanh', code: 'AUDI', description: 'Tai nghe, loa, thiết bị âm thanh' },
+  { name: 'Điện tử - Hình ảnh', code: 'VISU', description: 'Màn hình, TV, máy chiếu' },
+  { name: 'Điện tử - Gaming', code: 'GAME', description: 'Console, phụ kiện gaming' },
+  { name: 'Thực phẩm - Đồ uống', code: 'BEVE', description: 'Cà phê, trà, nước giải khát' },
+  { name: 'Thực phẩm - Khô', code: 'DRYF', description: 'Mì, gạo, bột, đồ khô' },
+  { name: 'Thực phẩm - Gia vị', code: 'SPIC', description: 'Gia vị, nước chấm, dầu ăn' },
+  { name: 'Thực phẩm - Snack', code: 'SNAC', description: 'Bánh kẹo, snack, đồ ăn vặt' },
+  { name: 'Dược phẩm - Thuốc', code: 'DRUG', description: 'Thuốc kê đơn, thuốc OTC' },
+  { name: 'Dược phẩm - TPCN', code: 'SUPP', description: 'Thực phẩm chức năng, vitamin' },
+  { name: 'Dược phẩm - Y tế', code: 'MEDI', description: 'Dụng cụ y tế, vật tư tiêu hao' },
+  { name: 'Văn phòng phẩm - Viết', code: 'WRIT', description: 'Bút, mực, bảng viết' },
+  { name: 'Văn phòng phẩm - Giấy', code: 'PAPE', description: 'Giấy in, sổ, tập' },
+  { name: 'Văn phòng phẩm - Dụng cụ', code: 'TOOL', description: 'Dụng cụ văn phòng, kẹp, ghim' },
+  { name: 'Gia dụng - Nội thất', code: 'FURN', description: 'Bàn, ghế, tủ, kệ' },
+  { name: 'Gia dụng - Nhà bếp', code: 'KITC', description: 'Dụng cụ nhà bếp, nồi, chảo' },
+  { name: 'Gia dụng - Điện gia dụng', code: 'APPL', description: 'Quạt, bàn ủi, máy hút bụi' },
+  { name: 'Thời trang - Nam', code: 'MENS', description: 'Quần áo nam, giày dép nam' },
+  { name: 'Thời trang - Nữ', code: 'WOME', description: 'Quần áo nữ, giày dép nữ' },
+  { name: 'Thời trang - Trẻ em', code: 'KIDS', description: 'Quần áo trẻ em' },
+  { name: 'Thời trang - Phụ kiện', code: 'ACCE', description: 'Túi, balo, ví, thắt lưng' },
+  { name: 'Mỹ phẩm - Chăm sóc da', code: 'SKIN', description: 'Kem dưỡng, sữa rửa mặt' },
+  { name: 'Mỹ phẩm - Trang điểm', code: 'MAKE', description: 'Son, phấn, mascara' },
+  { name: 'Mỹ phẩm - Chăm sóc tóc', code: 'HAIR', description: 'Dầu gội, dầu xả, thuốc nhuộm' },
+  { name: 'Mỹ phẩm - Cơ thể', code: 'BODY', description: 'Sữa tắm, kem body' },
+  { name: 'Đồ chơi - Trẻ em', code: 'TOYS', description: 'Đồ chơi cho trẻ nhỏ' },
+  { name: 'Đồ chơi - Giáo dục', code: 'EDUT', description: 'Đồ chơi giáo dục, STEM' },
+  { name: 'Đồ chơi - Mô hình', code: 'MODE', description: 'Mô hình, figure, collectible' },
+  { name: 'Thể thao - Dụng cụ', code: 'SPOR', description: 'Bóng, vợt, dụng cụ tập' },
+  { name: 'Thể thao - Trang phục', code: 'SPWE', description: 'Quần áo thể thao, giày thể thao' },
+  { name: 'Thể thao - Phụ kiện', code: 'SPAC', description: 'Bình nước, túi, băng đô' },
+  { name: 'Sách - Văn học', code: 'LITE', description: 'Tiểu thuyết, truyện ngắn' },
+  { name: 'Sách - Kỹ năng', code: 'SKIL', description: 'Sách kỹ năng sống, kinh doanh' },
+  { name: 'Sách - Học tập', code: 'STUD', description: 'Sách giáo khoa, tham khảo' },
+  { name: 'Sách - Thiếu nhi', code: 'CHIL', description: 'Sách cho trẻ em' },
+  { name: 'Đồ dùng học tập', code: 'SCHO', description: 'Cặp, hộp bút, thước kẻ' },
+  { name: 'Điện tử - Phụ kiện', code: 'ELAC', description: 'Cáp, sạc, ốp lưng' },
+  { name: 'Nông sản', code: 'AGRI', description: 'Rau củ quả sấy, hạt dinh dưỡng' },
+  { name: 'Đồ uống có cồn', code: 'ALCO', description: 'Bia, rượu, vang' },
 ];
 
-const REALISTIC_CATEGORIES = [
-  { name: 'Điện tử - Công nghệ', code: 'ELEC', description: 'Thiết bị điện tử, máy tính, phụ kiện công nghệ' },
-  { name: 'Thực phẩm & Đồ uống', code: 'FOOD', description: 'Thực phẩm khô, đồ uống, gia vị' },
-  { name: 'Dược phẩm', code: 'PHAR', description: 'Thuốc, thực phẩm chức năng, dụng cụ y tế' },
-  { name: 'Văn phòng phẩm', code: 'STAT', description: 'Dụng cụ văn phòng, giấy tờ, bút viết' },
-  { name: 'Gia dụng', code: 'HOME', description: 'Đồ gia dụng, nội thất, trang trí' },
-  { name: 'Thời trang', code: 'FASH', description: 'Quần áo, giày dép, phụ kiện thời trang' },
-  { name: 'Mỹ phẩm', code: 'COSM', description: 'Mỹ phẩm, chăm sóc cá nhân' },
-  { name: 'Đồ chơi', code: 'TOYS', description: 'Đồ chơi trẻ em, đồ chơi giáo dục' },
-  { name: 'Thể thao', code: 'SPOR', description: 'Dụng cụ thể thao, trang phục thể thao' },
-  { name: 'Sách & Báo', code: 'BOOK', description: 'Sách, tạp chí, báo' },
-];
-
-const REALISTIC_PRODUCTS = [
-  // Electronics
-  { sku: 'LAPTOP-001', name: 'Laptop Dell Inspiron 15 3000', category: 'ELEC', unit: 'cái', priceIn: 12000000, priceOut: 15000000, minStock: 10, description: 'Laptop văn phòng, Core i5, 8GB RAM, 256GB SSD' },
-  { sku: 'LAPTOP-002', name: 'Laptop HP Pavilion 14', category: 'ELEC', unit: 'cái', priceIn: 14000000, priceOut: 17500000, minStock: 8, description: 'Laptop mỏng nhẹ, Core i7, 16GB RAM, 512GB SSD' },
-  { sku: 'MOUSE-001', name: 'Chuột Logitech M331', category: 'ELEC', unit: 'cái', priceIn: 150000, priceOut: 250000, minStock: 50, description: 'Chuột không dây, pin 24 tháng' },
-  { sku: 'KEYB-001', name: 'Bàn phím cơ Keychron K2', category: 'ELEC', unit: 'cái', priceIn: 1800000, priceOut: 2500000, minStock: 20, description: 'Bàn phím cơ 75%, switch Gateron Brown' },
-  { sku: 'HEADPHONE-001', name: 'Tai nghe Sony WH-1000XM4', category: 'ELEC', unit: 'cái', priceIn: 6000000, priceOut: 8000000, minStock: 15, description: 'Tai nghe chống ồn cao cấp' },
-  { sku: 'MONITOR-001', name: 'Màn hình LG 24" IPS', category: 'ELEC', unit: 'cái', priceIn: 2500000, priceOut: 3500000, minStock: 12, description: 'Màn hình Full HD, IPS, 75Hz' },
-  { sku: 'PHONE-001', name: 'iPhone 14 Pro 128GB', category: 'ELEC', unit: 'cái', priceIn: 24000000, priceOut: 28000000, minStock: 5, description: 'Smartphone cao cấp Apple' },
-  { sku: 'PHONE-002', name: 'Samsung Galaxy S23', category: 'ELEC', unit: 'cái', priceIn: 18000000, priceOut: 22000000, minStock: 8, description: 'Smartphone Android flagship' },
-
-  // Food & Beverage
-  { sku: 'COFFEE-001', name: 'Cà phê Trung Nguyên G7 3in1', category: 'FOOD', unit: 'hộp', priceIn: 45000, priceOut: 65000, minStock: 200, description: 'Hộp 21 gói x 16g' },
-  { sku: 'COFFEE-002', name: 'Cà phê Highlands Phin Drip', category: 'FOOD', unit: 'hộp', priceIn: 120000, priceOut: 180000, minStock: 100, description: 'Hộp 10 gói phin giấy' },
-  { sku: 'TEA-001', name: 'Trà xanh Lipton 100 túi', category: 'FOOD', unit: 'hộp', priceIn: 80000, priceOut: 120000, minStock: 150, description: 'Trà xanh túi lọc' },
-  { sku: 'NOODLE-001', name: 'Mì Hảo Hảo tôm chua cay', category: 'FOOD', unit: 'thùng', priceIn: 95000, priceOut: 135000, minStock: 300, description: 'Thùng 30 gói' },
-  { sku: 'RICE-001', name: 'Gạo ST25 túi 5kg', category: 'FOOD', unit: 'túi', priceIn: 120000, priceOut: 180000, minStock: 100, description: 'Gạo thơm đặc sản' },
-  { sku: 'OIL-001', name: 'Dầu ăn Neptune chai 2L', category: 'FOOD', unit: 'chai', priceIn: 65000, priceOut: 95000, minStock: 80, description: 'Dầu ăn cao cấp' },
-  { sku: 'MILK-001', name: 'Sữa tươi Vinamilk 1L', category: 'FOOD', unit: 'hộp', priceIn: 28000, priceOut: 42000, minStock: 200, description: 'Sữa tươi tiệt trùng' },
-  { sku: 'SNACK-001', name: 'Snack Oishi 42g', category: 'FOOD', unit: 'gói', priceIn: 8000, priceOut: 12000, minStock: 500, description: 'Snack khoai tây vị tự nhiên' },
-
-  // Pharmaceuticals
-  { sku: 'MED-001', name: 'Paracetamol 500mg', category: 'PHAR', unit: 'hộp', priceIn: 15000, priceOut: 25000, minStock: 200, description: 'Thuốc hạ sốt, giảm đau - Hộp 100 viên' },
-  { sku: 'MED-002', name: 'Vitamin C 1000mg', category: 'PHAR', unit: 'lọ', priceIn: 120000, priceOut: 180000, minStock: 100, description: 'Thực phẩm chức năng - Lọ 100 viên' },
-  { sku: 'MED-003', name: 'Khẩu trang y tế 4 lớp', category: 'PHAR', unit: 'hộp', priceIn: 45000, priceOut: 70000, minStock: 300, description: 'Hộp 50 cái' },
-  { sku: 'MED-004', name: 'Dung dịch sát khuẩn 500ml', category: 'PHAR', unit: 'chai', priceIn: 35000, priceOut: 55000, minStock: 150, description: 'Cồn sát khuẩn 70%' },
-  { sku: 'MED-005', name: 'Băng cá nhân', category: 'PHAR', unit: 'hộp', priceIn: 25000, priceOut: 40000, minStock: 100, description: 'Hộp 100 miếng' },
-
-  // Stationery
-  { sku: 'PEN-001', name: 'Bút bi Thiên Long TL-079', category: 'STAT', unit: 'cây', priceIn: 3000, priceOut: 5000, minStock: 1000, description: 'Bút bi xanh' },
-  { sku: 'PEN-002', name: 'Bút gel Pentel BL77', category: 'STAT', unit: 'cây', priceIn: 12000, priceOut: 18000, minStock: 500, description: 'Bút gel mực nước' },
-  { sku: 'NOTEBOOK-001', name: 'Sổ tay Campus 200 trang', category: 'STAT', unit: 'quyển', priceIn: 25000, priceOut: 40000, minStock: 300, description: 'Sổ lò xo A5' },
-  { sku: 'PAPER-001', name: 'Giấy A4 Double A 70gsm', category: 'STAT', unit: 'ream', priceIn: 85000, priceOut: 120000, minStock: 200, description: 'Ream 500 tờ' },
-  { sku: 'STAPLER-001', name: 'Dập ghim Deli 0352', category: 'STAT', unit: 'cái', priceIn: 35000, priceOut: 55000, minStock: 100, description: 'Dập ghim cỡ nhỏ' },
-
-  // Home & Living
-  { sku: 'CHAIR-001', name: 'Ghế văn phòng ergonomic', category: 'HOME', unit: 'cái', priceIn: 1200000, priceOut: 1800000, minStock: 20, description: 'Ghế xoay có tựa lưng' },
-  { sku: 'DESK-001', name: 'Bàn làm việc gỗ 120x60cm', category: 'HOME', unit: 'cái', priceIn: 1500000, priceOut: 2200000, minStock: 15, description: 'Bàn gỗ công nghiệp' },
-  { sku: 'LAMP-001', name: 'Đèn bàn LED chống cận', category: 'HOME', unit: 'cái', priceIn: 250000, priceOut: 400000, minStock: 50, description: 'Đèn LED 3 chế độ' },
-  { sku: 'BOTTLE-001', name: 'Bình giữ nhiệt Lock&Lock 500ml', category: 'HOME', unit: 'cái', priceIn: 180000, priceOut: 280000, minStock: 80, description: 'Bình inox 2 lớp' },
-  { sku: 'TOWEL-001', name: 'Khăn tắm cotton 70x140cm', category: 'HOME', unit: 'cái', priceIn: 120000, priceOut: 200000, minStock: 100, description: 'Khăn 100% cotton' },
-
-  // Fashion
-  { sku: 'TSHIRT-001', name: 'Áo thun cotton nam', category: 'FASH', unit: 'cái', priceIn: 80000, priceOut: 150000, minStock: 200, description: 'Áo thun basic nhiều màu' },
-  { sku: 'JEANS-001', name: 'Quần jean nam slim fit', category: 'FASH', unit: 'cái', priceIn: 250000, priceOut: 450000, minStock: 100, description: 'Quần jean co giãn' },
-  { sku: 'SHOES-001', name: 'Giày thể thao Nike Air Max', category: 'FASH', unit: 'đôi', priceIn: 1800000, priceOut: 2500000, minStock: 30, description: 'Giày chạy bộ' },
-  { sku: 'BAG-001', name: 'Balo laptop 15.6 inch', category: 'FASH', unit: 'cái', priceIn: 350000, priceOut: 550000, minStock: 60, description: 'Balo chống nước' },
-
-  // Cosmetics
-  { sku: 'SHAMPOO-001', name: 'Dầu gội Dove 650ml', category: 'COSM', unit: 'chai', priceIn: 95000, priceOut: 145000, minStock: 150, description: 'Dầu gội phục hồi hư tổn' },
-  { sku: 'SOAP-001', name: 'Sữa tắm Lifebuoy 850ml', category: 'COSM', unit: 'chai', priceIn: 75000, priceOut: 115000, minStock: 200, description: 'Sữa tắm diệt khuẩn' },
-  { sku: 'CREAM-001', name: 'Kem dưỡng da Olay 50g', category: 'COSM', unit: 'hộp', priceIn: 180000, priceOut: 280000, minStock: 80, description: 'Kem dưỡng ẩm ban đêm' },
-  { sku: 'LIPSTICK-001', name: 'Son môi Maybelline', category: 'COSM', unit: 'cây', priceIn: 120000, priceOut: 200000, minStock: 100, description: 'Son lì lâu trôi' },
-
-  // Toys
-  { sku: 'LEGO-001', name: 'LEGO Classic 500 mảnh', category: 'TOYS', unit: 'hộp', priceIn: 450000, priceOut: 700000, minStock: 40, description: 'Bộ xếp hình sáng tạo' },
-  { sku: 'PUZZLE-001', name: 'Tranh ghép 1000 mảnh', category: 'TOYS', unit: 'hộp', priceIn: 180000, priceOut: 300000, minStock: 50, description: 'Puzzle phong cảnh' },
-  { sku: 'DOLL-001', name: 'Búp bê Barbie', category: 'TOYS', unit: 'cái', priceIn: 250000, priceOut: 400000, minStock: 60, description: 'Búp bê thời trang' },
-
-  // Sports
-  { sku: 'BALL-001', name: 'Bóng đá Molten size 5', category: 'SPOR', unit: 'quả', priceIn: 280000, priceOut: 450000, minStock: 50, description: 'Bóng da PU' },
-  { sku: 'YOGA-001', name: 'Thảm yoga TPE 6mm', category: 'SPOR', unit: 'cái', priceIn: 250000, priceOut: 400000, minStock: 70, description: 'Thảm tập yoga chống trượt' },
-  { sku: 'DUMBBELL-001', name: 'Tạ tay 5kg (cặp)', category: 'SPOR', unit: 'cặp', priceIn: 180000, priceOut: 300000, minStock: 40, description: 'Tạ tay bọc cao su' },
-
-  // Books
-  { sku: 'BOOK-001', name: 'Đắc Nhân Tâm', category: 'BOOK', unit: 'quyển', priceIn: 65000, priceOut: 95000, minStock: 100, description: 'Sách kỹ năng sống' },
-  { sku: 'BOOK-002', name: 'Nhà Giả Kim', category: 'BOOK', unit: 'quyển', priceIn: 55000, priceOut: 85000, minStock: 120, description: 'Tiểu thuyết Paulo Coelho' },
-  { sku: 'BOOK-003', name: 'Sapiens - Lược Sử Loài Người', category: 'BOOK', unit: 'quyển', priceIn: 120000, priceOut: 180000, minStock: 80, description: 'Sách lịch sử nhân loại' },
-];
-
-const REALISTIC_PARTNERS = [
-  // Suppliers
-  { type: 'supplier' as const, name: 'Công ty TNHH Điện Tử Việt Nam', code: 'SUP-ELEC-001', contact: 'Nguyễn Văn A - 0901234567 - electronics@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty CP Thực Phẩm Sạch', code: 'SUP-FOOD-001', contact: 'Trần Thị B - 0912345678 - food@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty TNHH Dược Phẩm ABC', code: 'SUP-PHAR-001', contact: 'Lê Văn C - 0923456789 - pharma@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty CP Văn Phòng Phẩm Thiên Long', code: 'SUP-STAT-001', contact: 'Phạm Thị D - 0934567890 - stationery@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty TNHH Nội Thất Hoàng Gia', code: 'SUP-HOME-001', contact: 'Võ Văn E - 0945678901 - furniture@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty CP Thời Trang Việt', code: 'SUP-FASH-001', contact: 'Đặng Thị F - 0956789012 - fashion@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty TNHH Mỹ Phẩm Quốc Tế', code: 'SUP-COSM-001', contact: 'Hoàng Văn G - 0967890123 - cosmetics@supplier.vn' },
-  { type: 'supplier' as const, name: 'Công ty CP Đồ Chơi Trẻ Em', code: 'SUP-TOYS-001', contact: 'Bùi Thị H - 0978901234 - toys@supplier.vn' },
-
-  // Customers
-  { type: 'customer' as const, name: 'Siêu Thị Co.opMart', code: 'CUST-RETAIL-001', contact: 'Nguyễn Minh I - 0989012345 - coopmart@customer.vn' },
-  { type: 'customer' as const, name: 'Chuỗi Cửa Hàng FPT Shop', code: 'CUST-RETAIL-002', contact: 'Trần Văn J - 0990123456 - fptshop@customer.vn' },
-  { type: 'customer' as const, name: 'Siêu Thị Điện Máy Xanh', code: 'CUST-RETAIL-003', contact: 'Lê Thị K - 0901234568 - dmx@customer.vn' },
-  { type: 'customer' as const, name: 'Nhà Thuốc Long Châu', code: 'CUST-PHAR-001', contact: 'Phạm Văn L - 0912345679 - longchau@customer.vn' },
-  { type: 'customer' as const, name: 'Cửa Hàng Sách Fahasa', code: 'CUST-BOOK-001', contact: 'Võ Thị M - 0923456780 - fahasa@customer.vn' },
-  { type: 'customer' as const, name: 'Chuỗi Gym California Fitness', code: 'CUST-SPORT-001', contact: 'Đặng Văn N - 0934567891 - california@customer.vn' },
-  { type: 'customer' as const, name: 'Siêu Thị BigC', code: 'CUST-RETAIL-004', contact: 'Hoàng Thị O - 0945678902 - bigc@customer.vn' },
-  { type: 'customer' as const, name: 'Cửa Hàng Thời Trang H&M', code: 'CUST-FASH-001', contact: 'Bùi Văn P - 0956789013 - hm@customer.vn' },
-];
-
-// ============================================================================
-// SEED FUNCTIONS
-// ============================================================================
+// Product name templates for ALL categories
+const PRODUCT_NAMES: Record<string, string[]> = {
+  COMP: ['Laptop Dell Inspiron', 'Laptop HP Pavilion', 'Laptop Asus VivoBook', 'Laptop Lenovo ThinkPad', 'Laptop Acer Aspire', 'PC Gaming RGB', 'PC Văn phòng', 'iMac', 'Mac Mini', 'RAM DDR4', 'RAM DDR5', 'SSD Samsung', 'SSD Kingston', 'HDD Seagate'],
+  MOBI: ['iPhone 15', 'iPhone 14', 'Samsung Galaxy S24', 'Samsung Galaxy A54', 'Xiaomi 14', 'OPPO Reno 11', 'Vivo V30', 'Realme GT', 'iPad Air', 'iPad Pro', 'Samsung Tab S9'],
+  AUDI: ['Tai nghe Sony WH-1000XM5', 'Tai nghe Bose QC45', 'AirPods Pro', 'Tai nghe JBL', 'Loa JBL Flip', 'Loa Sony SRS', 'Loa Marshall', 'Loa Harman Kardon'],
+  VISU: ['Màn hình LG UltraWide', 'Màn hình Samsung Odyssey', 'TV Samsung QLED', 'TV LG OLED', 'Máy chiếu Epson', 'Máy chiếu BenQ'],
+  GAME: ['PlayStation 5', 'Xbox Series X', 'Nintendo Switch', 'Tay cầm PS5', 'Tay cầm Xbox', 'Gaming Chair', 'Gaming Keyboard', 'Gaming Mouse'],
+  BEVE: ['Cà phê Trung Nguyên G7', 'Cà phê Highlands', 'Cà phê Nescafe', 'Trà Lipton', 'Trà Ô Long', 'Nước ép TH True', 'Coca Cola', 'Pepsi', 'Sting', 'Red Bull'],
+  DRYF: ['Gạo ST25', 'Gạo Jasmine', 'Mì Hảo Hảo', 'Mì Omachi', 'Mì Kokomi', 'Bột mì Meizan', 'Đường Biên Hòa', 'Muối I-ốt'],
+  SPIC: ['Dầu ăn Neptune', 'Dầu ăn Simply', 'Nước mắm Nam Ngư', 'Nước mắm Phú Quốc', 'Tương ớt Cholimex', 'Hạt nêm Knorr', 'Bột canh Ajinomoto'],
+  SNAC: ['Snack Oishi', 'Bánh Oreo', 'Kẹo Alpenliebe', 'Socola Kitkat', 'Kẹo dẻo Haribo', 'Bánh quy Cosy'],
+  DRUG: ['Paracetamol 500mg', 'Amoxicillin 500mg', 'Vitamin B Complex', 'Aspirin 100mg', 'Ibuprofen 400mg'],
+  SUPP: ['Vitamin C 1000mg', 'Vitamin D3', 'Omega 3', 'Canxi + D3', 'Sắt + Acid Folic', 'Probiotics'],
+  MEDI: ['Khẩu trang y tế', 'Găng tay y tế', 'Cồn sát khuẩn', 'Băng cá nhân', 'Nhiệt kế điện tử', 'Máy đo huyết áp'],
+  WRIT: ['Bút bi Thiên Long', 'Bút gel Pentel', 'Bút lông Artline', 'Bút chì 2B', 'Bút dạ quang Stabilo', 'Mực in HP', 'Mực in Canon'],
+  PAPE: ['Giấy A4 Double A', 'Giấy A4 IK Plus', 'Sổ tay Campus', 'Sổ lò xo Hồng Hà', 'Tập vở ô ly', 'Giấy note Post-it'],
+  TOOL: ['Dập ghim Deli', 'Kéo văn phòng', 'Dao rọc giấy', 'Bấm lỗ giấy', 'Hộp đựng bút', 'Kẹp bướm'],
+  FURN: ['Ghế văn phòng Ergonomic', 'Bàn làm việc gỗ', 'Tủ hồ sơ', 'Kệ sách', 'Ghế sofa', 'Bàn ăn'],
+  KITC: ['Nồi cơm điện Philips', 'Bếp từ Sunhouse', 'Lò vi sóng Sharp', 'Máy xay sinh tố', 'Bộ nồi inox', 'Chảo chống dính'],
+  APPL: ['Quạt điện Senko', 'Bàn ủi Philips', 'Máy hút bụi Electrolux', 'Máy lọc không khí', 'Máy sấy tóc'],
+  MENS: ['Áo thun nam', 'Quần jean nam', 'Áo sơ mi nam', 'Quần kaki nam', 'Giày thể thao nam', 'Giày tây nam'],
+  WOME: ['Áo thun nữ', 'Váy liền', 'Quần jean nữ', 'Áo kiểu nữ', 'Giày cao gót', 'Giày búp bê'],
+  KIDS: ['Áo thun trẻ em', 'Quần short trẻ em', 'Váy bé gái', 'Áo khoác trẻ em'],
+  ACCE: ['Balo laptop', 'Túi xách nữ', 'Ví da nam', 'Thắt lưng da', 'Cặp công sở'],
+  SKIN: ['Kem dưỡng Olay', 'Sữa rửa mặt Cetaphil', 'Serum Vitamin C', 'Kem chống nắng Nivea', 'Mặt nạ giấy'],
+  MAKE: ['Son môi Maybelline', 'Phấn nước Cushion', 'Mascara Loreal', 'Kẻ mắt nước', 'Phấn phủ'],
+  HAIR: ['Dầu gội Dove', 'Dầu xả Sunsilk', 'Thuốc nhuộm tóc', 'Dầu dưỡng tóc', 'Gội khô Batiste'],
+  BODY: ['Sữa tắm Lifebuoy', 'Sữa tắm Dove', 'Kem body Vaseline', 'Xà phòng Lux'],
+  TOYS: ['LEGO Classic', 'Búp bê Barbie', 'Xe điều khiển', 'Đồ chơi gỗ', 'Xếp hình Rubik'],
+  EDUT: ['Bộ thí nghiệm STEM', 'Đồ chơi lắp ráp', 'Tranh ghép puzzle', 'Bảng vẽ từ tính'],
+  MODE: ['Mô hình Gundam', 'Figure One Piece', 'Mô hình xe hơi', 'Mô hình máy bay'],
+  SPOR: ['Bóng đá Molten', 'Vợt cầu lông Yonex', 'Thảm yoga', 'Tạ tay', 'Dây nhảy'],
+  SPWE: ['Áo thể thao Nike', 'Quần thể thao Adidas', 'Giày chạy bộ', 'Giày bóng đá'],
+  SPAC: ['Bình nước Thermos', 'Túi thể thao', 'Băng đô thể thao', 'Găng tay tập gym'],
+  LITE: ['Đắc Nhân Tâm', 'Nhà Giả Kim', 'Sapiens', 'Tuổi Trẻ Đáng Giá Bao Nhiêu', 'Cà Phê Cùng Tony'],
+  SKIL: ['7 Thói Quen', 'Nghĩ Giàu Làm Giàu', 'Quản Trị Thời Gian', 'Kỹ Năng Giao Tiếp'],
+  STUD: ['Sách Toán lớp 10', 'Sách Văn lớp 11', 'Sách Anh lớp 12', 'Đề thi THPT'],
+  CHIL: ['Doraemon', 'Conan', 'Truyện cổ tích', 'Sách tô màu'],
+  SCHO: ['Cặp học sinh', 'Hộp bút', 'Thước kẻ', 'Bút chì màu'],
+  ELAC: ['Cáp sạc iPhone', 'Cáp USB-C', 'Sạc nhanh 65W', 'Ốp lưng điện thoại', 'Kính cường lực'],
+  AGRI: ['Hạt điều rang', 'Nho khô', 'Mơ sấy', 'Hạt óc chó'],
+  ALCO: ['Bia Heineken', 'Bia Tiger', 'Rượu vang Đà Lạt', 'Whisky Johnnie Walker'],
+};
 
 const seedUsers = async () => {
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, env.saltRounds);
+  const users = [];
+
+  users.push({ email: ADMIN_EMAIL, fullName: 'Nguyễn Văn An', role: 'Admin' as const });
+
+  for (let i = 0; i < 5; i++) {
+    users.push({
+      email: `manager${i + 1}@wms.local`,
+      fullName: generateVietnameseName(),
+      role: 'Manager' as const
+    });
+  }
+
+  for (let i = 0; i < 14; i++) {
+    users.push({
+      email: `staff${i + 1}@wms.local`,
+      fullName: generateVietnameseName(),
+      role: 'Staff' as const
+    });
+  }
+
   await UserModel.insertMany(
-    REALISTIC_USERS.map((user) => ({
+    users.map((user) => ({
       ...user,
       passwordHash,
       isActive: true
     }))
   );
-  logger.info(`✓ Seeded ${REALISTIC_USERS.length} users`);
+
+  logger.info(`✓ Seeded ${users.length} users`);
 };
 
 const seedCategories = async () => {
-  const inserted = await CategoryModel.insertMany(REALISTIC_CATEGORIES);
+  const inserted = await CategoryModel.insertMany(CATEGORIES);
   logger.info(`✓ Seeded ${inserted.length} categories`);
-  return inserted.map((cat) => ({ _id: cat._id as Types.ObjectId, code: cat.code }));
-};
-
-const seedProducts = async (categories: { _id: Types.ObjectId; code: string }[]) => {
-  const products = REALISTIC_PRODUCTS.map((product) => {
-    const category = categories.find((c) => c.code === product.category);
-    if (!category) throw new Error(`Category ${product.category} not found`);
-
-    return {
-      sku: product.sku,
-      name: product.name,
-      categoryId: category._id,
-      unit: product.unit,
-      priceIn: product.priceIn,
-      priceOut: product.priceOut,
-      minStock: product.minStock,
-      description: product.description,
-      supplierIds: []
-    };
-  });
-
-  const inserted = await ProductModel.insertMany(products);
-  logger.info(`✓ Seeded ${inserted.length} products across ${categories.length} categories`);
-  return inserted;
+  return inserted.map((cat) => ({ _id: cat._id as Types.ObjectId, code: cat.code, name: cat.name, description: cat.description }));
 };
 
 const seedPartners = async () => {
-  await PartnerModel.insertMany(REALISTIC_PARTNERS);
-  logger.info(`✓ Seeded ${REALISTIC_PARTNERS.length} partners (${REALISTIC_PARTNERS.filter(p => p.type === 'supplier').length} suppliers, ${REALISTIC_PARTNERS.filter(p => p.type === 'customer').length} customers)`);
+  const partners = [];
+
+  const supplierIndustries = ['Điện Tử', 'Thực Phẩm', 'Dược Phẩm', 'Văn Phòng Phẩm', 'Nội Thất', 'Thời Trang', 'Mỹ Phẩm', 'Đồ Chơi', 'Thể Thao', 'Sách'];
+  for (let i = 0; i < 50; i++) {
+    const industry = randomElement(supplierIndustries);
+    partners.push({
+      type: 'supplier' as const,
+      code: `SUP-${String(i + 1).padStart(4, '0')}`,
+      name: `${generateCompanyName(industry)} ${i + 1}`,
+      taxCode: generateTaxCode(),
+      contact: `${generateVietnameseName()} - ${generatePhone()}`,
+      address: generateAddress(),
+      businessType: randomElement(['Manufacturer', 'Distributor', 'Retailer'] as const),
+      paymentTerm: randomElement(['Ngay', '7 ngày', '15 ngày', '30 ngày', '60 ngày']),
+      isActive: true
+    });
+  }
+
+  const customerTypes = ['Siêu Thị', 'Cửa Hàng', 'Nhà Thuốc', 'Chuỗi Bán Lẻ', 'Đại Lý', 'Nhà Phân Phối'];
+  for (let i = 0; i < 100; i++) {
+    const type = randomElement(customerTypes);
+    partners.push({
+      type: 'customer' as const,
+      code: `CUST-${String(i + 1).padStart(4, '0')}`,
+      name: `${type} ${randomElement(CITIES)} ${i + 1}`,
+      taxCode: Math.random() > 0.3 ? generateTaxCode() : undefined,
+      contact: `${generateVietnameseName()} - ${generatePhone()}`,
+      address: generateAddress(),
+      customerType: randomElement(['Individual', 'Corporate'] as const),
+      creditLimit: randomInt(10000000, 500000000),
+      paymentTerm: randomElement(['Ngay', '7 ngày', '15 ngày', '30 ngày']),
+      isActive: true
+    });
+  }
+
+  await PartnerModel.insertMany(partners);
+  logger.info(`✓ Seeded ${partners.length} partners (50 suppliers, 100 customers)`);
+
+  return await PartnerModel.find({});
 };
 
+const seedProducts = async (categories: { _id: Types.ObjectId; code: string; name: string; description: string }[], partners: any[]) => {
+  const products = [];
+  const suppliers = partners.filter(p => p.type === 'supplier');
+
+  const productsPerCategory = Math.ceil(500 / categories.length);
+
+  for (const category of categories) {
+    const productNames = PRODUCT_NAMES[category.code] || [`${category.name} Sản phẩm`];
+    const variants = ['', 'Pro', 'Plus', 'Max', 'Ultra', 'Premium', 'Standard', 'Lite', 'Mini'];
+    const colors = ['', 'Đen', 'Trắng', 'Xanh', 'Đỏ', 'Vàng', 'Xám', 'Hồng'];
+    const sizes = ['', 'S', 'M', 'L', 'XL', '32GB', '64GB', '128GB', '256GB', '512GB'];
+
+    for (let i = 0; i < productsPerCategory && products.length < 500; i++) {
+      const baseName = randomElement(productNames);
+      const variant = i < variants.length ? variants[i] : '';
+      const color = randomElement(colors);
+      const size = randomElement(sizes);
+
+      const nameParts = [baseName, variant, color, size].filter(Boolean);
+      const name = nameParts.join(' ');
+
+      const sku: string = `${category.code}-${String(products.length + 1).padStart(5, '0')}`;
+
+      const priceIn = randomInt(10000, 50000000);
+      const priceOut = Math.floor(priceIn * (1.2 + Math.random() * 0.5));
+
+      const selectedSuppliers = suppliers
+        .sort(() => 0.5 - Math.random())
+        .slice(0, randomInt(1, 3))
+        .map(s => s._id);
+
+      products.push({
+        sku,
+        name,
+        categoryId: category._id,
+        unit: randomElement(['cái', 'hộp', 'chai', 'gói', 'túi', 'thùng', 'bộ', 'cặp', 'quyển']),
+        priceIn,
+        priceOut,
+        minStock: randomInt(10, 100),
+        image: generateProductImage(category.name),
+        description: `${name} - Hàng chính hãng, bảo hành ${randomInt(6, 36)} tháng. ${category.description}`,
+        supplierIds: selectedSuppliers
+      });
+    }
+  }
+
+  const inserted = await ProductModel.insertMany(products.slice(0, 500));
+  logger.info(`✓ Seeded ${inserted.length} products`);
+  return inserted;
+};
 const createWarehouseTree = async () => {
-  // Main Warehouse
-  const mainWarehouse = await WarehouseNodeModel.create({
-    type: 'warehouse',
-    name: 'Kho Trung Tâm Hà Nội',
-    code: 'WH-HN-001',
-    warehouseType: 'General'
-  });
-
-  // Secondary Warehouse
-  const secondaryWarehouse = await WarehouseNodeModel.create({
-    type: 'warehouse',
-    name: 'Kho Phân Phối TP.HCM',
-    code: 'WH-HCM-001',
-    warehouseType: 'General'
-  });
-
   const allBins = [];
 
-  // Create zones for main warehouse
-  const mainZones = await WarehouseNodeModel.insertMany([
-    { type: 'zone', name: 'Khu A - Điện Tử', code: 'WH-HN-001-ZA', parentId: mainWarehouse._id },
-    { type: 'zone', name: 'Khu B - Thực Phẩm', code: 'WH-HN-001-ZB', parentId: mainWarehouse._id },
-    { type: 'zone', name: 'Khu C - Dược Phẩm', code: 'WH-HN-001-ZC', parentId: mainWarehouse._id },
-    { type: 'zone', name: 'Khu D - Văn Phòng Phẩm', code: 'WH-HN-001-ZD', parentId: mainWarehouse._id },
-  ]);
+  const warehouseNames = ['Kho Trung Tâm Hà Nội', 'Kho Phân Phối TP.HCM', 'Kho Miền Trung Đà Nẵng'];
+  const warehouseCodes = ['WH-HN', 'WH-HCM', 'WH-DN'];
 
-  // Create zones for secondary warehouse
-  const secondaryZones = await WarehouseNodeModel.insertMany([
-    { type: 'zone', name: 'Khu A - Thời Trang', code: 'WH-HCM-001-ZA', parentId: secondaryWarehouse._id },
-    { type: 'zone', name: 'Khu B - Gia Dụng', code: 'WH-HCM-001-ZB', parentId: secondaryWarehouse._id },
-    { type: 'zone', name: 'Khu C - Mỹ Phẩm', code: 'WH-HCM-001-ZC', parentId: secondaryWarehouse._id },
-  ]);
+  for (let w = 0; w < 3; w++) {
+    const warehouse = await WarehouseNodeModel.create({
+      type: 'warehouse',
+      name: warehouseNames[w],
+      code: `${warehouseCodes[w]}-001`,
+      warehouseType: 'General'
+    });
 
-  const allZones = [...mainZones, ...secondaryZones];
+    const zoneNames = ['Khu A', 'Khu B', 'Khu C', 'Khu D', 'Khu E'];
+    for (let z = 0; z < 5; z++) {
+      const zone = await WarehouseNodeModel.create({
+        type: 'zone',
+        name: `${zoneNames[z]} - ${warehouse.name}`,
+        code: `${warehouse.code}-Z${z + 1}`,
+        parentId: warehouse._id
+      });
 
-  // Create aisles, racks, and bins for each zone
-  for (const zone of allZones) {
-    const aisleCount = 3; // 3 aisles per zone
-    const aisles = await WarehouseNodeModel.insertMany(
-      Array.from({ length: aisleCount }).map((_, i) => ({
-        type: 'aisle',
-        name: `${zone.name} - Lối ${i + 1}`,
-        code: `${zone.code}-A${i + 1}`,
-        parentId: zone._id
-      }))
-    );
+      for (let a = 0; a < 4; a++) {
+        const aisle = await WarehouseNodeModel.create({
+          type: 'aisle',
+          name: `${zone.name} - Lối ${a + 1}`,
+          code: `${zone.code}-A${a + 1}`,
+          parentId: zone._id
+        });
 
-    for (const aisle of aisles) {
-      const rackCount = 4; // 4 racks per aisle
-      const racks = await WarehouseNodeModel.insertMany(
-        Array.from({ length: rackCount }).map((_, i) => ({
-          type: 'rack',
-          name: `${aisle.name} - Kệ ${i + 1}`,
-          code: `${aisle.code}-R${i + 1}`,
-          parentId: aisle._id
-        }))
-      );
+        for (let r = 0; r < 5; r++) {
+          const rack = await WarehouseNodeModel.create({
+            type: 'rack',
+            name: `${aisle.name} - Kệ ${r + 1}`,
+            code: `${aisle.code}-R${r + 1}`,
+            parentId: aisle._id
+          });
 
-      for (const rack of racks) {
-        const binCount = 6; // 6 bins per rack
-        const bins = await WarehouseNodeModel.insertMany(
-          Array.from({ length: binCount }).map((_, i) => ({
-            type: 'bin',
-            name: `${rack.name} - Ngăn ${i + 1}`,
-            code: `${rack.code}-B${i + 1}`,
-            parentId: rack._id
-          }))
-        );
-        allBins.push(...bins);
+          const bins = await WarehouseNodeModel.insertMany(
+            Array.from({ length: 8 }).map((_, b) => ({
+              type: 'bin',
+              name: `${rack.name} - Ngăn ${b + 1}`,
+              code: `${rack.code}-B${b + 1}`,
+              parentId: rack._id
+            }))
+          );
+
+          allBins.push(...bins);
+        }
       }
     }
   }
 
-  logger.info(`✓ Created warehouse structure: 2 warehouses, ${allZones.length} zones, ${allBins.length} bins`);
+  logger.info(`✓ Created warehouse structure: 3 warehouses, 15 zones, ${allBins.length} bins`);
   return allBins;
 };
 
 const seedInventory = async (products: any[], bins: any[]) => {
   const items = [];
 
-  // Distribute products across bins with realistic quantities
   for (const product of products) {
-    // Each product in 2-5 different bins
-    const binCount = Math.floor(Math.random() * 4) + 2;
+    const binCount = randomInt(2, 5);
     const selectedBins = bins.sort(() => 0.5 - Math.random()).slice(0, binCount);
 
     for (const bin of selectedBins) {
-      // Quantity based on product type and minStock
       const baseQty = product.minStock || 50;
-      const quantity = Math.floor(Math.random() * baseQty * 3) + baseQty;
+      const quantity = randomInt(baseQty, baseQty * 5);
 
       items.push({
         productId: product._id,
@@ -285,57 +360,34 @@ const seedInventory = async (products: any[], bins: any[]) => {
   }
 
   await InventoryModel.insertMany(items);
-  logger.info(`✓ Seeded ${items.length} inventory records across ${bins.length} bins`);
+  logger.info(`✓ Seeded ${items.length} inventory records`);
 };
 
 const seedNotifications = async (users: any[]) => {
   const notifications = [];
-  const admin = users.find(u => u.role === 'Admin');
-  const managers = users.filter(u => u.role === 'Manager');
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
 
-  if (admin) {
-    notifications.push(
-      {
-        userId: admin._id,
-        type: 'info',
-        title: 'Hệ thống khởi động thành công',
-        message: 'Chào mừng bạn đến với WMS. Cơ sở dữ liệu đã được khởi tạo với dữ liệu mẫu thực tế.',
-        isRead: false
-      },
-      {
-        userId: admin._id,
-        type: 'warning',
-        title: 'Cảnh báo tồn kho thấp',
-        message: '15 sản phẩm đang có mức tồn kho dưới mức tối thiểu. Cần nhập hàng bổ sung.',
-        isRead: false
-      },
-      {
-        userId: admin._id,
-        type: 'success',
-        title: 'Đơn hàng mới',
-        message: 'Siêu Thị Co.opMart vừa đặt đơn hàng trị giá 150 triệu đồng.',
-        isRead: true
-      }
-    );
-  }
+  for (const user of users) {
+    const count = user.role === 'Admin' ? 10 : user.role === 'Manager' ? 5 : 3;
 
-  for (const manager of managers) {
-    notifications.push(
-      {
-        userId: manager._id,
-        type: 'info',
-        title: 'Nhiệm vụ mới',
-        message: 'Bạn có 3 phiếu nhập kho cần duyệt.',
-        isRead: false
-      },
-      {
-        userId: manager._id,
-        type: 'warning',
-        title: 'Kiểm kê định kỳ',
-        message: 'Đến hạn kiểm kê kho tháng 1/2026. Vui lòng lên kế hoạch.',
-        isRead: false
-      }
-    );
+    for (let i = 0; i < count; i++) {
+      notifications.push({
+        userId: user._id,
+        type: randomElement(['info', 'warning', 'success', 'error']),
+        title: randomElement([
+          'Đơn hàng mới',
+          'Cảnh báo tồn kho',
+          'Phiếu nhập cần duyệt',
+          'Kiểm kê định kỳ',
+          'Hệ thống cập nhật',
+          'Thanh toán đến hạn'
+        ]),
+        message: `Thông báo số ${i + 1} cho ${user.fullName}`,
+        isRead: Math.random() > 0.5,
+        createdAt: new Date(now - randomInt(0, 30) * dayMs)
+      });
+    }
   }
 
   const { NotificationModel } = await import('../src/models/notification.model.js');
@@ -347,44 +399,35 @@ const seedNotifications = async (users: any[]) => {
 
 const seedFinancials = async (partners: any[]) => {
   const transactions = [];
-  const suppliers = partners.filter(p => p.type === 'supplier');
-  const customers = partners.filter(p => p.type === 'customer');
-
-  // Create realistic financial transactions over the past 30 days
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
 
-  // Supplier payments (expenses)
-  for (let i = 0; i < 10; i++) {
-    const supplier = suppliers[i % suppliers.length];
-    const daysAgo = Math.floor(Math.random() * 30);
-    const amount = Math.floor(Math.random() * 50000000) + 10000000; // 10M - 60M
+  const suppliers = partners.filter(p => p.type === 'supplier');
+  const customers = partners.filter(p => p.type === 'customer');
 
+  for (let i = 0; i < 100; i++) {
+    const supplier = randomElement(suppliers);
     transactions.push({
       partnerId: supplier._id,
       type: 'expense',
-      status: i < 7 ? 'completed' : 'pending',
-      amount,
+      status: randomElement(['completed', 'completed', 'completed', 'pending']),
+      amount: randomInt(5000000, 100000000),
       referenceType: 'Receipt',
       note: `Thanh toán nhập hàng ${supplier.name}`,
-      date: new Date(now - daysAgo * dayMs)
+      date: new Date(now - randomInt(0, 90) * dayMs)
     });
   }
 
-  // Customer payments (income)
-  for (let i = 0; i < 12; i++) {
-    const customer = customers[i % customers.length];
-    const daysAgo = Math.floor(Math.random() * 30);
-    const amount = Math.floor(Math.random() * 80000000) + 20000000; // 20M - 100M
-
+  for (let i = 0; i < 150; i++) {
+    const customer = randomElement(customers);
     transactions.push({
       partnerId: customer._id,
       type: 'income',
-      status: i < 9 ? 'completed' : 'pending',
-      amount,
+      status: randomElement(['completed', 'completed', 'pending']),
+      amount: randomInt(10000000, 200000000),
       referenceType: 'Delivery',
-      note: `Thu tiền bán hàng cho ${customer.name}`,
-      date: new Date(now - daysAgo * dayMs)
+      note: `Thu tiền bán hàng ${customer.name}`,
+      date: new Date(now - randomInt(0, 90) * dayMs)
     });
   }
 
@@ -395,23 +438,11 @@ const seedFinancials = async (partners: any[]) => {
   }
 };
 
-// ============================================================================
-// MAIN SEED FUNCTION
-// ============================================================================
-
 const seed = async () => {
   await connectMongo();
-  logger.info('🌱 Starting comprehensive seed process...\n');
+  logger.info('🌱 Starting MASSIVE seed process...\n');
 
-  // Wipe all collections
-  const collections = [
-    UserModel,
-    CategoryModel,
-    ProductModel,
-    PartnerModel,
-    WarehouseNodeModel,
-    InventoryModel
-  ];
+  const collections = [UserModel, CategoryModel, ProductModel, PartnerModel, WarehouseNodeModel, InventoryModel];
 
   try {
     const { NotificationModel } = await import('../src/models/notification.model.js');
@@ -438,23 +469,24 @@ const seed = async () => {
   await Promise.all(collections.map((model) => (model as any).deleteMany({})));
   logger.info('✓ Wiped all collections\n');
 
-  // Seed data
   await seedUsers();
   const users = await UserModel.find({});
 
   const categories = await seedCategories();
-  const products = await seedProducts(categories);
 
-  await seedPartners();
-  const partners = await PartnerModel.find({});
+  const partners = await seedPartners();
+
+  const products = await seedProducts(categories, partners);
 
   const bins = await createWarehouseTree();
+
   await seedInventory(products, bins);
 
   await seedNotifications(users);
+
   await seedFinancials(partners);
 
-  logger.info('\n✅ Seed completed successfully!');
+  logger.info('\n✅ MASSIVE Seed completed successfully!');
   logger.info(`
 📊 Summary:
    - Users: ${users.length}
@@ -463,8 +495,8 @@ const seed = async () => {
    - Partners: ${partners.length}
    - Warehouse Bins: ${bins.length}
    - Inventory Records: ~${products.length * 3}
-   - Notifications: ~${users.length * 2}
-   - Financial Transactions: ~22
+   - Notifications: ~${users.length * 5}
+   - Financial Transactions: 250
   `);
 };
 

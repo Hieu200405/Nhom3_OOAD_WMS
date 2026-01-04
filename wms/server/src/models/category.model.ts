@@ -21,8 +21,10 @@ const categorySchema = new Schema<CategoryDocument>(
   { timestamps: true }
 );
 
-categorySchema.index({ code: 1 }, { unique: true });
+// Indexes for query optimization
 categorySchema.index({ name: 1 });
+categorySchema.index({ isActive: 1, name: 1 }); // Compound index for filtering active categories
+
 
 export const CategoryModel: Model<CategoryDocument> = (mongoose.models.Category as Model<CategoryDocument>) || model<CategoryDocument>(
   'Category',
