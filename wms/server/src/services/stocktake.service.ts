@@ -56,11 +56,11 @@ const enrichItemsWithSystemQty = async (
       typeof item.systemQty === 'number'
         ? item.systemQty
         : (
-            await InventoryModel.findOne({
-              productId: new Types.ObjectId(item.productId),
-              locationId: new Types.ObjectId(item.locationId)
-            }).lean()
-          )?.quantity ?? 0;
+          await InventoryModel.findOne({
+            productId: new Types.ObjectId(item.productId),
+            locationId: new Types.ObjectId(item.locationId)
+          }).lean()
+        )?.quantity ?? 0;
     results.push({
       productId: new Types.ObjectId(item.productId),
       locationId: new Types.ObjectId(item.locationId),
@@ -142,51 +142,75 @@ export const approveStocktake = async (
   actorId: string,
   payload?: { minutes?: string; attachments?: string[] }
 ) => {
-  const stocktake = await StocktakeModel.findById(new Types.ObjectId(id));
-  if (!stocktake) {
-    throw notFound('Stocktake not found');
+  try {
+    const stocktake = await StocktakeModel.findById(new Types.ObjectId(id));
+    if (!stocktake) {
+      throw notFound('Stocktake not found');
+    }
+    if (stocktake.status !== 'draft') {
+      throw badRequest('Only draft stocktakes can be approved');
+    }
+
+
+    const deltas = stocktake.items
+      .map((item) => {
+        const sys = item.systemQty;
+        const counted = item.countedQty;
+        const delta = counted - sys;
+        return {
+          productId: item.productId,
+          locationId: item.locationId,
+          delta
+        };
+      })
+      .filter((line) => line.delta !== 0);
+
+    // Check for existing adjustment code and auto-increment if needed
+    const codeBase = `ADJ-${stocktake.code}`;
+    let code = codeBase;
+    let i = 1;
+    // Note: AdjustmentModel.exists might fail if not connected, but should be fine here.
+    while (await AdjustmentModel.exists({ code })) {
+      code = `${codeBase}-${i++}`;
+    }
+
+    // Create adjustment document with properly converted ObjectIds
+    const adjustmentDoc = new AdjustmentModel({
+      code,
+      reason: 'correction',
+      lines: deltas.map(line => ({
+        productId: new Types.ObjectId(line.productId.toString()),
+        locationId: new Types.ObjectId(line.locationId.toString()),
+        delta: line.delta
+      }))
+    });
+
+    const adjustment = await adjustmentDoc.save();
+
+    stocktake.status = 'approved';
+    stocktake.adjustmentId = adjustment._id as Types.ObjectId;
+    stocktake.approvedBy = new Types.ObjectId(actorId);
+    stocktake.approvedAt = new Date();
+    if (payload?.minutes !== undefined) stocktake.minutes = payload.minutes;
+    if (payload?.attachments !== undefined) stocktake.attachments = payload.attachments;
+    await stocktake.save();
+
+    await recordAudit({
+      action: 'stocktake.approved',
+      entity: 'Stocktake',
+      entityId: stocktake._id,
+      actorId,
+      payload: { adjustmentId: adjustment._id, approvedAt: stocktake.approvedAt }
+    });
+
+    return stocktake.toObject();
+
+  } catch (err) {
+    // Re-throw so the controller catches it (asyncHandler will pass to global error handler)
+    throw err;
   }
-  if (stocktake.status !== 'draft') {
-    throw badRequest('Only draft stocktakes can be approved');
-  }
-  const deltas = stocktake.items
-    .map((item) => ({
-      productId: item.productId,
-      locationId: item.locationId,
-      delta: item.countedQty - item.systemQty
-    }))
-    .filter((line) => line.delta !== 0);
-  const codeBase = `ADJ-${stocktake.code}`;
-  let code = codeBase;
-  let i = 1;
-  while (await AdjustmentModel.exists({ code })) {
-    code = `${codeBase}-${i++}`;
-  }
-  const adjustment = await AdjustmentModel.create({
-    code,
-    reason: 'correction',
-    lines: deltas.map((line) => ({
-      productId: new Types.ObjectId(line.productId),
-      locationId: new Types.ObjectId(line.locationId),
-      delta: line.delta
-    }))
-  });
-  stocktake.status = 'approved';
-  stocktake.adjustmentId = adjustment._id as Types.ObjectId;
-  stocktake.approvedBy = new Types.ObjectId(actorId);
-  stocktake.approvedAt = new Date();
-  if (payload?.minutes !== undefined) stocktake.minutes = payload.minutes;
-  if (payload?.attachments !== undefined) stocktake.attachments = payload.attachments;
-  await stocktake.save();
-  await recordAudit({
-    action: 'stocktake.approved',
-    entity: 'Stocktake',
-    entityId: stocktake._id,
-    actorId,
-    payload: { adjustmentId: adjustment._id, approvedAt: stocktake.approvedAt }
-  });
-  return stocktake.toObject();
 };
+
 
 export const applyStocktake = async (id: string, actorId: string) => {
   const stocktake = await StocktakeModel.findById(new Types.ObjectId(id));
