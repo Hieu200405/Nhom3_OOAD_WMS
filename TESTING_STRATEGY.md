@@ -43,6 +43,15 @@ Bên cạnh tự động hóa, cần thực hiện kiểm tra thủ công các y
 4.  **Bước 4:** Mở rộng độ phủ test cho các module Inventory và Warehouse. (✅ Hoàn thành)
 5.  **Bước 5:** (Tùy chọn) Viết thêm test cho Reports và Notifications. (✅ Hoàn thành Reports)
 6.  **Bước 6:** Debug và sửa lỗi trong Stocktake tests. (✅ Hoàn thành)
+7.  **Bước 7:** Thiết lập E2E Testing với Playwright. (🔄 Đang thực hiện)
+   - ✅ Cài đặt Playwright
+   - ✅ Cấu hình playwright.config.ts
+   - ✅ Tạo helper functions
+   - ✅ Viết test Authentication flow
+   - ✅ Viết test Stocktake flow
+   - ⏳ Viết test Receipt flow
+   - ⏳ Viết test Delivery flow
+   - ⏳ Chạy và verify E2E tests
 
 ---
 

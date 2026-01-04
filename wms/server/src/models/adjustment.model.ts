@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
+import mongoose, { Schema, model, type Document, type Model, Types } from 'mongoose';
 import { ADJUSTMENT_REASONS, type AdjustmentReason } from '@wms/shared';
 
 export interface AdjustmentLine {
@@ -41,4 +41,4 @@ const adjustmentSchema = new Schema<AdjustmentDocument>(
 
 adjustmentSchema.index({ code: 1 }, { unique: true });
 
-export const AdjustmentModel: Model<AdjustmentDocument> = (models.Adjustment as Model<AdjustmentDocument>) || model<AdjustmentDocument>('Adjustment', adjustmentSchema);
+export const AdjustmentModel: Model<AdjustmentDocument> = (mongoose.models.Adjustment as Model<AdjustmentDocument>) || model<AdjustmentDocument>('Adjustment', adjustmentSchema);

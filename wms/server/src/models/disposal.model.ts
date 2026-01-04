@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
+import mongoose, { Schema, model, type Document, type Model, Types } from 'mongoose';
 import { DISPOSAL_STATUS, DISPOSAL_REASONS, type DisposalStatus, type DisposalReason } from '@wms/shared';
 
 export interface DisposalItem {
@@ -56,4 +56,4 @@ disposalSchema.pre('save', function (next) {
   next();
 });
 
-export const DisposalModel: Model<DisposalDocument> = (models.Disposal as Model<DisposalDocument>) || model<DisposalDocument>('Disposal', disposalSchema);
+export const DisposalModel: Model<DisposalDocument> = (mongoose.models.Disposal as Model<DisposalDocument>) || model<DisposalDocument>('Disposal', disposalSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Model, Types, models } from 'mongoose';
+import mongoose, { Schema, model, type Document, type Model, Types } from 'mongoose';
 
 export interface SupplierProduct {
     supplierId: Types.ObjectId;
@@ -44,4 +44,4 @@ const supplierProductSchema = new Schema<SupplierProductDocument>(
 supplierProductSchema.index({ supplierId: 1, productId: 1 }, { unique: true });
 supplierProductSchema.index({ productId: 1, isPreferred: 1 });
 
-export const SupplierProductModel: Model<SupplierProductDocument> = (models.SupplierProduct as Model<SupplierProductDocument>) || model<SupplierProductDocument>('SupplierProduct', supplierProductSchema);
+export const SupplierProductModel: Model<SupplierProductDocument> = (mongoose.models.SupplierProduct as Model<SupplierProductDocument>) || model<SupplierProductDocument>('SupplierProduct', supplierProductSchema);
