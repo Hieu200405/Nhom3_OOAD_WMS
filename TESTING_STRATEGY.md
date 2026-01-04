@@ -40,4 +40,38 @@ Bên cạnh tự động hóa, cần thực hiện kiểm tra thủ công các y
 1.  **Bước 1:** Chạy toàn bộ test Backend hiện tại để "bắt mạch" hệ thống. (✅ Hoàn thành)
 2.  **Bước 2:** Cài đặt môi trường test cho Frontend (Vitest). (✅ Hoàn thành)
 3.  **Bước 3:** Viết 1 test case mẫu cho luồng quan trọng nhất (LoginPage, TransactionsPage). (✅ Hoàn thành)
-4.  **Bước 4:** Mở rộng độ phủ test cho các module Inventory và Warehouse.
+4.  **Bước 4:** Mở rộng độ phủ test cho các module Inventory và Warehouse. (✅ Hoàn thành)
+5.  **Bước 5:** (Tùy chọn) Viết thêm test cho Reports và Notifications. (✅ Hoàn thành Reports)
+6.  **Bước 6:** Debug và sửa lỗi trong Stocktake tests. (✅ Hoàn thành)
+
+---
+
+## Kết quả kiểm thử (Cập nhật: 2026-01-04)
+
+### Backend Tests (Jest + Supertest)
+- ✅ **8 test suites** - Tất cả PASSED
+- ✅ **21 tests** - Tất cả PASSED
+- Modules được kiểm thử:
+  - Authentication (auth.test.ts)
+  - Inventory Management (inventory.test.ts)
+  - Products (product.test.ts)
+  - Receipt & Delivery (receipt-delivery.test.ts)
+  - Reports (reports.test.ts)
+  - Stocktake (stocktake.test.ts) - **Đã sửa lỗi BSONError**
+  - Warehouse (warehouse.test.ts)
+  - Sanity checks (sanity.test.ts)
+
+### Frontend Tests (Vitest + React Testing Library)
+- ✅ **5 test files** - Tất cả PASSED
+- ✅ **14 tests** - Tất cả PASSED
+- Components được kiểm thử:
+  - App.test.jsx
+  - LoginPage.test.jsx
+  - ReportsPage.test.jsx
+  - StocktakingPage.test.jsx
+  - TransactionsPage.test.jsx
+
+### Lỗi đã sửa
+- **BSONError trong Stocktake approval**: Sửa lỗi khi test sử dụng `.id` thay vì `._id` từ Mongoose response
+- **ObjectId conversion**: Đảm bảo productId và locationId được chuyển đổi đúng cách khi tạo Adjustment documents
+

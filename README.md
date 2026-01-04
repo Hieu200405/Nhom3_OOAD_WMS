@@ -72,6 +72,45 @@ npm run dev
 npm run docker:up
 ```
 
+## 🧪 Testing & Quality Assurance
+
+### Chạy Tests
+
+**Backend Tests (Jest + Supertest):**
+```bash
+cd wms/server
+npm test
+```
+
+**Frontend Tests (Vitest + React Testing Library):**
+```bash
+cd wms/frontend
+npm test
+```
+
+### Kết Quả Kiểm Thử
+
+✅ **Backend:** 8 test suites, 21 tests - **100% PASSED**  
+✅ **Frontend:** 5 test files, 14 tests - **100% PASSED**
+
+**Modules đã kiểm thử:**
+- Authentication & Authorization
+- Inventory Management
+- Product CRUD Operations
+- Receipt & Delivery Workflows
+- Stocktake & Adjustments
+- Warehouse Management
+- Reports & Analytics
+- UI Components & User Flows
+
+### Tài Liệu Kiểm Thử
+
+Xem chi tiết tại:
+- 📋 [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) - Chiến lược kiểm thử
+- 📊 [VERIFICATION_REPORT.md](./VERIFICATION_REPORT.md) - Báo cáo chi tiết
+- ✅ [VERIFICATION_CHECKLIST.md](./VERIFICATION_CHECKLIST.md) - Checklist kiểm tra
+- 📝 [VERIFICATION_SUMMARY.md](./VERIFICATION_SUMMARY.md) - Tóm tắt kết quả
+
 ## 📚 Tài liệu API
 Hệ thống cung cấp tài liệu API chuẩn OpenAPI (Swagger) tại đường dẫn `/api-docs` khi server đang chạy.
 
