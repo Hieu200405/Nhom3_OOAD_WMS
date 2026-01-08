@@ -260,3 +260,24 @@ export const sendExpiryAlerts = async () => {
     soonToExpire: soonToExpire.length
   };
 };
+
+export const exportInventoryExcel = async (query: InventoryQuery) => {
+  const filter: Record<string, unknown> = {};
+  if (query.productId) filter.productId = new Types.ObjectId(query.productId);
+  if (query.locationId) filter.locationId = new Types.ObjectId(query.locationId);
+
+  const items = await InventoryModel.find(filter)
+    .populate('productId', 'sku name')
+    .populate('locationId', 'name code')
+    .lean();
+
+  return items.map((item: any) => ({
+    sku: item.productId?.sku || 'N/A',
+    name: item.productId?.name || 'N/A',
+    location: item.locationId?.code || 'N/A',
+    quantity: item.quantity,
+    status: item.status,
+    batch: item.batch || '',
+    expDate: item.expDate ? new Date(item.expDate).toLocaleDateString('vi-VN') : ''
+  }));
+};

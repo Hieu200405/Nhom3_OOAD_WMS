@@ -5,12 +5,14 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import { useAuth } from '../../app/auth-context.jsx';
+import { useSocket } from '../../app/socket-context.jsx';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const socket = useSocket();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +32,19 @@ export function DashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Realtime updates
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = (payload) => {
+      // Refresh if dashboard or specific counters might have changed
+      if (['dashboard', 'receipt', 'delivery', 'incident'].includes(payload.resource)) {
+        fetchData();
+      }
+    };
+    socket.on('resource_update', handleUpdate);
+    return () => socket.off('resource_update', handleUpdate);
+  }, [socket, fetchData]);
 
   const metrics = useMemo(() => {
     if (!data) return {

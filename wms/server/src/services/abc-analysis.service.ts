@@ -31,36 +31,43 @@ export const calculateABCAnalysis = async (): Promise<{
     products: ABCProduct[];
     summary: ABCSummary;
 }> => {
-    // Get all products
-    const products = await ProductModel.find().lean();
+    // Optimized: Use single aggregation query instead of N+1 loop
+    const productValuesRaw = await ProductModel.aggregate([
+        {
+            $lookup: {
+                from: 'inventories',
+                localField: '_id',
+                foreignField: 'productId',
+                as: 'inventoryItems'
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                sku: 1,
+                name: 1,
+                unitPrice: '$priceOut',
+                quantity: { $sum: '$inventoryItems.quantity' }
+            }
+        },
+        {
+            $addFields: {
+                totalValue: { $multiply: ['$quantity', '$unitPrice'] }
+            }
+        },
+        { $sort: { totalValue: -1 } }
+    ]);
 
-    // Calculate value for each product
-    const productValues = await Promise.all(
-        products.map(async (product) => {
-            // Get total quantity across all locations
-            const inventory = await InventoryModel.aggregate([
-                { $match: { productId: new Types.ObjectId(product._id as string) } },
-                { $group: { _id: null, totalQty: { $sum: '$quantity' } } }
-            ]);
+    // Map to interface and calculate cumulative
+    const productValues = productValuesRaw.map(p => ({
+        productId: p._id.toString(),
+        sku: p.sku,
+        name: p.name,
+        quantity: p.quantity,
+        unitPrice: p.unitPrice,
+        totalValue: p.totalValue
+    }));
 
-            const qty = inventory[0]?.totalQty || 0;
-            const value = qty * product.priceOut;
-
-            return {
-                productId: product._id.toString(),
-                sku: product.sku,
-                name: product.name,
-                quantity: qty,
-                unitPrice: product.priceOut,
-                totalValue: value
-            };
-        })
-    );
-
-    // Sort by value descending
-    productValues.sort((a, b) => b.totalValue - a.totalValue);
-
-    // Calculate cumulative percentage and classify
     const totalValue = productValues.reduce((sum, p) => sum + p.totalValue, 0);
 
     if (totalValue === 0) {

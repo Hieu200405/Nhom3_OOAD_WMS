@@ -7,6 +7,7 @@ import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import { adjustInventory } from './inventory.service.js';
 import { resolveDefaultBin } from './warehouse.service.js';
+import { notifyResourceUpdate } from './socket.service.js';
 import type { ReceiptStatus } from '@wms/shared';
 
 const allowedTransitions: Record<ReceiptStatus, ReceiptStatus[]> = {
@@ -103,6 +104,10 @@ export const createReceipt = async (
       totalLines: receipt.lines.length
     }
   });
+
+  notifyResourceUpdate('receipt', 'create', receipt);
+  notifyResourceUpdate('dashboard', 'refresh'); // Update counters
+
   return receipt.toObject();
 };
 
@@ -151,6 +156,9 @@ export const updateReceipt = async (
     actorId,
     payload
   });
+
+  notifyResourceUpdate('receipt', 'update', receipt);
+
   return receipt.toObject();
 };
 
@@ -234,6 +242,7 @@ export const transitionReceipt = async (
 
   receipt.status = target;
   await receipt.save();
+
   await recordAudit({
     action: `receipt.${target}`,
     entity: 'Receipt',
@@ -241,6 +250,7 @@ export const transitionReceipt = async (
     actorId,
     payload: { status: target }
   });
+
   // Create notification
   const { createNotification } = await import('./notification.service.js');
   await createNotification({
@@ -249,6 +259,12 @@ export const transitionReceipt = async (
     title: 'Receipt Completed',
     message: `Receipt ${receipt.code} has been fully processed and added to inventory.`,
   });
+
+  notifyResourceUpdate('receipt', 'update', receipt);
+  notifyResourceUpdate('dashboard', 'refresh');
+  if (target === 'completed') {
+    notifyResourceUpdate('inventory', 'update');
+  }
 
   return receipt.toObject();
 };
@@ -269,5 +285,30 @@ export const deleteReceipt = async (id: string, actorId: string) => {
     actorId,
     payload: { code: receipt.code }
   });
+
+  notifyResourceUpdate('receipt', 'delete', { id });
+  notifyResourceUpdate('dashboard', 'refresh');
+
   return true;
+};
+
+export const exportReceiptsExcel = async (query: ListQuery) => {
+  const filter: Record<string, unknown> = {};
+  if (query.status) filter.status = query.status;
+  if (query.supplierId) filter.supplierId = new Types.ObjectId(query.supplierId);
+
+  const items = await ReceiptModel.find(filter)
+    .populate('supplierId', 'name')
+    .sort({ date: -1 })
+    .lean();
+
+  return items.map((item: any) => ({
+    code: item.code,
+    supplier: item.supplierId?.name || 'N/A',
+    date: new Date(item.date).toLocaleDateString('vi-VN'),
+    status: item.status,
+    totalLines: item.lines.length,
+    totalQty: item.lines.reduce((sum: number, l: any) => sum + l.qty, 0),
+    notes: item.notes || ''
+  }));
 };

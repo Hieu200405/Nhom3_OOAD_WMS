@@ -40,6 +40,7 @@ const transitionSchema = z.object({
 router.use(auth);
 
 router.get('/:id/audit-logs', controller.getAuditLogs);
+router.get('/export', controller.exportData);
 router.get('/', controller.list);
 router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
 router.put('/:id', requireRole('Staff', 'Manager', 'Admin'), validate({ body: updateSchema }), controller.update);

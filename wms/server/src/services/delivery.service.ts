@@ -6,6 +6,7 @@ import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import { adjustInventory, ensureStock } from './inventory.service.js';
+import { notifyResourceUpdate } from './socket.service.js';
 import type { DeliveryStatus } from '@wms/shared';
 
 const allowedTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
@@ -142,6 +143,10 @@ export const createDelivery = async (
       status: delivery.status
     }
   });
+
+  notifyResourceUpdate('delivery', 'create', delivery);
+  notifyResourceUpdate('dashboard', 'refresh');
+
   return delivery.toObject();
 };
 
@@ -191,6 +196,9 @@ export const updateDelivery = async (
     actorId,
     payload
   });
+
+  notifyResourceUpdate('delivery', 'update', delivery);
+
   return delivery.toObject();
 };
 
@@ -266,6 +274,13 @@ export const transitionDelivery = async (
     actorId,
     payload: { status: target }
   });
+
+  notifyResourceUpdate('delivery', 'update', delivery);
+  notifyResourceUpdate('dashboard', 'refresh');
+  if (target === 'completed') {
+    notifyResourceUpdate('inventory', 'update');
+  }
+
   return delivery.toObject();
 };
 
@@ -285,5 +300,31 @@ export const deleteDelivery = async (id: string, actorId: string) => {
     actorId,
     payload: { code: delivery.code }
   });
+
+  notifyResourceUpdate('delivery', 'delete', { id });
+  notifyResourceUpdate('dashboard', 'refresh');
+
   return true;
+};
+
+export const exportDeliveriesExcel = async (query: ListQuery) => {
+  const filter: Record<string, unknown> = {};
+  if (query.status) filter.status = query.status;
+  if (query.customerId) filter.customerId = new Types.ObjectId(query.customerId);
+
+  const items = await DeliveryModel.find(filter)
+    .populate('customerId', 'name')
+    .sort({ date: -1 })
+    .lean();
+
+  return items.map((item: any) => ({
+    code: item.code,
+    customer: item.customerId?.name || 'N/A',
+    date: new Date(item.date).toLocaleDateString('vi-VN'),
+    expectedDate: new Date(item.expectedDate).toLocaleDateString('vi-VN'),
+    status: item.status,
+    totalLines: item.lines.length,
+    totalQty: item.lines.reduce((sum: number, l: any) => sum + l.qty, 0),
+    notes: item.notes || ''
+  }));
 };

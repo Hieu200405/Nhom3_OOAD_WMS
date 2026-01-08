@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectMongo } from './db/mongo.js';
 import { logger } from './utils/logger.js';
+import { initSocket } from './services/socket.service.js';
 
 const app = createApp();
 const server = createServer(app);
@@ -10,6 +11,9 @@ const server = createServer(app);
 const start = async () => {
   try {
     await connectMongo();
+    // Initialize Socket.io
+    initSocket(server);
+
     server.listen(env.port, () => {
       logger.info(`Server listening on port ${env.port}`);
     });
