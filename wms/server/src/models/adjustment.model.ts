@@ -11,13 +11,14 @@ export interface Adjustment {
   code: string;
   reason: AdjustmentReason;
   lines: AdjustmentLine[];
+  status: 'draft' | 'completed';
   approvedBy?: Types.ObjectId | null;
   approvedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface AdjustmentDocument extends Adjustment, Document {}
+export interface AdjustmentDocument extends Adjustment, Document { }
 
 const adjustmentLineSchema = new Schema<AdjustmentLine>(
   {
@@ -33,6 +34,7 @@ const adjustmentSchema = new Schema<AdjustmentDocument>(
     code: { type: String, required: true, unique: true, trim: true },
     reason: { type: String, enum: ADJUSTMENT_REASONS, required: true },
     lines: { type: [adjustmentLineSchema], default: [] },
+    status: { type: String, enum: ['draft', 'completed'], default: 'draft' },
     approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date }
   },

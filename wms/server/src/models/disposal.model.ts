@@ -17,11 +17,18 @@ export interface Disposal {
   minutesFileUrl?: string | null;
   status: DisposalStatus;
   items: DisposalItem[];
+  // Approval workflow fields
+  approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  approvalNotes?: string;
+  attachments?: string[]; // URLs to disposal documents
+  photos?: string[]; // URLs to photos (before/after)
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface DisposalDocument extends Disposal, Document {}
+export interface DisposalDocument extends Disposal, Document { }
 
 const disposalItemSchema = new Schema<DisposalItem>(
   {
@@ -42,7 +49,14 @@ const disposalSchema = new Schema<DisposalDocument>(
     boardMembers: { type: [String], default: [] },
     minutesFileUrl: { type: String, trim: true },
     status: { type: String, enum: DISPOSAL_STATUS, required: true, default: 'draft' },
-    items: { type: [disposalItemSchema], default: [] }
+    items: { type: [disposalItemSchema], default: [] },
+    // Approval workflow
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+    approvalNotes: { type: String },
+    attachments: [{ type: String }],
+    photos: [{ type: String }],
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
   },
   { timestamps: true }
 );

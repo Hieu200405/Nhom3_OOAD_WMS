@@ -24,6 +24,7 @@ export const listAdjustments = async (query: ListQuery) => {
       id: item._id.toString(),
       code: item.code,
       reason: item.reason,
+      status: item.status,
       lines: item.lines,
       approvedBy: item.approvedBy?.toString() ?? null,
       approvedAt: item.approvedAt ?? null
@@ -106,6 +107,7 @@ export const approveAdjustment = async (id: string, actorId: string) => {
     }
   }
 
+  adjustment.status = 'completed';
   adjustment.approvedBy = new Types.ObjectId(actorId);
   adjustment.approvedAt = new Date();
   await adjustment.save();

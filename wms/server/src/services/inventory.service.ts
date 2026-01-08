@@ -82,7 +82,50 @@ export const adjustInventory = async (
   doc.quantity = Math.max(nextQty, 0);
   if (options?.expDate) doc.expDate = options.expDate;
   await doc.save();
+
+  // Check for low stock and send notifications
+  await checkLowStock(productId.toString());
+
   return doc;
+};
+
+/**
+ * Check if product stock is below minimum and send notifications
+ */
+export const checkLowStock = async (productId: string) => {
+  try {
+    const { ProductModel } = await import('../models/product.model.js');
+    const product = await ProductModel.findById(new Types.ObjectId(productId));
+    if (!product || !product.minStock) return;
+
+    // Calculate total stock across all locations
+    const totalQty = await InventoryModel.aggregate([
+      { $match: { productId: new Types.ObjectId(productId) } },
+      { $group: { _id: null, total: { $sum: '$quantity' } } }
+    ]);
+
+    const currentStock = totalQty[0]?.total || 0;
+
+    if (currentStock < product.minStock) {
+      // Send notification to all managers and admins
+      const { UserModel } = await import('../models/user.model.js');
+      const managers = await UserModel.find({
+        role: { $in: ['Admin', 'Manager'] }
+      });
+
+      const { createNotification } = await import('./notification.service.js');
+      for (const manager of managers) {
+        await createNotification({
+          userId: (manager as any)._id.toString(),
+          type: 'warning',
+          title: 'Cảnh báo tồn kho thấp',
+          message: `Sản phẩm ${product.name} (${product.sku}) còn ${currentStock}/${product.minStock}. Cần nhập thêm hàng.`
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to check low stock:', e);
+  }
 };
 
 export const moveInventory = async (
@@ -113,4 +156,107 @@ export const ensureStock = async (
       });
     }
   }
+};
+
+/**
+ * Get expired inventory items
+ */
+export const getExpiredInventory = async () => {
+  const now = new Date();
+
+  const expiredItems = await InventoryModel.find({
+    expDate: { $lt: now },
+    quantity: { $gt: 0 }
+  })
+    .populate('productId', 'sku name')
+    .populate('locationId', 'name code')
+    .lean();
+
+  return expiredItems.map(item => ({
+    id: item._id.toString(),
+    product: item.productId,
+    location: item.locationId,
+    batch: item.batch,
+    expDate: item.expDate,
+    quantity: item.quantity,
+    daysExpired: Math.floor((now.getTime() - (item.expDate?.getTime() || 0)) / (1000 * 60 * 60 * 24))
+  }));
+};
+
+/**
+ * Get soon-to-expire inventory (within X days)
+ */
+export const getSoonToExpireInventory = async (daysThreshold = 30) => {
+  const now = new Date();
+  const thresholdDate = new Date();
+  thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
+
+  const soonToExpire = await InventoryModel.find({
+    expDate: {
+      $gte: now,
+      $lte: thresholdDate
+    },
+    quantity: { $gt: 0 }
+  })
+    .populate('productId', 'sku name')
+    .populate('locationId', 'name code')
+    .lean();
+
+  return soonToExpire.map(item => ({
+    id: item._id.toString(),
+    product: item.productId,
+    location: item.locationId,
+    batch: item.batch,
+    expDate: item.expDate,
+    quantity: item.quantity,
+    daysUntilExpiry: Math.floor(((item.expDate?.getTime() || 0) - now.getTime()) / (1000 * 60 * 60 * 24))
+  }));
+};
+
+/**
+ * Send expiry alerts to managers
+ */
+export const sendExpiryAlerts = async () => {
+  const expired = await getExpiredInventory();
+  const soonToExpire = await getSoonToExpireInventory(7);
+
+  if (expired.length === 0 && soonToExpire.length === 0) {
+    return { sent: 0, message: 'No expiry alerts needed' };
+  }
+
+  const { UserModel } = await import('../models/user.model.js');
+  const managers = await UserModel.find({
+    role: { $in: ['Admin', 'Manager'] }
+  });
+
+  const { createNotification } = await import('./notification.service.js');
+  let sentCount = 0;
+
+  for (const manager of managers) {
+    if (expired.length > 0) {
+      await createNotification({
+        userId: (manager as any)._id.toString(),
+        type: 'error',
+        title: 'Hàng hóa đã hết hạn',
+        message: `Có ${expired.length} sản phẩm đã hết hạn. Cần xử lý ngay!`
+      });
+      sentCount++;
+    }
+
+    if (soonToExpire.length > 0) {
+      await createNotification({
+        userId: (manager as any)._id.toString(),
+        type: 'warning',
+        title: 'Cảnh báo sắp hết hạn',
+        message: `Có ${soonToExpire.length} sản phẩm sắp hết hạn trong 7 ngày.`
+      });
+      sentCount++;
+    }
+  }
+
+  return {
+    sent: sentCount,
+    expired: expired.length,
+    soonToExpire: soonToExpire.length
+  };
 };

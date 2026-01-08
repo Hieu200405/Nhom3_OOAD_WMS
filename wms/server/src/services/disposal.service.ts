@@ -214,6 +214,64 @@ export const transitionDisposal = async (
   return disposal.toObject();
 };
 
+/**
+ * Approve disposal with enhanced workflow
+ * Only Admin/Manager can approve
+ */
+export const approveDisposal = async (
+  id: string,
+  payload: {
+    approvalNotes?: string;
+    attachments?: string[];
+    photos?: string[];
+  },
+  actorId: string
+) => {
+  const disposal = await DisposalModel.findById(new Types.ObjectId(id));
+  if (!disposal) {
+    throw notFound('Disposal not found');
+  }
+
+  if (disposal.status !== 'draft') {
+    throw badRequest('Only draft disposals can be approved');
+  }
+
+  // Check permission - Only Admin/Manager
+  const { UserModel } = await import('../models/user.model.js');
+  const user = await UserModel.findById(new Types.ObjectId(actorId));
+  if (!user || !['Admin', 'Manager'].includes(user.role)) {
+    const { forbidden } = await import('../utils/errors.js');
+    throw forbidden('Only Admin or Manager can approve disposals');
+  }
+
+  // Check board requirements
+  if (disposal.boardRequired) {
+    if (!disposal.boardMembers?.length || !disposal.minutesFileUrl) {
+      throw badRequest('Board approval requires members and minutes file');
+    }
+  }
+
+  // Update disposal with approval info
+  disposal.status = 'approved';
+  disposal.approvedBy = new Types.ObjectId(actorId);
+  disposal.approvedAt = new Date();
+  disposal.approvalNotes = payload.approvalNotes;
+  disposal.attachments = payload.attachments || [];
+  disposal.photos = payload.photos || [];
+
+  await disposal.save();
+
+  await recordAudit({
+    action: 'disposal.approved',
+    entity: 'Disposal',
+    entityId: disposal._id,
+    actorId,
+    payload
+  });
+
+  return disposal.toObject();
+};
+
 export const deleteDisposal = async (id: string, actorId: string) => {
   const disposal = await DisposalModel.findById(new Types.ObjectId(id));
   if (!disposal) {

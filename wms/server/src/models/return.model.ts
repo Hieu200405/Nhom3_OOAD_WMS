@@ -6,6 +6,11 @@ export interface ReturnItem {
   qty: number;
   reason: string;
   expDate?: Date | null;
+  // QC fields
+  qcStatus?: 'pending' | 'approved' | 'rejected';
+  qcNotes?: string;
+  restockQty?: number; // Quantity approved for restock
+  disposeQty?: number; // Quantity to dispose
 }
 
 export interface Return {
@@ -15,18 +20,29 @@ export interface Return {
   disposalId?: Types.ObjectId | null;
   items: ReturnItem[];
   status: ReturnStatus;
+  // QC workflow
+  qcInspectedBy?: Types.ObjectId;
+  qcInspectedAt?: Date;
+  qcNotes?: string;
+  adjustmentId?: Types.ObjectId; // Link to auto-created adjustment
+  refundTransactionId?: Types.ObjectId; // Link to refund transaction
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ReturnDocument extends Return, Document {}
+export interface ReturnDocument extends Return, Document { }
 
 const returnItemSchema = new Schema<ReturnItem>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     qty: { type: Number, required: true, min: 0 },
     reason: { type: String, required: true, trim: true },
-    expDate: { type: Date }
+    expDate: { type: Date },
+    // QC fields
+    qcStatus: { type: String, enum: ['pending', 'approved', 'rejected'] },
+    qcNotes: { type: String },
+    restockQty: { type: Number, min: 0 },
+    disposeQty: { type: Number, min: 0 }
   },
   { _id: false }
 );
@@ -38,7 +54,13 @@ const returnSchema = new Schema<ReturnDocument>(
     refId: { type: Schema.Types.ObjectId },
     disposalId: { type: Schema.Types.ObjectId, ref: 'Disposal' },
     items: { type: [returnItemSchema], default: [] },
-    status: { type: String, enum: RETURN_STATUS, required: true, default: 'draft' }
+    status: { type: String, enum: RETURN_STATUS, required: true, default: 'draft' },
+    // QC workflow
+    qcInspectedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    qcInspectedAt: { type: Date },
+    qcNotes: { type: String },
+    adjustmentId: { type: Schema.Types.ObjectId, ref: 'Adjustment' },
+    refundTransactionId: { type: Schema.Types.ObjectId, ref: 'FinancialTransaction' }
   },
   { timestamps: true }
 );

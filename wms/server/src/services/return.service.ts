@@ -245,7 +245,7 @@ export const transitionReturn = async (
       if (partnerId && amount > 0) {
         await createTransaction({
           partnerId: partnerId.toString(),
-          type: returnDoc.from === 'customer' ? 'expense' : 'revenue',
+          type: returnDoc.from === 'customer' ? 'refund' : 'income',
           amount: amount,
           status: 'completed',
           referenceId: (returnDoc as any)._id.toString(),
@@ -259,6 +259,196 @@ export const transitionReturn = async (
   }
 
   return returnDoc.toObject();
+};
+
+/**
+ * QC Inspection - Inspect return items and mark as approved/rejected
+ */
+export const inspectReturn = async (
+  id: string,
+  payload: {
+    items: Array<{
+      index: number;
+      qcStatus: 'approved' | 'rejected';
+      qcNotes?: string;
+      restockQty?: number;
+      disposeQty?: number;
+    }>;
+    qcNotes?: string;
+  },
+  actorId: string
+) => {
+  const returnDoc = await ReturnModel.findById(new Types.ObjectId(id));
+  if (!returnDoc) {
+    throw notFound('Return not found');
+  }
+
+  if (returnDoc.status !== 'approved') {
+    throw badRequest('Only approved returns can be inspected');
+  }
+
+  // Update each item with QC results
+  payload.items.forEach((itemUpdate) => {
+    if (itemUpdate.index >= 0 && itemUpdate.index < returnDoc.items.length) {
+      const item = returnDoc.items[itemUpdate.index];
+      item.qcStatus = itemUpdate.qcStatus;
+      item.qcNotes = itemUpdate.qcNotes;
+      item.restockQty = itemUpdate.restockQty || 0;
+      item.disposeQty = itemUpdate.disposeQty || 0;
+    }
+  });
+
+  // Update return-level QC info
+  returnDoc.qcInspectedBy = new Types.ObjectId(actorId);
+  returnDoc.qcInspectedAt = new Date();
+  returnDoc.qcNotes = payload.qcNotes;
+
+  await returnDoc.save();
+
+  await recordAudit({
+    action: 'return.inspected',
+    entity: 'Return',
+    entityId: returnDoc._id,
+    actorId,
+    payload: { qcResults: payload.items }
+  });
+
+  return returnDoc.toObject();
+};
+
+/**
+ * Auto-Restock - Create adjustment and update inventory for approved items
+ */
+export const restockReturn = async (id: string, actorId: string) => {
+  const returnDoc = await ReturnModel.findById(new Types.ObjectId(id));
+  if (!returnDoc) {
+    throw notFound('Return not found');
+  }
+
+  if (!returnDoc.qcInspectedBy) {
+    throw badRequest('Return must be inspected before restocking');
+  }
+
+  // Get approved items for restock
+  const approvedItems = returnDoc.items.filter(
+    (item) => item.qcStatus === 'approved' && (item.restockQty || 0) > 0
+  );
+
+  if (approvedItems.length === 0) {
+    throw badRequest('No approved items to restock');
+  }
+
+  // Create adjustment
+  const { AdjustmentModel } = await import('../models/adjustment.model.js');
+  const defaultBin = await resolveDefaultBin();
+
+  const adjustment = await AdjustmentModel.create({
+    code: `ADJ-RET-${returnDoc.code}`,
+    reason: `Restock from return ${returnDoc.code}`,
+    lines: approvedItems.map((item) => ({
+      productId: item.productId,
+      locationId: new Types.ObjectId(defaultBin),
+      delta: item.restockQty || 0
+    })),
+    status: 'draft',
+    createdBy: new Types.ObjectId(actorId)
+  });
+
+  // Apply adjustment to inventory
+  for (const line of adjustment.lines) {
+    await adjustInventory(
+      line.productId.toString(),
+      line.locationId.toString(),
+      line.delta
+    );
+  }
+
+  // Mark adjustment as completed
+  adjustment.status = 'completed';
+  await adjustment.save();
+
+  // Link adjustment to return
+  returnDoc.adjustmentId = adjustment._id as Types.ObjectId;
+  await returnDoc.save();
+
+  await recordAudit({
+    action: 'return.restocked',
+    entity: 'Return',
+    entityId: returnDoc._id,
+    actorId,
+    payload: { adjustmentId: adjustment._id }
+  });
+
+  return {
+    return: returnDoc.toObject(),
+    adjustment: adjustment.toObject()
+  };
+};
+
+/**
+ * Process Refund - Create refund transaction for customer returns
+ */
+export const processRefund = async (
+  id: string,
+  refundAmount: number,
+  actorId: string
+) => {
+  const returnDoc = await ReturnModel.findById(new Types.ObjectId(id))
+    .populate('refId');
+
+  if (!returnDoc) {
+    throw notFound('Return not found');
+  }
+
+  if (returnDoc.from !== 'customer') {
+    throw badRequest('Only customer returns can be refunded');
+  }
+
+  if (!returnDoc.refId) {
+    throw badRequest('Return must have reference to original delivery');
+  }
+
+  // Get customer ID from original delivery
+  const { DeliveryModel } = await import('../models/delivery.model.js');
+  const delivery = await DeliveryModel.findById(returnDoc.refId);
+
+  if (!delivery) {
+    throw notFound('Original delivery not found');
+  }
+
+  const customerId = delivery.customerId;
+
+  // Create refund transaction
+  const { createTransaction } = await import('./transaction.service.js');
+  const refundTxn = await createTransaction(
+    {
+      partnerId: customerId.toString(),
+      type: 'refund',
+      amount: refundAmount,
+      status: 'completed',
+      referenceId: id,
+      referenceType: 'Return',
+      note: `Refund for return ${returnDoc.code}`
+    },
+    actorId
+  );
+
+  // Link refund to return
+  returnDoc.refundTransactionId = (refundTxn as any)._id;
+  await returnDoc.save();
+
+  await recordAudit({
+    action: 'return.refunded',
+    entity: 'Return',
+    entityId: returnDoc._id,
+    actorId,
+    payload: { refundAmount, transactionId: (refundTxn as any)._id }
+  });
+
+  return {
+    return: returnDoc.toObject(),
+    refund: refundTxn
+  };
 };
 
 export const deleteReturn = async (id: string, actorId: string) => {
