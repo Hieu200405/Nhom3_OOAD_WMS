@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, FileSpreadsheet } from 'lucide-react';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Select } from '../../components/forms/Select.jsx';
@@ -15,6 +15,7 @@ import { ReceiptStatus, Roles } from '../../utils/constants.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { RoleGuard } from '../../components/RoleGuard.jsx';
 import { useAuth } from '../../app/auth-context.jsx';
+import { useSocket } from '../../app/socket-context.jsx';
 import { PageHeader } from '../../components/PageHeader.jsx';
 
 const defaultForm = {
@@ -66,9 +67,24 @@ export function ReceiptsPage() {
     }
   }, []);
 
+  const socket = useSocket();
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = (payload) => {
+      if (payload.resource === 'receipt') {
+        fetchData();
+      }
+    };
+    socket.on('resource_update', handleUpdate);
+    return () => {
+      socket.off('resource_update', handleUpdate);
+    };
+  }, [socket, fetchData]);
 
   const supplierOptions = useMemo(
     () => suppliers.map((s) => ({ value: s.id, label: s.name })),
@@ -127,6 +143,21 @@ export function ReceiptsPage() {
     } catch (error) {
       console.error(error);
       toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const blob = await apiClient('/receipts/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Receipts-List-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (e) {
+      toast.error('Failed to export receipts');
     }
   };
 
@@ -193,16 +224,25 @@ export function ReceiptsPage() {
         title={t('receipts.title')}
         description="Manage inbound receipts and lifecycle transitions."
         actions={
-          <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
+          <div className="flex gap-2">
             <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
             >
-              <Plus className="h-4 w-4" />
-              {t('receipts.create')}
+              <FileSpreadsheet className="h-4 w-4" />
+              Export Excel
             </button>
-          </RoleGuard>
+            <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+              >
+                <Plus className="h-4 w-4" />
+                {t('receipts.create')}
+              </button>
+            </RoleGuard>
+          </div>
         }
       />
 

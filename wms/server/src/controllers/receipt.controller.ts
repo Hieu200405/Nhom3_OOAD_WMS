@@ -4,14 +4,34 @@ import {
   createReceipt,
   updateReceipt,
   deleteReceipt,
-  transitionReceipt
+  transitionReceipt,
+  exportReceiptsExcel
 } from '../services/receipt.service.js';
+import { exportToExcel } from '../services/excel.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AuditLogModel } from '../models/auditLog.model.js';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const result = await listReceipts(req.query as any);
   res.json(result);
+});
+
+export const exportData = asyncHandler(async (req: Request, res: Response) => {
+  const data = await exportReceiptsExcel(req.query as any);
+  await exportToExcel(
+    res,
+    'Receipts-List',
+    [
+      { header: 'Code', key: 'code', width: 20 },
+      { header: 'Supplier', key: 'supplier', width: 30 },
+      { header: 'Date', key: 'date', width: 20 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Lines', key: 'totalLines', width: 10 },
+      { header: 'Total Qty', key: 'totalQty', width: 15 },
+      { header: 'Notes', key: 'notes', width: 30 }
+    ],
+    data
+  );
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {

@@ -5,6 +5,7 @@ import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import { formatNumber } from '../../utils/formatters.js';
 import toast from 'react-hot-toast';
+import { FileSpreadsheet } from 'lucide-react';
 
 export function InventoryPage() {
   const { t } = useTranslation();
@@ -59,6 +60,21 @@ export function InventoryPage() {
     });
   }, [inventory, categoryFilter, productMap]);
 
+  const handleExport = async () => {
+    try {
+      const blob = await apiClient('/inventory/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Inventory-Report-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (e) {
+      toast.error('Failed to export inventory');
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -70,18 +86,27 @@ export function InventoryPage() {
             Track stock levels by category and location.
           </p>
         </div>
-        <select
-          value={categoryFilter}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-          onChange={(event) => setCategoryFilter(event.target.value)}
-        >
-          <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Export Excel
+          </button>
+          <select
+            value={categoryFilter}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            onChange={(event) => setCategoryFilter(event.target.value)}
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <DataTable

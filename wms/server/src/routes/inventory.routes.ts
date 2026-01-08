@@ -18,6 +18,7 @@ const moveSchema = z.object({
 router.use(auth);
 
 router.get('/', controller.list);
+router.get('/export', controller.exportData);
 router.post('/move', requireRole('Admin', 'Manager'), validate({ body: moveSchema }), controller.move);
 
 export default router;

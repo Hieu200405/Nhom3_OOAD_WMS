@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { NotificationModel } from '../models/notification.model.js';
 import { notFound, badRequest } from '../utils/errors.js';
+import { notifyUser } from './socket.service.js';
 
 export const createNotification = async (payload: {
     userId: string | Types.ObjectId;
@@ -9,10 +10,15 @@ export const createNotification = async (payload: {
     message: string;
     actionLink?: string;
 }) => {
-    return await NotificationModel.create({
+    const notification = await NotificationModel.create({
         ...payload,
         isRead: false
     });
+
+    // Realtime notification
+    notifyUser(payload.userId.toString(), notification.toObject());
+
+    return notification;
 };
 
 export const getUserNotifications = async (userId: string, limit = 20) => {

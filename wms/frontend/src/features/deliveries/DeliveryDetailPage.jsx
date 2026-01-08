@@ -7,6 +7,7 @@ import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { InfoCard } from '../../components/InfoCard.jsx';
 import { PDFExport } from '../../components/PDFButton.jsx';
+import { AuditLogViewer } from '../../components/AuditLogViewer.jsx';
 
 export function DeliveryDetailPage() {
   const { id } = useParams();
@@ -169,6 +170,10 @@ export function DeliveryDetailPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <AuditLogViewer resource="deliveries" resourceId={id} />
       </div>
     </div>
   );
