@@ -5,9 +5,11 @@ import clsx from 'clsx';
 import { formatDistanceToNow } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
+import { useSocket } from '../../app/socket-context.jsx';
 
 export function NotificationDropdown() {
     const { t, i18n } = useTranslation();
+    const socket = useSocket(); // Use socket
     const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -25,10 +27,22 @@ export function NotificationDropdown() {
 
     useEffect(() => {
         fetchNotifications();
-        // Poll every 30 seconds
-        const interval = setInterval(fetchNotifications, 30000);
+        // Backup polling every 60s
+        const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    // Realtime listener
+    useEffect(() => {
+        if (!socket) return;
+        const handleNewNotification = (newNotif) => {
+            // Add new notif to top
+            setNotifications(prev => [newNotif, ...prev]);
+            setUnreadCount(prev => prev + 1);
+        };
+        socket.on('notification', handleNewNotification);
+        return () => socket.off('notification', handleNewNotification);
+    }, [socket]);
 
     // Handle click outside to close
     useEffect(() => {
@@ -40,14 +54,19 @@ export function NotificationDropdown() {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
     const markAsRead = async (id) => {
         try {
             await apiClient(`/notifications/${id}/read`, { method: 'PATCH' });
             setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            // Only decrement if it was previously unread
+            const notif = notifications.find(n => n._id === id);
+            if (notif && !notif.isRead) {
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
         } catch (e) { console.error(e); }
     };
+
+
 
     const markAllRead = async () => {
         try {

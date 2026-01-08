@@ -11,8 +11,13 @@ const server = createServer(app);
 const start = async () => {
   try {
     await connectMongo();
+    await import('./services/setting.service.js').then(s => s.initializeDefaultSettings());
     // Initialize Socket.io
     initSocket(server);
+
+    // Initial check for expiry alerts
+    const { sendExpiryAlerts } = await import('./services/inventory.service.js');
+    sendExpiryAlerts().catch(e => logger.warn('Expiry alert check failed at startup', e));
 
     server.listen(env.port, () => {
       logger.info(`Server listening on port ${env.port}`);

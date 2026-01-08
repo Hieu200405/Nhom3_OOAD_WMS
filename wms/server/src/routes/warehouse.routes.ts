@@ -41,6 +41,7 @@ router.use(auth);
 
 router.get('/', controller.list);
 router.get('/tree', controller.tree);
+router.get('/:id/visualization', controller.visualize);
 router.post('/', requireRole('Admin', 'Manager'), validate({ body: createSchema }), controller.create);
 router.put(
   '/:id',

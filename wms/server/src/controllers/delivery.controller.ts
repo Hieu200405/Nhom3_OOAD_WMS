@@ -66,3 +66,31 @@ export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => 
 
   res.json({ data: logs });
 });
+
+export const allocateInventory = asyncHandler(async (req: Request, res: Response) => {
+  const { items } = req.body; // Expects [{ productId, quantity }]
+  if (!items || !Array.isArray(items)) {
+    throw new Error('Invalid items format');
+  }
+
+  const { pickInventoryFIFO } = await import('../services/fifo.service.js');
+  const allocations = [];
+
+  for (const item of items) {
+    if (!item.productId || typeof item.quantity !== 'number') continue;
+    try {
+      const result = await pickInventoryFIFO({
+        productId: item.productId,
+        quantity: item.quantity
+      });
+      allocations.push(result);
+    } catch (e: any) {
+      allocations.push({
+        productId: item.productId,
+        error: e.message
+      });
+    }
+  }
+
+  res.json({ data: allocations });
+});

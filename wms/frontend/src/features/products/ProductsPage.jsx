@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus, Pencil, Check, X, Trash2, Save, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Check, X, Trash2, Save, ArrowLeft, Printer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
@@ -160,6 +160,56 @@ export function ProductsPage() {
     }
   };
 
+  const handlePrintLabel = (product) => {
+    const printWindow = window.open('', '', 'width=600,height=400');
+    if (!printWindow) {
+      toast.error('Vui lòng cho phép popup để in tem');
+      return;
+    }
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Tem sản phẩm - ${product.sku}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
+          <style>
+            @page { size: auto; margin: 0mm; }
+            body { font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+            .label { 
+                border: 2px solid #000; 
+                padding: 10px; 
+                display: inline-block; 
+                margin: 10px; 
+                width: 300px; 
+                height: 180px;
+                box-sizing: border-box;
+                position: relative;
+            }
+            .name { font-size: 16px; font-weight: bold; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .barcode { font-family: 'Libre Barcode 39 Text', cursive; font-size: 48px; line-height: 1; margin: 10px 0; }
+            .sku { font-size: 14px; color: #333; font-weight: bold; }
+            .info { display: flex; justify-content: space-between; margin-top: 15px; font-size: 14px; border-top: 1px dashed #ccc; padding-top: 5px; }
+            .price { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <div class="name">${product.name}</div>
+            <div class="barcode">*${product.sku}*</div>
+            <div class="sku">SKU: ${product.sku}</div>
+            <div class="info">
+                <span>ĐVT: ${product.unit || 'Cái'}</span>
+                <span class="price">${product.priceOut.toLocaleString()} ₫</span>
+            </div>
+          </div>
+          <script>
+            window.onload = () => { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleSaveSupplier = async (e) => {
     e.preventDefault();
     if (!editing) return;
@@ -308,14 +358,25 @@ export function ProductsPage() {
             header: t('app.actions'),
             sortable: false,
             render: (_, row) => (
-              <button
-                type="button"
-                onClick={() => openEditModal(row)}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                {t('app.edit')}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintLabel(row)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                  title="In tem mã vạch"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  In tem
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openEditModal(row)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  {t('app.edit')}
+                </button>
+              </div>
             ),
           },
         ]}

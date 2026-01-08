@@ -8,21 +8,21 @@ export function Input({
   ...props
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      {label ? <span className="font-medium text-slate-700 dark:text-slate-200">{label}</span> : null}
+    <label className="flex flex-col gap-2 text-sm">
+      {label ? <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1 leading-none">{label}</span> : null}
       <input
         className={clsx(
-          'rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-indigo-400',
-          error && 'border-rose-500 focus:border-rose-500 focus:ring-rose-200 dark:border-rose-400',
+          'input',
+          error && 'border-rose-500/50 bg-rose-50/10 text-rose-600 ring-rose-500/20 placeholder:text-rose-300 focus:bg-white dark:border-rose-500/30 dark:bg-rose-500/5 dark:text-rose-400',
           className,
         )}
         {...props}
       />
-      {helperText ? (
-        <span className="text-xs text-slate-500 dark:text-slate-400">{helperText}</span>
+      {helperText && !error ? (
+        <span className="text-xs text-slate-400 ml-1">{helperText}</span>
       ) : null}
       {error ? (
-        <span className="text-xs text-rose-500">{error}</span>
+        <span className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{error}</span>
       ) : null}
     </label>
   );

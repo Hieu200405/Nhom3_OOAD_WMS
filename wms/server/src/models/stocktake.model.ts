@@ -6,6 +6,7 @@ export interface StocktakeItem {
   locationId: Types.ObjectId;
   systemQty: number;
   countedQty: number;
+  serials?: string[];
 }
 
 export interface Stocktake {
@@ -22,14 +23,15 @@ export interface Stocktake {
   updatedAt: Date;
 }
 
-export interface StocktakeDocument extends Stocktake, Document {}
+export interface StocktakeDocument extends Stocktake, Document { }
 
 const stocktakeItemSchema = new Schema<StocktakeItem>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', required: true },
     systemQty: { type: Number, required: true, min: 0 },
-    countedQty: { type: Number, required: true, min: 0 }
+    countedQty: { type: Number, required: true, min: 0 },
+    serials: { type: [String], default: [] }
   },
   { _id: false }
 );

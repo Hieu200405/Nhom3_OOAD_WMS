@@ -36,7 +36,8 @@ export const auth: RequestHandler = asyncHandler(async (req, _res, next) => {
     id: user._id.toString(),
     email: user.email,
     fullName: user.fullName,
-    role: user.role
+    role: user.role as any,
+    branchIds: user.branchIds?.map(id => id.toString())
   };
   req.authToken = token;
   next();

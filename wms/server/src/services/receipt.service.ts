@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { ReceiptModel } from '../models/receipt.model.js';
+import { logger } from '../utils/logger.js';
 import { PartnerModel } from '../models/partner.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
@@ -141,11 +142,18 @@ export const updateReceipt = async (
         throw notFound('Product not found');
       }
     }
-    receipt.lines = payload.lines.map((line) => ({
-      productId: new Types.ObjectId(line.productId),
-      qty: line.qty,
-      priceIn: line.priceIn,
-      locationId: line.locationId ? new Types.ObjectId(line.locationId) : undefined
+    receipt.lines = await Promise.all(payload.lines.map(async (line) => {
+      let locationId = line.locationId;
+      if (!locationId) {
+        const suggested = await import('./warehouse.service.js').then(s => s.suggestPutAway(line.productId, line.qty));
+        if (suggested) locationId = suggested;
+      }
+      return {
+        productId: new Types.ObjectId(line.productId),
+        qty: line.qty,
+        priceIn: line.priceIn,
+        locationId: locationId ? new Types.ObjectId(locationId) : undefined
+      };
     }));
   }
   await receipt.save();
@@ -181,9 +189,75 @@ export const transitionReceipt = async (
   ensureTransition(receipt.status, target);
 
   if (target === 'completed') {
+    const { ProductModel } = await import('../models/product.model.js');
+    const { SerialModel } = await import('../models/serial.model.js');
+
     for (const line of receipt.lines) {
+      const product = await ProductModel.findById(line.productId);
+      if (!product) throw notFound(`Product ${line.productId} not found`);
+
       const locationId = line.locationId?.toString() ?? (await resolveDefaultBin());
-      await adjustInventory(line.productId.toString(), locationId, line.qty);
+
+      // If product managed by serial, validate and create serials
+      if (product.manageBySerial) {
+        const serials = line.serials || [];
+        if (serials.length !== line.qty) {
+          throw badRequest(`Sản phẩm ${product.name} yêu cầu ${line.qty} số serial, nhưng chỉ nhận được ${serials.length}`);
+        }
+
+        // Check for duplicate serials in DB
+        const existing = await SerialModel.find({ serialNumber: { $in: serials } }).lean();
+        if (existing.length > 0) {
+          throw conflict(`Các số serial sau đã tồn tại: ${existing.map(s => s.serialNumber).join(', ')}`);
+        }
+
+        // Create serials
+        await SerialModel.insertMany(serials.map(sn => ({
+          serialNumber: sn,
+          productId: product._id,
+          locationId: new Types.ObjectId(locationId),
+          status: 'in_stock',
+          batch: line.batch,
+          receiptId: receipt._id
+        })));
+      }
+
+      const inventoryStatus = product.requiresQC ? 'quarantined' : 'available';
+      await adjustInventory(line.productId.toString(), locationId, line.qty, {
+        status: inventoryStatus,
+        batch: line.batch,
+        expDate: line.expDate
+      });
+
+      if (product.requiresQC) {
+        logger.info(`Product ${product.sku} requires QC. Added to quarantined stock.`);
+      }
+
+      // --- CROSS-DOCKING SUGGESTION ---
+      try {
+        const { DeliveryModel } = await import('../models/delivery.model.js');
+        const pendingDeliveries = await DeliveryModel.find({
+          status: { $in: ['draft', 'approved'] },
+          'lines.productId': line.productId
+        }).lean();
+
+        if (pendingDeliveries.length > 0) {
+          const { createNotification } = await import('./notification.service.js');
+          const { UserModel } = await import('../models/user.model.js');
+          const managers = await UserModel.find({ role: { $in: ['Admin', 'Manager'] } });
+
+          for (const manager of managers) {
+            await createNotification({
+              userId: (manager as any)._id.toString(),
+              type: 'info',
+              title: 'Gợi ý Cross-docking',
+              message: `Sản phẩm ${product.name} vừa được nhập kho (${line.qty}) hiện đang có ${pendingDeliveries.length} đơn hàng chờ xuất. Cân nhắc chuyển thẳng ra khu vực xuất hàng.`
+            });
+          }
+        }
+      } catch (cdErr) {
+        logger.warn('Cross-docking check failed:', cdErr);
+      }
     }
 
     // Auto-create Payment/Expense Transaction

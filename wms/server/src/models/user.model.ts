@@ -7,6 +7,10 @@ export interface User {
   fullName: string;
   role: UserRole;
   isActive: boolean;
+  branchIds?: mongoose.Types.ObjectId[];
+  refreshToken?: string;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,7 +23,11 @@ const userSchema = new Schema<UserDocument>(
     passwordHash: { type: String, required: true },
     fullName: { type: String, required: true, trim: true },
     role: { type: String, enum: USER_ROLES, required: true, default: 'Staff' },
-    isActive: { type: Boolean, required: true, default: true }
+    isActive: { type: Boolean, required: true, default: true },
+    branchIds: [{ type: Schema.Types.ObjectId, ref: 'WarehouseNode' }],
+    refreshToken: { type: String },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String }
   },
   { timestamps: true }
 );

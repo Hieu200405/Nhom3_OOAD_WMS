@@ -14,6 +14,10 @@ export interface WarehouseNode {
   lat?: number;
   lng?: number;
   notes?: string;
+  branchId?: Types.ObjectId | null; // Root warehouse ID
+  capacity?: number;
+  allowedCategories?: Types.ObjectId[];
+  preferredProductIds?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,7 +38,11 @@ const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
     province: { type: String, trim: true },
     lat: { type: Number },
     lng: { type: Number },
-    notes: { type: String, trim: true }
+    notes: { type: String, trim: true },
+    branchId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', default: null },
+    capacity: { type: Number, default: 0 },
+    allowedCategories: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
+    preferredProductIds: [{ type: Schema.Types.ObjectId, ref: 'Product' }]
   },
   { timestamps: true }
 );

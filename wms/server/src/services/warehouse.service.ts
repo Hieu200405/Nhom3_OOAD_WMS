@@ -1,9 +1,45 @@
 import { Types } from 'mongoose';
-import { WarehouseNodeModel, type WarehouseNodeDocument } from '../models/warehouseNode.model.js';
+import { WarehouseNodeModel, type WarehouseNodeDocument, type WarehouseNode } from '../models/warehouseNode.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import { WAREHOUSE_NODE_TYPES, type WarehouseNodeType } from '@wms/shared';
+import { InventoryModel } from '../models/inventory.model.js';
+
+
+
+export const getWarehouseVisualization = async (nodeId: string) => {
+  const root = await WarehouseNodeModel.findById(new Types.ObjectId(nodeId)).lean();
+  if (!root) throw notFound('Node not found');
+
+  const children = await WarehouseNodeModel.find({ parentId: new Types.ObjectId(nodeId) }).lean();
+
+  // Get inventory aggregates for children
+  const inventoryStats = await InventoryModel.aggregate([
+    { $match: { locationId: { $in: children.map(c => c._id) } } },
+    { $group: { _id: '$locationId', totalQty: { $sum: '$quantity' }, itemsCount: { $sum: 1 } } }
+  ]);
+
+  const statsMap = new Map();
+  inventoryStats.forEach(stat => {
+    statsMap.set(stat._id.toString(), stat);
+  });
+
+  return {
+    ...root,
+    children: children.map(child => {
+      const stats = statsMap.get(child._id.toString()) || { totalQty: 0, itemsCount: 0 };
+      return {
+        ...child,
+        currentQty: stats.totalQty,
+        itemsCount: stats.itemsCount,
+        utilization: (child.capacity && child.capacity > 0)
+          ? Math.round((stats.totalQty / child.capacity) * 100)
+          : 0
+      };
+    })
+  };
+};
 
 const typeRank = new Map<WarehouseNodeType, number>(
   WAREHOUSE_NODE_TYPES.map((type, index) => [type, index])
@@ -40,6 +76,7 @@ type ListQuery = {
   query?: string;
   type?: WarehouseNodeType;
   parentId?: string;
+  branchIds?: string[];
 };
 
 export const listWarehouseNodes = async (query: ListQuery) => {
@@ -47,7 +84,15 @@ export const listWarehouseNodes = async (query: ListQuery) => {
   const filter: Record<string, unknown> = {};
   if (query.type) filter.type = query.type;
   if (query.parentId) filter.parentId = new Types.ObjectId(query.parentId);
-  if (query.query) filter.name = new RegExp(query.query, 'i');
+
+  // RBAC: Filter by Branch
+  if (query.branchIds && query.branchIds.length > 0) {
+    filter.branchId = { $in: query.branchIds.map(id => new Types.ObjectId(id)) };
+  }
+  if (query.query) {
+    const regex = new RegExp(query.query, 'i');
+    filter.$or = [{ name: regex }, { barcode: regex }, { code: regex }];
+  }
 
   const [total, nodes] = await Promise.all([
     WarehouseNodeModel.countDocuments(filter),
@@ -75,8 +120,12 @@ export const listWarehouseNodes = async (query: ListQuery) => {
   );
 };
 
-export const getWarehouseTree = async () => {
-  const nodes = await WarehouseNodeModel.find().lean();
+export const getWarehouseTree = async (branchIds?: string[]) => {
+  const filter: any = {};
+  if (branchIds && branchIds.length > 0) {
+    filter.branchId = { $in: branchIds.map(id => new Types.ObjectId(id)) };
+  }
+  const nodes = await WarehouseNodeModel.find(filter).lean();
   const map = new Map<string, any>();
   nodes.forEach((node) => {
     map.set(node._id.toString(), {
@@ -151,10 +200,22 @@ export const createWarehouseNode = async (
     }
   }
 
+  // Auto-set branchId for location-based RBAC
+  let branchId = null;
+  if (parent) {
+    branchId = (parent as any).branchId || parent._id;
+  }
+
   const node = await WarehouseNodeModel.create({
     ...payload,
-    parentId: parent ? (parent._id as Types.ObjectId) : null
+    parentId: parent ? (parent._id as Types.ObjectId) : null,
+    branchId
   });
+
+  if (payload.type === 'warehouse') {
+    node.branchId = node._id as any;
+    await node.save();
+  }
   await recordAudit({
     action: 'warehouse.created',
     entity: 'WarehouseNode',
@@ -241,4 +302,50 @@ export const resolveDefaultBin = async () => {
     throw notFound('Default bin not configured');
   }
   return node._id.toString();
+};
+
+export const suggestPutAway = async (productId: string, qty: number): Promise<string | null> => {
+  const { ProductModel } = await import('../models/product.model.js');
+  const product = await ProductModel.findById(productId).lean();
+  if (!product) return null;
+
+  // 1. Prioritize Preferred Product Bins
+  const preferredBin = await WarehouseNodeModel.findOne({
+    type: 'bin',
+    preferredProductIds: new Types.ObjectId(productId)
+  }).lean();
+  if (preferredBin && await hasCapacity(preferredBin as any, qty)) {
+    return preferredBin._id.toString();
+  }
+
+  // 2. Filter by Allowed Categories
+  if (product.categoryId) {
+    const categoryBins = await WarehouseNodeModel.find({
+      type: 'bin',
+      allowedCategories: new Types.ObjectId(product.categoryId as any)
+    }).lean();
+
+    for (const bin of categoryBins) {
+      if (await hasCapacity(bin as any, qty)) return bin._id.toString();
+    }
+  }
+
+  // 3. Fallback: Any Bin with capacity
+  const allBins = await WarehouseNodeModel.find({ type: 'bin' }).lean();
+  for (const bin of allBins) {
+    if (await hasCapacity(bin as any, qty)) return bin._id.toString();
+  }
+
+  return null;
+};
+
+const hasCapacity = async (bin: WarehouseNode, qty: number): Promise<boolean> => {
+  if (!bin.capacity || bin.capacity === 0) return true;
+
+  const result = await InventoryModel.aggregate([
+    { $match: { locationId: (bin as any)._id } },
+    { $group: { _id: null, total: { $sum: '$quantity' } } }
+  ]);
+  const currentQty = result[0]?.total || 0;
+  return (currentQty + qty) <= bin.capacity;
 };

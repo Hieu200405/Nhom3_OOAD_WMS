@@ -19,6 +19,9 @@ router.use(auth);
 
 router.get('/', controller.list);
 router.get('/export', controller.exportData);
+router.get('/replenishment/check', requireRole('Admin', 'Manager'), controller.checkReplenishment);
+router.post('/replenishment/exec', requireRole('Admin', 'Manager'), controller.execReplenishment);
 router.post('/move', requireRole('Admin', 'Manager'), validate({ body: moveSchema }), controller.move);
+router.post('/release-qc', requireRole('Admin', 'Manager'), controller.releaseQC);
 
 export default router;

@@ -8,6 +8,7 @@ export interface ReceiptLine {
   locationId?: Types.ObjectId | null;
   batch?: string; // Batch/Lot number
   expDate?: Date; // Expiry date
+  serials?: string[]; // Serial numbers
 }
 
 export interface Receipt {
@@ -31,7 +32,8 @@ const receiptLineSchema = new Schema<ReceiptLine>(
     priceIn: { type: Number, required: true, min: 0 },
     locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode' },
     batch: { type: String, trim: true },
-    expDate: { type: Date }
+    expDate: { type: Date },
+    serials: { type: [String], default: [] }
   },
   { _id: false }
 );

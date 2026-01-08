@@ -11,6 +11,7 @@ import { apiClient } from '../../services/apiClient.js';
 import { generateId } from '../../utils/id.js';
 import { formatDate } from '../../utils/formatters.js';
 import { PageHeader } from '../../components/PageHeader.jsx';
+import { ImageUploader } from '../../components/ImageUploader.jsx';
 
 const emptyLine = {
   productId: '',
@@ -24,7 +25,9 @@ const createEmptyIncident = () => ({
   note: '',
   action: '',
   lines: [{ ...emptyLine, id: generateId('line') }],
+  attachments: []
 });
+
 
 export function IncidentsPage() {
   const { t } = useTranslation();
@@ -96,7 +99,8 @@ export function IncidentsPage() {
         quantity: Number(l.quantity)
       })),
       note: form.note,
-      action: form.action
+      action: form.action,
+      attachments: form.attachments
     };
 
     try {
@@ -314,6 +318,10 @@ export function IncidentsPage() {
             value={form.note}
             onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
             required
+          />
+
+          <ImageUploader
+            onUploadComplete={(urls) => setForm(prev => ({ ...prev, attachments: urls }))}
           />
           <Select
             label={t('incidents.action')}

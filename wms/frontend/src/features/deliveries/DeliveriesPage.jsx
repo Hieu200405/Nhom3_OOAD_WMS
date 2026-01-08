@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Plus, FileSpreadsheet } from 'lucide-react';
+import { ArrowRight, Plus, FileSpreadsheet, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Modal } from '../../components/Modal.jsx';
@@ -204,6 +204,54 @@ export function DeliveriesPage() {
     }));
   };
 
+  const handleAutoAllocate = async () => {
+    const itemsToAllocate = form.lines
+      .filter(l => l.productId && l.quantity > 0)
+      .map(l => ({ productId: l.productId, quantity: Number(l.quantity) }));
+
+    if (itemsToAllocate.length === 0) {
+      toast.error('Vui lòng chọn sản phẩm và số lượng trước khi phân bổ');
+      return;
+    }
+
+    try {
+      const res = await apiClient.post('/deliveries/allocate', { items: itemsToAllocate });
+      const allocations = res.data.data;
+
+      const newLines = [];
+      // Reconstruct lines based on allocation
+      allocations.forEach(alloc => {
+        if (alloc.error) {
+          toast.error(`Sản phẩm ${alloc.productId}: ${alloc.error}`);
+          // Keep original line if failed
+          const original = form.lines.find(l => l.productId === alloc.productId);
+          if (original) newLines.push(original);
+        } else {
+          // successful allocation, expand to multiple lines if needed
+          alloc.picks.forEach(pick => {
+            const original = form.lines.find(l => l.productId === alloc.productId);
+            newLines.push({
+              productId: alloc.productId,
+              quantity: pick.quantity,
+              price: original ? original.price : 0,
+              locationId: pick.locationId,
+              note: pick.batch ? `Batch: ${pick.batch}` : ''
+            });
+          });
+          if (alloc.totalPicked < itemsToAllocate.find(i => i.productId === alloc.productId).quantity) {
+            toast.warning(`Sản phẩm ${alloc.productId}: Chỉ phân bổ được ${alloc.totalPicked}`);
+          }
+        }
+      });
+
+      setForm(prev => ({ ...prev, lines: newLines }));
+      toast.success('Đã phân bổ tồn kho tự động (FIFO)');
+    } catch (e) {
+      console.error(e);
+      toast.error('Lỗi khi phân bổ tự động');
+    }
+  };
+
   const handleExport = async () => {
     try {
       const blob = await apiClient('/deliveries/export', { responseType: 'blob' });
@@ -349,9 +397,19 @@ export function DeliveriesPage() {
           />
 
           <div className="space-y-3">
-            <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Chi tiết sản phẩm</div>
+            <div className="flex items-center justify-between">
+              <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Chi tiết sản phẩm</div>
+              <button
+                type="button"
+                onClick={handleAutoAllocate}
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+              >
+                <Wand2 className="h-3 w-3" />
+                Tự động phân bổ (FIFO)
+              </button>
+            </div>
             {form.lines.map((line, index) => (
-              <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-4 gap-3">
+              <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-4 gap-3 relative">
                 <div className="md:col-span-2">
                   <Select
                     label="Sản phẩm"
@@ -361,6 +419,7 @@ export function DeliveriesPage() {
                     placeholder="Chọn sản phẩm"
                     required
                   />
+                  {line.note && <div className="text-xs text-indigo-600 mt-1">{line.note}</div>}
                 </div>
                 <div className="md:col-span-2">
                   <Select

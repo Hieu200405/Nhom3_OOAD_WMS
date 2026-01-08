@@ -35,6 +35,15 @@ import { TransactionsPage } from '../features/financials/TransactionsPage.jsx';
 import { UsersPage } from '../features/users/UsersPage.jsx';
 import { Roles } from '../utils/constants.js';
 import { PdfTestPage } from '../features/pdf/PdfTestPage.jsx';
+import { ProfilePage } from '../features/profile/ProfilePage.jsx';
+import { SettingsPage } from '../features/settings/SettingsPage.jsx';
+import { Settings } from 'lucide-react';
+
+import { ScannerPage } from '../features/scanner/ScannerPage.jsx';
+import { Scan } from 'lucide-react';
+
+import { AuditLogPage } from '../features/audit/AuditLogPage.jsx';
+import { History } from 'lucide-react';
 
 export const appRoutes = [
   {
@@ -42,6 +51,13 @@ export const appRoutes = [
     labelKey: 'navigation.dashboard',
     icon: LayoutDashboard,
     component: DashboardPage,
+    roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
+  },
+  {
+    path: '/scanner',
+    labelKey: 'navigation.scanner',
+    icon: Scan,
+    component: ScannerPage,
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
   },
   {
@@ -171,5 +187,27 @@ export const appRoutes = [
     icon: Users,
     component: UsersPage,
     roles: [Roles.ADMIN],
+  },
+  {
+    path: '/audit',
+    labelKey: 'navigation.audit',
+    icon: History,
+    component: AuditLogPage,
+    roles: [Roles.ADMIN],
+  },
+  {
+    path: '/settings',
+    labelKey: 'navigation.settings',
+    icon: Settings,
+    component: SettingsPage,
+    roles: [Roles.ADMIN],
+  },
+  {
+    path: '/profile',
+    labelKey: 'navigation.profile',
+    icon: Users,
+    component: ProfilePage,
+    roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
+    hiddenInMenu: true,
   },
 ];

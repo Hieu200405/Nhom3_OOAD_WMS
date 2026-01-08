@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(auth);
 
+router.get('/export', requireRole('Admin', 'Manager'), controller.exportData);
 router.get('/', requireRole('Admin', 'Manager'), controller.listTransactions);
 router.post('/', requireRole('Admin', 'Manager'), controller.createTransaction);
 router.get('/stats', requireRole('Admin', 'Manager'), controller.getStats);

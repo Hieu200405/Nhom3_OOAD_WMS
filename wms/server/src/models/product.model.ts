@@ -11,6 +11,8 @@ export interface Product {
   image?: string;
   description?: string;
   supplierIds: Types.ObjectId[];
+  manageBySerial: boolean;
+  requiresQC: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,7 +30,9 @@ const productSchema = new Schema<ProductDocument>(
     minStock: { type: Number, required: true, min: 0 },
     image: { type: String },
     description: { type: String },
-    supplierIds: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }]
+    supplierIds: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }],
+    manageBySerial: { type: Boolean, default: false },
+    requiresQC: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

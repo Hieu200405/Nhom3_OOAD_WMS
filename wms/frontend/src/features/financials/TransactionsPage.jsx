@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Plus, ArrowUpRight, ArrowDownLeft, FileSpreadsheet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient.js';
 import { DataTable } from '../../components/DataTable.jsx';
@@ -24,6 +24,22 @@ export function TransactionsPage() {
             setLoading(false);
         }
     }, []);
+
+    const handleExport = async () => {
+        try {
+            const blob = await apiClient('/transactions/export', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Transactions-${Date.now()}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (e) {
+            console.error(e);
+            toast.error('Export failed');
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -78,15 +94,14 @@ export function TransactionsPage() {
                     </h1>
                     <p className="text-sm text-slate-500">{t('financials.transactions')}</p>
                 </div>
-                {/* 
                 <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    onClick={handleExport}
+                    className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
                 >
-                    <Plus className="h-4 w-4" />
-                    {t('financials.createPayment')}
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Export Excel
                 </button>
-                */}
             </div>
 
             <DataTable

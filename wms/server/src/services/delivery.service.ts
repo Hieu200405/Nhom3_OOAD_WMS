@@ -1,34 +1,34 @@
 import { Types } from 'mongoose';
 import { DeliveryModel } from '../models/delivery.model.js';
+import { logger } from '../utils/logger.js';
 import { PartnerModel } from '../models/partner.model.js';
 import { ProductModel } from '../models/product.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
-import { adjustInventory, ensureStock } from './inventory.service.js';
+import { adjustInventory, ensureStock, reserveStock, releaseStock, suggestPicking } from './inventory.service.js';
 import { notifyResourceUpdate } from './socket.service.js';
 import type { DeliveryStatus } from '@wms/shared';
+import { getSetting } from './setting.service.js';
 
 const allowedTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
-  draft: ['approved'],
-  approved: ['prepared'],
-  prepared: ['delivered'],
+  draft: ['approved', 'cancelled'],
+  approved: ['prepared', 'cancelled'],
+  prepared: ['delivered', 'cancelled'],
   delivered: ['completed'],
-  completed: []
-};
-
-const CUSTOMER_CONSTRAINTS = {
-  Corporate: { maxQty: 1000, slaDays: 7 },
-  Individual: { maxQty: 50, slaDays: 2 }
+  completed: [],
+  cancelled: []
 };
 
 const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate = false) => {
-  const tier = customer.customerType === 'Corporate' ? CUSTOMER_CONSTRAINTS.Corporate : CUSTOMER_CONSTRAINTS.Individual;
+  const customerType = customer.customerType || 'Individual';
+  const maxQty = await getSetting(`delivery.limit.${customerType.toLowerCase()}`, customerType === 'Corporate' ? 1000 : 50);
+  const slaDays = await getSetting(`delivery.sla.${customerType.toLowerCase()}`, customerType === 'Corporate' ? 7 : 2);
 
   // 1. Total quantity validation
   const totalQty = deliveryData.lines.reduce((sum: number, line: any) => sum + line.qty, 0);
-  if (totalQty > tier.maxQty) {
-    throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customer.customerType ?? 'Individual'} customers (${tier.maxQty})`);
+  if (totalQty > maxQty) {
+    throw badRequest(`Total quantity (${totalQty}) exceeds the limit for ${customerType} customers (${maxQty})`);
   }
 
   // 2. SLA validation: Expected Date - Export Date
@@ -36,8 +36,8 @@ const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate 
   const expectedDate = new Date(deliveryData.expectedDate);
   const diffDays = (expectedDate.getTime() - exportDate.getTime()) / (1000 * 3600 * 24);
 
-  if (diffDays > tier.slaDays && !deliveryData.notes?.includes('[EXCEPTION]')) {
-    throw badRequest(`Delivery window (${Math.ceil(diffDays)} days) exceeds SLA limit of ${tier.slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
+  if (diffDays > slaDays && !deliveryData.notes?.includes('[EXCEPTION]')) {
+    throw badRequest(`Delivery window (${Math.ceil(diffDays)} days) exceeds SLA limit of ${slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
   }
 };
 
@@ -104,34 +104,45 @@ export const createDelivery = async (
   if (existing) {
     throw conflict('Delivery code already exists');
   }
+  const finalLines = [];
   for (const line of payload.lines) {
     const product = await ProductModel.findById(new Types.ObjectId(line.productId)).lean();
     if (!product) {
-      throw notFound('Product not found');
-    }
-    if (!line.locationId) {
-      throw badRequest('Location is required for delivery lines');
+      throw notFound(`Sản phẩm ${line.productId} không tồn tại`);
     }
     if (line.qty <= 0) {
-      throw badRequest('Quantity must be positive');
+      throw badRequest('Số lượng phải lớn hơn 0');
+    }
+
+    if (line.locationId) {
+      finalLines.push({
+        productId: new Types.ObjectId(line.productId),
+        qty: line.qty,
+        priceOut: line.priceOut,
+        locationId: new Types.ObjectId(line.locationId)
+      });
+    } else {
+      // FEFO Picking Suggestion
+      const suggestions = await suggestPicking(line.productId, line.qty);
+      for (const sug of suggestions) {
+        finalLines.push({
+          productId: new Types.ObjectId(line.productId),
+          qty: sug.qty,
+          priceOut: line.priceOut,
+          locationId: new Types.ObjectId(sug.locationId),
+          batch: sug.batch
+        });
+      }
     }
   }
 
-  // Ensure stock is available before creating the delivery - REMOVED to allow Drafts
-  // await ensureStock(
-  //   payload.lines.map((line) => ({
-  //     productId: line.productId,
-  //     locationId: line.locationId,
-  //     qty: line.qty
-  //   }))
-  // );
-
   // Validate additional constraints (Qty limit, SLA)
-  await validateDeliveryRules(payload, customer);
+  await validateDeliveryRules({ ...payload, lines: finalLines }, customer);
 
   const delivery = await DeliveryModel.create({
     ...payload,
-    customerId: customer._id
+    customerId: customer._id,
+    lines: finalLines
   });
   await recordAudit({
     action: 'delivery.created',
@@ -169,24 +180,37 @@ export const updateDelivery = async (
   if (payload.date) delivery.date = payload.date;
   if (payload.notes !== undefined) delivery.notes = payload.notes;
   if (payload.lines) {
+    const finalLines = [];
     for (const line of payload.lines) {
       if (line.qty <= 0) {
-        throw badRequest('Quantity must be positive');
-      }
-      if (!line.locationId) {
-        throw badRequest('Location is required for delivery lines');
+        throw badRequest('Số lượng phải lớn hơn 0');
       }
       const product = await ProductModel.findById(new Types.ObjectId(line.productId)).lean();
       if (!product) {
-        throw notFound('Product not found');
+        throw notFound('Không tìm thấy sản phẩm');
+      }
+
+      if (line.locationId) {
+        finalLines.push({
+          productId: new Types.ObjectId(line.productId),
+          qty: line.qty,
+          priceOut: line.priceOut,
+          locationId: new Types.ObjectId(line.locationId)
+        });
+      } else {
+        const suggestions = await suggestPicking(line.productId, line.qty);
+        for (const sug of suggestions) {
+          finalLines.push({
+            productId: new Types.ObjectId(line.productId),
+            qty: sug.qty,
+            priceOut: line.priceOut,
+            locationId: new Types.ObjectId(sug.locationId),
+            batch: sug.batch
+          });
+        }
       }
     }
-    delivery.lines = payload.lines.map((line) => ({
-      productId: new Types.ObjectId(line.productId),
-      qty: line.qty,
-      priceOut: line.priceOut,
-      locationId: new Types.ObjectId(line.locationId)
-    }));
+    delivery.lines = finalLines;
   }
   await delivery.save();
   await recordAudit({
@@ -218,7 +242,8 @@ export const transitionDelivery = async (
   if (!delivery) {
     throw notFound('Delivery not found');
   }
-  ensureTransition(delivery.status, target);
+  const oldStatus = delivery.status;
+  ensureTransition(oldStatus, target);
 
   if (['approved', 'prepared'].includes(target)) {
     for (const line of delivery.lines) {
@@ -226,15 +251,26 @@ export const transitionDelivery = async (
         throw badRequest('Location is required to progress delivery');
       }
     }
-    await ensureStock(
-      delivery.lines.map((line) => ({
-        productId: line.productId.toString(),
-        locationId: line.locationId!.toString(),
-        qty: line.qty
-      }))
-    );
-    // Re-validate constraints on approval
-    if (target === 'approved') {
+
+    // Reservation logic on Approval
+    if (target === 'approved' && oldStatus === 'draft') {
+      for (const line of delivery.lines) {
+        await reserveStock(line.productId.toString(), line.locationId!.toString(), line.qty, line.batch ?? undefined);
+      }
+
+      // AUTO-WAYBILL GENERATION
+      try {
+        const { createWaybill } = await import('./shipping.service.js');
+        const waybill = await createWaybill(delivery);
+        delivery.trackingNumber = waybill.trackingNumber;
+        delivery.carrier = waybill.carrier;
+        delivery.shippingFee = waybill.shippingFee;
+        logger.info(`Waybill created for ${delivery.code}: ${delivery.trackingNumber} via ${delivery.carrier}`);
+      } catch (shipErr) {
+        logger.warn(`Failed to generate waybill for ${delivery.code}:`, shipErr);
+      }
+
+      // Re-validate constraints on approval
       const customer = await PartnerModel.findById(delivery.customerId).lean();
       if (customer) {
         await validateDeliveryRules(delivery.toObject(), customer);
@@ -242,12 +278,50 @@ export const transitionDelivery = async (
     }
   }
 
+  if (target === 'cancelled' && ['approved', 'prepared', 'delivered'].includes(oldStatus)) {
+    // Release Stock
+    for (const line of delivery.lines) {
+      await releaseStock(line.productId.toString(), line.locationId!.toString(), line.qty, line.batch ?? undefined);
+    }
+  }
+
   if (target === 'completed') {
+    const { SerialModel } = await import('../models/serial.model.js');
     for (const line of delivery.lines) {
       if (!line.locationId) {
         throw badRequest('Location is required to complete delivery');
       }
-      await adjustInventory(line.productId.toString(), line.locationId.toString(), -line.qty);
+
+      const product = await ProductModel.findById(line.productId);
+      if (!product) throw notFound(`Product ${line.productId} not found`);
+
+      if (product.manageBySerial) {
+        const serials = line.serials || [];
+        if (serials.length !== line.qty) {
+          throw badRequest(`Sản phẩm ${product.name} yêu cầu ${line.qty} số serial khi xuất, nhưng chỉ chọn được ${serials.length}`);
+        }
+
+        // Validate serials exist and are in_stock at this location
+        const foundSerials = await SerialModel.find({
+          serialNumber: { $in: serials },
+          productId: product._id,
+          locationId: line.locationId,
+          status: 'in_stock'
+        });
+
+        if (foundSerials.length !== serials.length) {
+          throw badRequest(`Một số Serial không hợp lệ hoặc không có trong kho tại vị trí này.`);
+        }
+
+        // Update status
+        await SerialModel.updateMany(
+          { serialNumber: { $in: serials } },
+          { $set: { status: 'sold', deliveryId: delivery._id } }
+        );
+      }
+
+      // Important: Deduct from RESERVED status because it was reserved on approval
+      await adjustInventory(line.productId.toString(), line.locationId.toString(), -line.qty, { status: 'reserved', batch: line.batch });
     }
 
     // Auto-create Revenue Transaction
@@ -263,6 +337,20 @@ export const transitionDelivery = async (
       referenceType: 'Delivery',
       note: `Auto-generated revenue for Delivery ${delivery.code}`
     }, actorId);
+
+    // AUTO-EMAIL INVOICE
+    try {
+      const customer = await PartnerModel.findById(delivery.customerId).lean();
+      if (customer && (customer as any).email) {
+        const { generateInvoicePdf } = await import('./report.service.js');
+        const { sendInvoiceEmail } = await import('./email.service.js');
+
+        const pdfBuffer = await generateInvoicePdf((delivery as any)._id.toString());
+        await sendInvoiceEmail((customer as any).email, delivery.code, pdfBuffer);
+      }
+    } catch (emailError) {
+      console.warn('Failed to send auto-invoice email:', emailError);
+    }
   }
 
   delivery.status = target;
