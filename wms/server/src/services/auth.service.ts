@@ -79,11 +79,43 @@ export const login = async ({ email, password }: LoginInput) => {
   };
   const accessToken = signAccessToken(buildTokenPayload(base));
   const refreshToken = signRefreshToken(buildTokenPayload(base));
+
+  // Save refresh token to DB
+  user.refreshToken = refreshToken;
+  await user.save();
+
   return {
     user: base,
     accessToken,
     refreshToken
   };
+};
+
+export const refresh = async (token: string) => {
+  try {
+    const decoded = jwt.verify(token, env.jwtRefreshSecret as Secret) as any;
+    const user = await UserModel.findById(decoded.sub);
+    if (!user || user.refreshToken !== token) {
+      throw unauthorized('Invalid refresh token');
+    }
+
+    const base = {
+      id: (user._id as Types.ObjectId).toString(),
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role
+    };
+
+    const accessToken = signAccessToken(buildTokenPayload(base));
+    const newRefreshToken = signRefreshToken(buildTokenPayload(base));
+
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    return { accessToken, refreshToken: newRefreshToken };
+  } catch (err) {
+    throw unauthorized('Invalid or expired refresh token');
+  }
 };
 
 export const getProfile = async (userId: string) => {
@@ -99,4 +131,16 @@ export const getProfile = async (userId: string) => {
     role: user.role,
     isActive: user.isActive
   };
+};
+
+export const changePassword = async (userId: string, data: { currentPass: string; newPass: string }) => {
+  const user = await UserModel.findById(new Types.ObjectId(userId));
+  if (!user) throw badRequest('User not found');
+
+  const match = await bcrypt.compare(data.currentPass, user.passwordHash);
+  if (!match) throw badRequest('Mật khẩu hiện tại không đúng');
+
+  user.passwordHash = await bcrypt.hash(data.newPass, env.saltRounds);
+  await user.save();
+  return true;
 };

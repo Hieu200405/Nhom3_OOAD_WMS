@@ -9,15 +9,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        // We can extend or override defaults here.
-        // For now, let's just use the palette we defined if we want custom names,
-        // or rely on Tailwind's defaults matching our design system.
-        // To enforce our file as source of truth, we could map them:
-        // brand: colors.primary,
-        // However, Tailwind default palette is quite good.
-        // Let's assume user wants to CENTRALIZE control.
-        // So we might replace colors here if they differ from defaults.
-        // Our file mirrors Tailwind defaults for Slate/Indigo roughly.
+        primary: colors.primary,
+        accent: colors.accent,
+        success: colors.success,
+        danger: colors.danger,
+        warning: colors.warning,
       },
       fontFamily: typography.fontFamily,
       fontSize: typography.fontSize,
@@ -26,6 +22,9 @@ export default {
       screens: layout.screens,
       borderRadius: layout.borderRadius,
       container: layout.container,
+      animation: {
+        'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+      },
     },
   },
   plugins: [],

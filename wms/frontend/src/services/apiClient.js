@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'http://localhost:4001/api/v1/';
+const DEFAULT_BASE_URL = 'http://localhost:4000/api/v1/';
 
 export async function apiClient(path, options = {}) {
   const {
@@ -72,3 +72,10 @@ export async function apiClient(path, options = {}) {
   }
   return response.text();
 }
+
+// Add helper methods
+apiClient.get = (path, options = {}) => apiClient(path, { ...options, method: 'GET' });
+apiClient.post = (path, body, options = {}) => apiClient(path, { ...options, method: 'POST', body });
+apiClient.put = (path, body, options = {}) => apiClient(path, { ...options, method: 'PUT', body });
+apiClient.delete = (path, options = {}) => apiClient(path, { ...options, method: 'DELETE' });
+

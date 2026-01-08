@@ -112,5 +112,63 @@ Xem chi tiết tại:
 ## 📚 Tài liệu API
 Hệ thống cung cấp tài liệu API chuẩn OpenAPI (Swagger) tại đường dẫn `/api-docs` khi server đang chạy.
 
+## 🌟 Các cải tiến mới (Phiên bản Pro)
+
+Hệ thống đã được nâng cấp với các tính năng chuyên sâu cho vận hành công nghiệp:
+
+### 1. Quản lý kho thông minh (Advanced Inventory)
+*   **Chiến lược FEFO Picking:** Tự động gợi ý vị trí lấy hàng dựa trên nguyên tắc **Hết hạn trước - Xuất trước** (First Expired First Out).
+*   **Cơ chế Giữ hàng (Stock Reservation):** Tự động giữ chỗ (Reserve) tồn kho ngay khi đơn hàng được duyệt, tránh tình trạng bán quá số lượng thực tế.
+*   **Khoá kho kiểm kê (Stocktake Lock):** Tự động khóa vị trí đang kiểm kê, ngăn chặn mọi biến động kho làm sai lệch dữ liệu đối soát.
+*   **Theo dõi Serial Number:** Quản lý chi tiết từng đơn vị sản phẩm cao cấp qua mã Serial duy nhất.
+
+### 2. Tự động hóa & DX (Automation)
+*   **Hóa đơn PDF Chuyên nghiệp:** Tự động vẽ hóa đơn PDF chuẩn (bao gồm chi tiết Serial) khi xuất kho.
+*   **Email Automation:** Tự động gửi email đính kèm hóa đơn cho khách hàng ngay khi hoàn tất giao hàng.
+*   **Dịch vụ Lưu trữ Đám mây:** Đã tích hợp **Cloudinary**, sẵn sàng chuyển đổi từ lưu trữ ảnh cục bộ sang Cloud chỉ qua cấu hình.
+
+### 3. Analytics & Giám sát thông minh (Intelligence)
+*   **Logistics & Waybill Integration:** Tự động kết nối với các đơn vị vận chuyển (GHTK, GHN,...) để sinh mã vận đơn và tính phí ship ngay khi duyệt đơn hàng.
+*   **Kiểm soát chất lượng (QC Quarantine):** Cơ chế "Tạm nhập - Chờ kiểm" cho phép đưa hàng mới nhập vào diện Quarantined để kiểm tra chất lượng trước khi mở bán chính thức.
+*   **Quy trình Hoàn hàng (Advanced RMA):** Phân loại rõ hàng hoàn có thể nhập lại kho (Restock) hay cần tiêu hủy (Dispose) sau khi giám định QC.
+*   **Bảo mật 2-Layer (Refresh Tokens):** Cơ chế token kép (Access/Refresh Token) đảm bảo an toàn tối đa cho phiên đăng nhập của người dùng.
+*   **Dự báo hết hàng (AI Predictive Insights):** Dashboard tự động tính toán tốc độ bán hàng (Sales Velocity) và dự báo ngày hết hàng thực tế cho từng SKU.
+*   **Tự động nhập hàng (Auto-Replenishment):** Hệ thống tự động khởi tạo Phiếu nhập hàng nháp (Draft Receipt) khi tồn kho xuống dưới mức tối thiểu.
+*   **Phân loại ABC:** Tự động phân loại sản phẩm theo giá trị đóng góp (Loại A: 80%, B: 15%, C: 5%).
+*   **Gợi ý Cross-docking:** Tự động phát hiện và cảnh báo khi có hàng nhập về đang trùng với nhu cầu của các đơn hàng chờ xuất, giúp giảm chi phí lưu kho.
+*   **Quy tắc Put-away (Rule-based):** Cho phép cấu hình vị trí ưu tiên cho từng sản phẩm hoặc loại hàng hóa.
+*   **Nhật ký hoạt động (Audit Logs):** Giao diện tra cứu toàn diện lịch sử thay đổi: ai làm gì, khi nào, dữ liệu cũ/mới là gì.
+
+## 🛠 Cấu hình mở rộng (Team Review)
+
+Để kích hoạt đầy đủ các tính năng thực tế, team member cần bổ sung các biến môi trường sau vào file `.env`:
+
+### 1. Cấu hình Email (SMTP)
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_app_password
+SMTP_FROM_NAME="WMS System"
+```
+
+### 2. Cấu hình Cloudinary (Ảnh)
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_key
+CLOUDINARY_API_SECRET=your_secret
+```
+
+## 🗺️ Lộ trình tiếp tục hoàn thiện (Team Roadmap)
+
+Team member có thể tiếp tục cải tiến dựa trên các hướng sau:
+
+1.  **Mobile Scanner:** Mở rộng giao diện `/scanner` để hỗ trợ đầy đủ quy trình Nhập - Cất - Nhặt trên thiết bị cầm tay.
+2.  **Bản đồ kho 2D:** Xây dựng Visualization cho các WarehouseNode để quản lý vị trí kệ trực quan hơn.
+3.  **Dự báo nhu cầu:** Sử dụng dữ liệu báo cáo để tính toán **Reorder Point (Điểm đặt hàng lại)** tự động cho từng sản phẩm.
+4.  **Tích hợp vận chuyển:** Kết nối API với các đơn vị vận chuyển (GHTK, GHN...) để lấy mã vận đơn tự động.
+
+---
+
 ## 🛡️ Tác giả & Bản quyền
 Dự án được thực hiện bởi Nhóm 3 - OOAD.

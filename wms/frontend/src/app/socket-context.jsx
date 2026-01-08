@@ -20,7 +20,7 @@ export function SocketProvider({ children }) {
 
         // Determine Socket URL.
         // If VITE_API_BASE_URL is http://localhost:4001/api/v1, we need http://localhost:4001
-        const envBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4001/api/v1';
+        const envBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1';
         const serverUrl = envBase.includes('/api/')
             ? envBase.split('/api/')[0]
             : envBase;

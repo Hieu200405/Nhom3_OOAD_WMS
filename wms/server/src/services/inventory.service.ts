@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { InventoryModel } from '../models/inventory.model.js';
+import { logger } from '../utils/logger.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { WarehouseNodeModel } from '../models/warehouseNode.model.js';
@@ -10,6 +11,7 @@ interface InventoryQuery {
   sort?: string;
   productId?: string;
   locationId?: string;
+  branchIds?: string[];
 }
 
 export const listInventory = async (query: InventoryQuery) => {
@@ -17,6 +19,23 @@ export const listInventory = async (query: InventoryQuery) => {
   const filter: Record<string, unknown> = {};
   if (query.productId) filter.productId = new Types.ObjectId(query.productId);
   if (query.locationId) filter.locationId = new Types.ObjectId(query.locationId);
+
+  // RBAC: Filter by Branch
+  if (query.branchIds && query.branchIds.length > 0) {
+    const allowedBins = await WarehouseNodeModel.find({
+      branchId: { $in: query.branchIds.map(id => new Types.ObjectId(id)) }
+    }).select('_id').lean();
+    const binIds = allowedBins.map(b => b._id);
+
+    if (filter.locationId) {
+      // Intersection of requested and allowed
+      if (!binIds.some(id => id.toString() === filter.locationId?.toString())) {
+        return buildPagedResponse([], 0, { page, limit, sort, skip });
+      }
+    } else {
+      filter.locationId = { $in: binIds };
+    }
+  }
 
   const [total, items] = await Promise.all([
     InventoryModel.countDocuments(filter),
@@ -38,12 +57,38 @@ export const listInventory = async (query: InventoryQuery) => {
 };
 
 const ensureLocationExists = async (locationId: string | Types.ObjectId) => {
-  const exists = await WarehouseNodeModel.exists({
+  const location = await WarehouseNodeModel.findOne({
     _id: new Types.ObjectId(locationId),
     type: 'bin'
   });
-  if (!exists) {
+  if (!location) {
     throw notFound('Location not found');
+  }
+  return location;
+};
+
+const checkCapacity = async (location: any, delta: number) => {
+  if (!location.capacity || location.capacity <= 0) return;
+
+  const result = await InventoryModel.aggregate([
+    { $match: { locationId: location._id } },
+    { $group: { _id: null, total: { $sum: '$quantity' } } }
+  ]);
+  const currentTotal = result[0]?.total || 0;
+
+  if (currentTotal + delta > location.capacity) {
+    throw conflict(`Location capability exceeded. Max: ${location.capacity}, Current: ${currentTotal}, Adding: ${delta}`);
+  }
+};
+
+const checkStocktakeLock = async (locationId: string | Types.ObjectId) => {
+  const { StocktakeModel } = await import('../models/stocktake.model.js');
+  const activeStocktake = await StocktakeModel.findOne({
+    status: 'draft',
+    'items.locationId': new Types.ObjectId(locationId)
+  }).lean();
+  if (activeStocktake) {
+    throw conflict(`Vị trí ${locationId} đang bị khóa để kiểm kê (${activeStocktake.code}). Vui lòng hoàn tất hoặc hủy phiếu kiểm kê trước.`);
   }
 };
 
@@ -51,16 +96,30 @@ export const adjustInventory = async (
   productId: string | Types.ObjectId,
   locationId: string | Types.ObjectId,
   delta: number,
-  options?: { batch?: string | null; expDate?: Date | null; allowNegative?: boolean; status?: 'available' | 'reserved' | 'pending' | 'special' }
+  options?: { batch?: string | null; expDate?: Date | null; allowNegative?: boolean; status?: 'available' | 'reserved' | 'pending' | 'special' | 'quarantined'; ignoreLock?: boolean }
 ) => {
   if (!delta) return null;
-  await ensureLocationExists(locationId);
+
+  // Stocktake Locking Check
+  if (!options?.ignoreLock) {
+    await checkStocktakeLock(locationId);
+  }
+
+  const location = await ensureLocationExists(locationId);
+
+  if (delta > 0) {
+    await checkCapacity(location, delta);
+  }
+
   const filter: Record<string, unknown> = {
     productId: new Types.ObjectId(productId),
-    locationId: new Types.ObjectId(locationId)
+    locationId: new Types.ObjectId(locationId),
+    status: options?.status ?? 'available'
   };
   if (options?.batch) {
     filter.batch = options.batch;
+  } else {
+    filter.batch = null;
   }
   let doc = await InventoryModel.findOne(filter);
   if (!doc) {
@@ -107,13 +166,11 @@ export const checkLowStock = async (productId: string) => {
     const currentStock = totalQty[0]?.total || 0;
 
     if (currentStock < product.minStock) {
-      // Send notification to all managers and admins
+      // 1. Send notification
       const { UserModel } = await import('../models/user.model.js');
-      const managers = await UserModel.find({
-        role: { $in: ['Admin', 'Manager'] }
-      });
-
+      const managers = await UserModel.find({ role: { $in: ['Admin', 'Manager'] } });
       const { createNotification } = await import('./notification.service.js');
+
       for (const manager of managers) {
         await createNotification({
           userId: (manager as any)._id.toString(),
@@ -122,9 +179,40 @@ export const checkLowStock = async (productId: string) => {
           message: `Sản phẩm ${product.name} (${product.sku}) còn ${currentStock}/${product.minStock}. Cần nhập thêm hàng.`
         });
       }
+
+      // 2. AUTO-REPLENISHMENT: Create Draft Receipt
+      try {
+        const { ReceiptModel } = await import('../models/receipt.model.js');
+        const existingDraft = await ReceiptModel.findOne({
+          status: 'draft',
+          'lines.productId': product._id,
+          notes: { $regex: /Auto-replenishment/ }
+        });
+
+        if (!existingDraft) {
+          const replenishQty = product.minStock * 2; // Replenishment strategy: 2x minStock
+          const supplierId = product.supplierIds && product.supplierIds.length > 0 ? product.supplierIds[0] : null;
+
+          await ReceiptModel.create({
+            code: `AUTO-REP-${Date.now().toString().slice(-6)}`,
+            date: new Date(),
+            supplierId: supplierId,
+            status: 'draft',
+            lines: [{
+              productId: product._id,
+              qty: replenishQty,
+              priceIn: (product as any).priceIn || 0
+            }],
+            notes: `[SYSTEM] Auto-replenishment for low stock (${currentStock}/${product.minStock})`
+          });
+          logger.info(`Auto-replenishment draft created for ${product.sku}`);
+        }
+      } catch (err) {
+        logger.error('Auto-replenishment creation failed', err);
+      }
     }
   } catch (e) {
-    console.warn('Failed to check low stock:', e);
+    logger.warn('Failed to check low stock:', e);
   }
 };
 
@@ -261,6 +349,98 @@ export const sendExpiryAlerts = async () => {
   };
 };
 
+/**
+ * Suggest best picking locations using FEFO (First Expired First Out)
+ */
+export const suggestPicking = async (productId: string, qty: number) => {
+  const { getSetting } = await import('./setting.service.js');
+  const minExpiryDays = await getSetting('inventory.minRemainingShelfLife', 30);
+  const expiryThreshold = new Date();
+  expiryThreshold.setDate(expiryThreshold.getDate() + minExpiryDays);
+
+  const stock = await InventoryModel.find({
+    productId: new Types.ObjectId(productId),
+    status: 'available',
+    quantity: { $gt: 0 },
+    $or: [
+      { expDate: { $gt: expiryThreshold } },
+      { expDate: null }
+    ]
+  })
+    .sort({ expDate: 1, createdAt: 1 }) // FEFO + FIFO
+    .lean();
+
+  const suggestions = [];
+  let remaining = qty;
+
+  for (const item of stock) {
+    if (remaining <= 0) break;
+    const take = Math.min(item.quantity, remaining);
+    suggestions.push({
+      locationId: item.locationId,
+      batch: item.batch,
+      qty: take
+    });
+    remaining -= take;
+  }
+
+  if (remaining > 0) {
+    throw badRequest(`Không đủ hàng tồn tại kho để xuất (Thiếu ${remaining} đơn vị)`);
+  }
+
+  return suggestions;
+};
+
+/**
+ * Move quantity from 'available' to 'reserved'
+ */
+export const reserveStock = async (productId: string, locationId: string, qty: number, batch?: string) => {
+  await checkStocktakeLock(locationId);
+  // 1. Check & Deduct from Available
+  const doc = await InventoryModel.findOneAndUpdate(
+    { productId: new Types.ObjectId(productId), locationId: new Types.ObjectId(locationId), status: 'available', batch: batch ?? null },
+    { $inc: { quantity: -qty } },
+    { new: true }
+  );
+  if (!doc || doc.quantity < 0) {
+    if (doc) await InventoryModel.updateOne({ _id: doc._id }, { $inc: { quantity: qty } }); // rollback
+    throw badRequest(`Không đủ hàng 'có sẵn' để giữ tại vị trí ${locationId}`);
+  }
+
+  // 2. Add to Reserved
+  const resDoc = await InventoryModel.findOneAndUpdate(
+    { productId: new Types.ObjectId(productId), locationId: new Types.ObjectId(locationId), status: 'reserved', batch: batch ?? null },
+    { $inc: { quantity: qty } },
+    { upsert: true, new: true }
+  );
+
+  return { available: doc, reserved: resDoc };
+};
+
+/**
+ * Move back from 'reserved' to 'available'
+ */
+export const releaseStock = async (productId: string, locationId: string, qty: number, batch?: string) => {
+  await checkStocktakeLock(locationId);
+  const doc = await InventoryModel.findOneAndUpdate(
+    { productId: new Types.ObjectId(productId), locationId: new Types.ObjectId(locationId), status: 'reserved', batch: batch ?? null },
+    { $inc: { quantity: -qty } },
+    { new: true }
+  );
+  if (!doc || doc.quantity < 0) {
+    if (doc) await InventoryModel.updateOne({ _id: doc._id }, { $inc: { quantity: qty } });
+    throw badRequest(`Không thể giải phóng hàng giữ (Lỗi số lượng reserved)`);
+  }
+
+  const avDoc = await InventoryModel.findOneAndUpdate(
+    { productId: new Types.ObjectId(productId), locationId: new Types.ObjectId(locationId), status: 'available', batch: batch ?? null },
+    { $inc: { quantity: qty } },
+    { upsert: true, new: true }
+  );
+
+  return { reserved: doc, available: avDoc };
+};
+
 export const exportInventoryExcel = async (query: InventoryQuery) => {
   const filter: Record<string, unknown> = {};
   if (query.productId) filter.productId = new Types.ObjectId(query.productId);
@@ -280,4 +460,28 @@ export const exportInventoryExcel = async (query: InventoryQuery) => {
     batch: item.batch || '',
     expDate: item.expDate ? new Date(item.expDate).toLocaleDateString('vi-VN') : ''
   }));
+};
+/**
+ * Move quantity from 'quarantined' to 'available' after QC approval
+ */
+export const releaseQuarantine = async (productId: string, locationId: string, qty: number, batch?: string) => {
+  await checkStocktakeLock(locationId);
+
+  // 1. Deduct from Quarantined
+  const doc = await InventoryModel.findOneAndUpdate(
+    { productId: new Types.ObjectId(productId), locationId: new Types.ObjectId(locationId), status: 'quarantined', batch: batch ?? null },
+    { $inc: { quantity: -qty } },
+    { new: true }
+  );
+
+  if (!doc || doc.quantity < 0) {
+    if (doc) await InventoryModel.updateOne({ _id: doc._id }, { $inc: { quantity: qty } }); // rollback
+    throw badRequest(`Không đủ hàng trong diện 'kiểm soát chất lượng' (quarantined) tại vị trí này`);
+  }
+
+  // 2. Add to Available
+  await adjustInventory(productId, locationId, qty, { status: 'available', batch });
+
+  logger.info(`Released ${qty} of ${productId} from quarantine at ${locationId}`);
+  return true;
 };

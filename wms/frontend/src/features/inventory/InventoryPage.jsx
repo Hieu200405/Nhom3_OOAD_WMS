@@ -5,7 +5,8 @@ import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import { formatNumber } from '../../utils/formatters.js';
 import toast from 'react-hot-toast';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { ReplenishmentModal } from './ReplenishmentModal.jsx';
 
 export function InventoryPage() {
   const { t } = useTranslation();
@@ -15,6 +16,10 @@ export function InventoryPage() {
   const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+
+  // Replenishment State
+  const [replenishModalOpen, setReplenishModalOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,37 +80,74 @@ export function InventoryPage() {
     }
   };
 
+  const handleCheckReplenishment = async () => {
+    const toastId = toast.loading('Đang kiểm tra tồn kho...');
+    try {
+      const res = await apiClient('/inventory/replenishment/check');
+      setSuggestions(res.data || []);
+      setReplenishModalOpen(true);
+      toast.dismiss(toastId);
+      if (res.data?.length === 0) {
+        toast.success('Hệ thống đủ hàng, không cần bổ sung.');
+      }
+    } catch (err) {
+      toast.error('Lỗi kiểm tra: ' + err.message, { id: toastId });
+    }
+  };
+
+  const handleExecReplenishment = async (selectedSuggestions) => {
+    try {
+      await apiClient('/inventory/replenishment/exec', {
+        method: 'POST',
+        body: { suggestions: selectedSuggestions }
+      });
+      toast.success(`Đã tạo ${selectedSuggestions.length} phiếu nhập kho nháp thành công!`);
+      // Optionally refresh inventory if anything changed immediately? 
+      // Receipts are drafts so inventory wont change yet.
+    } catch (err) {
+      toast.error('Lỗi tạo phiếu: ' + err.message);
+      throw err;
+    }
+  };
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-8 animate-in">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             {t('navigation.inventory')}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Track stock levels by category and location.
+          <p className="mt-2 text-sm font-medium text-slate-500 italic opacity-80">
+            Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            Export Excel
-          </button>
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={categoryFilter}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            className="input !py-2 !h-11 !rounded-2xl !bg-slate-100/50 dark:!bg-slate-900/50 min-w-[150px]"
             onChange={(event) => setCategoryFilter(event.target.value)}
           >
-            <option value="">All categories</option>
+            <option value="">Tất cả danh mục</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
+          <button
+            onClick={handleCheckReplenishment}
+            className="btn btn-primary shadow-indigo-200 !h-11 !rounded-2xl"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Kiểm tra thông minh
+          </button>
+          <button
+            onClick={handleExport}
+            className="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 !h-11 !rounded-2xl"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Xuất Excel
+          </button>
         </div>
       </div>
 
@@ -157,6 +199,13 @@ export function InventoryPage() {
             },
           },
         ]}
+      />
+
+      <ReplenishmentModal
+        open={replenishModalOpen}
+        onClose={() => setReplenishModalOpen(false)}
+        suggestions={suggestions}
+        onConfirm={handleExecReplenishment}
       />
     </div>
   );

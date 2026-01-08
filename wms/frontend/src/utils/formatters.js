@@ -12,6 +12,15 @@ export function formatDate(value) {
   }
 }
 
+export function formatDateTime(value) {
+  if (!value) return '';
+  try {
+    return format(new Date(value), 'dd/MM/yyyy HH:mm');
+  } catch {
+    return '';
+  }
+}
+
 export function formatCurrency(value, currency = 'VND', locale = DEFAULT_LOCALE) {
   if (value == null) return '';
   return new Intl.NumberFormat(locale, {

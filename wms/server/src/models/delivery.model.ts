@@ -6,6 +6,8 @@ export interface DeliveryLine {
   qty: number;
   priceOut: number;
   locationId?: Types.ObjectId | null;
+  serials?: string[];
+  batch?: string | null;
 }
 
 export interface Delivery {
@@ -16,6 +18,17 @@ export interface Delivery {
   status: DeliveryStatus;
   lines: DeliveryLine[];
   notes?: string;
+  // Logistics
+  carrier?: string;
+  trackingNumber?: string;
+  shippingFee?: number;
+  codAmount?: number;
+  weight?: number; // in grams
+  dimensions?: {
+    l: number;
+    w: number;
+    h: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,7 +40,9 @@ const deliveryLineSchema = new Schema<DeliveryLine>(
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     qty: { type: Number, required: true, min: 0 },
     priceOut: { type: Number, required: true, min: 0 },
-    locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode' }
+    locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode' },
+    serials: { type: [String], default: [] },
+    batch: { type: String, trim: true }
   },
   { _id: false }
 );
@@ -40,7 +55,18 @@ const deliverySchema = new Schema<DeliveryDocument>(
     expectedDate: { type: Date, required: true }, // Delivery Deadline
     status: { type: String, enum: DELIVERY_STATUS, default: 'draft', required: true },
     lines: { type: [deliveryLineSchema], default: [] },
-    notes: { type: String, trim: true }
+    notes: { type: String, trim: true },
+    // Logistics
+    carrier: { type: String, trim: true },
+    trackingNumber: { type: String, trim: true },
+    shippingFee: { type: Number, default: 0 },
+    codAmount: { type: Number, default: 0 },
+    weight: { type: Number, default: 0 },
+    dimensions: {
+      l: { type: Number, default: 0 },
+      w: { type: Number, default: 0 },
+      h: { type: Number, default: 0 }
+    }
   },
   { timestamps: true }
 );

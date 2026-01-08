@@ -18,6 +18,8 @@ import reportRoutes from './report.routes.js';
 import uploadRoutes from './upload.routes.js';
 import transactionRoutes from './transaction.routes.js';
 import notificationRoutes from './notification.routes.js';
+import settingRoutes from './setting.routes.js';
+import auditRoutes from './audit.routes.js';
 
 const router = Router();
 
@@ -40,5 +42,7 @@ router.use('/reports', reportRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/settings', settingRoutes);
+router.use('/audit', auditRoutes);
 
 export const apiRouter = router;

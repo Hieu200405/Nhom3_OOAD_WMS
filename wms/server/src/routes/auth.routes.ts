@@ -23,5 +23,6 @@ const loginSchema = z.object({
 router.post('/register', auth, requireRole('Admin'), validate({ body: registerSchema }), register);
 router.post('/login', validate({ body: loginSchema }), loginHandler);
 router.get('/me', auth, me);
+router.put('/password', auth, validate({ body: z.object({ currentPass: z.string(), newPass: z.string().min(8) }) }), require('../controllers/auth.controller.js').updatePassword);
 
 export default router;

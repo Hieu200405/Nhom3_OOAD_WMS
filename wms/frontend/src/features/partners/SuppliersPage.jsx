@@ -7,6 +7,7 @@ import { Input } from '../../components/forms/Input.jsx';
 import { Select } from '../../components/forms/Select.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import toast from 'react-hot-toast';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 const emptySupplier = {
   type: 'supplier',
@@ -103,19 +104,20 @@ export function SuppliersPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          {t('partners.suppliers')}
-        </h1>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-        >
-          <Plus className="h-4 w-4" />
-          {t('app.create')}
-        </button>
-      </div>
+      <PageHeader
+        title={t('partners.suppliers')}
+        description="Quản lý danh sách nhà cung cấp và thông tin liên hệ."
+        actions={
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            {t('app.create')}
+          </button>
+        }
+      />
 
       <DataTable
         data={suppliers}

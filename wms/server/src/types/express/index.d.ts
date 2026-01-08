@@ -7,6 +7,7 @@ declare global {
       email: string;
       fullName: string;
       role: UserRole;
+      branchIds?: string[];
     }
 
     interface Request {
@@ -16,4 +17,4 @@ declare global {
   }
 }
 
-export {};
+export { };

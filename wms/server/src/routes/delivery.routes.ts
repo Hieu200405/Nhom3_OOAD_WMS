@@ -39,6 +39,9 @@ router.use(auth);
 router.get('/export', controller.exportData);
 router.get('/:id/audit-logs', controller.getAuditLogs);
 router.get('/', controller.list);
+// Route for smart allocation
+router.post('/allocate', requireRole('Staff', 'Manager', 'Admin'), controller.allocateInventory);
+
 router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
 router.put('/:id', requireRole('Staff', 'Manager', 'Admin'), validate({ body: updateSchema }), controller.update);
 router.delete('/:id', requireRole('Admin'), controller.remove);

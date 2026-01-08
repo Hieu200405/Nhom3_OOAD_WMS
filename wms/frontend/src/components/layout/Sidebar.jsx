@@ -23,26 +23,27 @@ export function Sidebar({ routes = [], collapsed = false }) {
   return (
     <aside
       className={clsx(
-        'sticky top-0 h-screen border-r border-slate-200 bg-white px-3 py-6 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950',
-        collapsed ? 'w-[72px]' : 'w-64',
+        'sidebar-glass z-50 transition-all duration-300',
+        collapsed ? 'w-[80px]' : 'w-72',
       )}
     >
-      <div className="mb-6 flex items-center gap-2 px-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-lg font-bold text-white">
-          W
-        </span>
+      <div className="mb-10 flex items-center gap-3 px-3">
+        <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20">
+          <span className="text-xl font-black text-white italic">W</span>
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent" />
+        </div>
         {!collapsed ? (
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <div className="animate-in">
+            <p className="text-base font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
               {t('app.title')}
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
               {t(`roles.${user?.role ?? 'Staff'}`)}
             </p>
           </div>
         ) : null}
       </div>
-      <nav className="space-y-1">
+      <nav className="flex flex-col gap-1.5 px-2">
         {visibleRoutes.map((route) => {
           const Icon = route.icon;
 
@@ -52,18 +53,15 @@ export function Sidebar({ routes = [], collapsed = false }) {
               to={route.path}
               className={({ isActive }) =>
                 clsx(
-                  'group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition',
-                  collapsed && 'relative',
+                  'group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200',
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white',
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white',
                 )
               }
             >
-              <div className="flex items-center gap-3">
-                {Icon ? <Icon className="h-4 w-4" /> : null}
-                {!collapsed ? <span>{t(route.labelKey)}</span> : null}
-              </div>
+              {Icon ? <Icon className={clsx("h-5 w-5 transition-transform group-hover:scale-110")} /> : null}
+              {!collapsed ? <span className="animate-in">{t(route.labelKey)}</span> : null}
             </NavLink>
           );
         })}

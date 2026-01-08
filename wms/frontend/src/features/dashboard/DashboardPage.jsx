@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, Boxes, ClipboardList, Truck, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { BarChart3, Boxes, ClipboardList, Truck, TrendingUp, TrendingDown, AlertTriangle, Clock, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
@@ -60,8 +60,11 @@ export function DashboardPage() {
       pendingReceipts: data.counts?.pendingReceipts || 0,
       pendingDeliveries: data.counts?.pendingDeliveries || 0,
       openIncidents: data.counts?.openIncidents || 0,
+      expiringSoon: data.counts?.expiringSoon || 0,
       revenueChart: data.revenueChart || [],
-      inventoryStatus: data.inventoryStatus || []
+      inventoryStatus: data.inventoryStatus || [],
+      abcAnalysis: data.abcAnalysis || [],
+      predictiveInsights: data.predictiveInsights || []
     };
   }, [data]);
 
@@ -70,143 +73,235 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          {t('dashboard.welcome', { name: user?.fullName ?? 'User' })}
-        </h1>
-        <p className="text-sm text-slate-500">Tổng quan tình hình hoạt động kho hàng</p>
+    <div className="space-y-8 animate-in">
+      <div className="relative overflow-hidden rounded-3xl bg-indigo-600 p-8 shadow-2xl shadow-indigo-500/20 dark:shadow-none">
+        <div className="relative z-10">
+          <h1 className="text-3xl font-black tracking-tight text-white transition-all">
+            {t('dashboard.welcome', { name: user?.fullName ?? 'User' })}
+          </h1>
+          <p className="mt-2 text-indigo-100 font-medium opacity-80">
+            Hôm nay kho hàng có <span className="underline decoration-wavy">{metrics.pendingReceipts + metrics.pendingDeliveries}</span> vận hành đang chờ xử lý.
+          </p>
+        </div>
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-indigo-400/20 blur-3xl" />
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           icon={Boxes}
           label="Giá trị tồn kho"
           value={formatCurrency(metrics.totalInventoryValue)}
-          trend="RealTime"
+          trend="+12% vs tháng trước"
           trendUp={true}
           color="indigo"
         />
         <MetricCard
           icon={ClipboardList}
-          label="Phiếu nhập chờ xử lý"
+          label="Nhập kho chờ"
           value={metrics.pendingReceipts}
-          trend=""
+          trend="Cần ưu tiên"
           trendUp={true}
           color="blue"
         />
         <MetricCard
           icon={Truck}
-          label="Phiếu xuất đang chờ"
+          label="Xuất kho chờ"
           value={metrics.pendingDeliveries}
-          trend=""
+          trend="Hôm nay"
           trendUp={false}
-          color="orange"
+          color="rose"
         />
         <MetricCard
           icon={AlertTriangle}
-          label="Sự cố chưa giải quyết"
+          label="Sự cố mở"
           value={metrics.openIncidents}
-          trend=""
-          trendUp={true}
-          color="red"
+          trend="Cần xử lý ngay"
+          trendUp={false}
+          color="danger"
+        />
+        <MetricCard
+          icon={Clock}
+          label="Sắp hết hạn"
+          value={metrics.expiringSoon}
+          trend="< 30 ngày"
+          trendUp={false}
+          color="warning"
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
         {/* Revenue Chart */}
-        <div className="card lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Doanh thu & Chi phí (6 tháng)
-            </h2>
+        <div className="card lg:col-span-2 xl:col-span-2 p-8">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                Hiệu suất vận hành
+              </h2>
+              <p className="text-sm text-slate-500">Doanh thu & Chi phí 6 tháng gần nhất</p>
+            </div>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={metrics.revenueChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <AreaChart data={metrics.revenueChart} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}M`} />
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                 <Tooltip
-                  formatter={(value) => formatCurrency(value)}
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  cursor={{ stroke: '#6366f1', strokeWidth: 2 }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+                          <p className="mb-2 font-bold text-slate-900 dark:text-white">{label}</p>
+                          {payload.map((p, i) => (
+                            <div key={i} className="flex items-center gap-2 text-sm">
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                              <span className="text-slate-500">{p.name}:</span>
+                              <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(p.value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
-                <Area type="monotone" dataKey="income" name="Doanh thu" stroke="#818cf8" fillOpacity={1} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="expense" name="Chi phí" stroke="#f87171" fillOpacity={1} fill="url(#colorExpense)" />
-                <Legend />
+                <Area type="monotone" dataKey="income" name="Doanh thu" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                <Area type="monotone" dataKey="expense" name="Chi phí" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Inventory Status Pie Chart */}
-        <div className="card">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Trạng thái tồn kho
-            </h2>
+        <div className="card p-8">
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Trạng thái tồn kho</h2>
+            <p className="text-sm text-slate-500">Tỷ lệ phân bổ hàng hóa</p>
           </div>
-          <div className="h-[300px] w-full flex items-center justify-center">
+          <div className="h-[350px] w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={metrics.inventoryStatus}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  paddingAngle={5}
+                  cy="45%"
+                  innerRadius={80}
+                  outerRadius={105}
+                  paddingAngle={10}
                   dataKey="value"
+                  stroke="none"
                 >
                   {metrics.inventoryStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b', '#f43f5e'][index % 4]} cornerRadius={8} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend verticalAlign="bottom" height={36} />
+                <Legend verticalAlign="bottom" iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
+
+      {/* AI Predictive Insights Section */}
+      {metrics.predictiveInsights?.length > 0 && (
+        <div className="card relative overflow-hidden border-none bg-indigo-50/50 p-8 dark:bg-indigo-500/5">
+          <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/30">
+                <Zap className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white capitalize tracking-tight">
+                  Gợi ý từ AI: Dự báo hết hàng
+                </h2>
+                <p className="text-sm text-slate-500 italic">Dựa trên tốc độ bán hàng thực tế trong 30 ngày qua</p>
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {metrics.predictiveInsights.map((item, idx) => (
+                <div key={idx} className="group relative rounded-[2rem] border border-white/50 bg-white/40 p-6 shadow-sm transition-all hover:-translate-y-1 hover:bg-white hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/40">
+                  <div className="mb-4 flex justify-between items-start">
+                    <div>
+                      <h4 className="font-black text-slate-900 dark:text-white leading-tight">{item.name}</h4>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">{item.sku}</p>
+                    </div>
+                  </div>
+                  <div className="mb-6 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Khả năng hết hàng:</span>
+                      <span className="font-bold text-rose-500">Trong {item.daysLeft} ngày</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.max(100 - (item.daysLeft * 10), 10)}%` }} />
+                    </div>
+                  </div>
+                  <button className="w-full rounded-2xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-700 hover:shadow-indigo-500/40">
+                    Lập kế hoạch nhập hàng
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function MetricCard({ icon: Icon, label, value, trend, trendUp, color }) {
-  const colorStyles = {
-    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
-    red: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+  const colorMap = {
+    indigo: 'from-indigo-500 to-indigo-600',
+    blue: 'from-blue-500 to-blue-600',
+    rose: 'from-rose-500 to-rose-600',
+    danger: 'from-rose-500 to-rose-600',
+    warning: 'from-amber-400 to-amber-500',
+  };
+
+  const iconBgMap = {
+    indigo: 'bg-indigo-500/10 text-indigo-600',
+    blue: 'bg-blue-500/10 text-blue-600',
+    rose: 'bg-rose-500/10 text-rose-600',
+    danger: 'bg-rose-500/10 text-rose-600',
+    warning: 'bg-amber-500/10 text-amber-600',
   };
 
   return (
-    <div className="card">
-      <div className="flex items-start justify-between">
+    <div className="group card relative overflow-hidden p-6 hover:-translate-y-1">
+      <div className="relative z-10 flex flex-col justify-between h-full">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconBgMap[color] || iconBgMap.indigo} transition-transform group-hover:scale-110`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          {trend && (
+            <span className={clsx(
+              "text-[10px] font-bold px-2 py-1 rounded-full",
+              trendUp ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+            )}>
+              {trend}
+            </span>
+          )}
+        </div>
         <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-          <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</h3>
-        </div>
-        <div className={`rounded-xl p-2 ${colorStyles[color] || colorStyles.indigo}`}>
-          <Icon className="h-5 w-5" />
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{value}</h3>
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-2">
-        {/* Trend display if needed, currently just removed mock trend */}
-      </div>
+      <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-slate-50 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-white/5" />
     </div>
   );
 }

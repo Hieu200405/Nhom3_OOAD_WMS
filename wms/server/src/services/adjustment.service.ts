@@ -63,7 +63,7 @@ export const createAdjustment = async (
   return adjustment.toObject();
 };
 
-export const approveAdjustment = async (id: string, actorId: string) => {
+export const approveAdjustment = async (id: string, actorId: string, options?: { ignoreLock?: boolean }) => {
   const adjustment = await AdjustmentModel.findById(new Types.ObjectId(id));
   if (!adjustment) {
     throw notFound('Adjustment not found');
@@ -75,7 +75,7 @@ export const approveAdjustment = async (id: string, actorId: string) => {
   const { ProductModel } = await import('../models/product.model.js');
 
   for (const line of adjustment.lines) {
-    await adjustInventory(line.productId.toString(), line.locationId.toString(), line.delta);
+    await adjustInventory(line.productId.toString(), line.locationId.toString(), line.delta, { ignoreLock: options?.ignoreLock });
 
     // Calculate Value
     const product = await ProductModel.findById(line.productId);

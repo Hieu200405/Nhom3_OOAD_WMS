@@ -125,3 +125,34 @@ export const getTransactionStats = async () => {
         profit: income - expense
     };
 };
+
+export const exportTransactionsExcel = async (query: ListQuery) => {
+    const filter: Record<string, unknown> = {};
+
+    if (query.type) filter.type = query.type;
+    if (query.status) filter.status = query.status;
+    if (query.partnerId) filter.partnerId = new Types.ObjectId(query.partnerId);
+    if (query.referenceType) filter.referenceType = query.referenceType;
+
+    if (query.startDate || query.endDate) {
+        const dateQuery: Record<string, Date> = {};
+        if (query.startDate) dateQuery.$gte = new Date(query.startDate);
+        if (query.endDate) dateQuery.$lte = new Date(query.endDate);
+        filter.date = dateQuery;
+    }
+
+    const items = await FinancialTransactionModel.find(filter)
+        .populate('partnerId', 'name type')
+        .sort({ date: -1 })
+        .lean();
+
+    return items.map((item: any) => ({
+        date: new Date(item.date).toLocaleDateString('vi-VN'),
+        type: item.type === 'income' ? 'Thu' : 'Chi',
+        partner: item.partnerId?.name || 'N/A',
+        amount: item.amount,
+        status: item.status,
+        reference: `${item.referenceType} ${item.referenceId || ''}`,
+        note: item.note || ''
+    }));
+};

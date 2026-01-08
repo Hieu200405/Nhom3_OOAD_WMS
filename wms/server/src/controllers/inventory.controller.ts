@@ -4,7 +4,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { exportToExcel } from '../services/excel.service.js';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await listInventory(req.query as any);
+  const query = {
+    ...req.query,
+    branchIds: req.user?.role === 'Admin' ? undefined : req.user?.branchIds
+  };
+  const result = await listInventory(query as any);
   res.json(result);
 });
 
@@ -29,4 +33,21 @@ export const exportData = asyncHandler(async (req: Request, res: Response) => {
     ],
     data
   );
+});
+
+export const checkReplenishment = asyncHandler(async (req: Request, res: Response) => {
+  const data = await import('../services/replenishment.service.js').then(s => s.getReplenishmentSuggestions());
+  res.json({ data });
+});
+
+export const execReplenishment = asyncHandler(async (req: Request, res: Response) => {
+  const { suggestions } = req.body;
+  const result = await import('../services/replenishment.service.js').then(s => s.createReplenishmentOrders(suggestions, req.user!.id));
+  res.json({ data: result, message: `Created ${result.length} draft receipts` });
+});
+export const releaseQC = asyncHandler(async (req: Request, res: Response) => {
+  const { productId, locationId, qty, batch } = req.body;
+  const { releaseQuarantine } = await import('../services/inventory.service.js');
+  await releaseQuarantine(productId, locationId, qty, batch);
+  res.json({ message: 'Stock released from quarantine' });
 });

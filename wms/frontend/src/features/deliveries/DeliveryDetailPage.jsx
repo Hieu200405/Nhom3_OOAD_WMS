@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Truck } from 'lucide-react';
 import { apiClient } from '../../services/apiClient.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
@@ -129,11 +129,38 @@ export function DeliveryDetailPage() {
         <InfoCard title={t('app.total')} value={formatCurrency(delivery.total)} />
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          {t('deliveries.deliveryNote')}
-        </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.notes || delivery.note || '—'}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-3">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Truck className="h-5 w-5 text-indigo-500" />
+            Thông tin vận chuyển (Logistics)
+          </h2>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-slate-500">Đơn vị vận chuyển</p>
+              <p className="font-medium text-slate-900 dark:text-white">{delivery.carrier || '—'}</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Mã vận đơn (Waybill)</p>
+              <p className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{delivery.trackingNumber || '—'}</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Phí vận chuyển</p>
+              <p className="font-medium text-slate-900 dark:text-white">{formatCurrency(delivery.shippingFee)}</p>
+            </div>
+            <div>
+              <p className="text-slate-500">Dịch vụ</p>
+              <p className="font-medium text-slate-900 dark:text-white">Giao hàng tiêu chuẩn</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-3">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            {t('deliveries.deliveryNote')}
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.notes || delivery.note || '—'}</p>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">

@@ -9,10 +9,13 @@ import { adjustInventory } from './inventory.service.js';
 import { resolveDefaultBin } from './warehouse.service.js';
 import { env } from '../config/env.js';
 import type { ReturnStatus } from '@wms/shared';
+import { DeliveryModel } from '../models/delivery.model.js';
+import { ReceiptModel } from '../models/receipt.model.js';
 
 const allowedTransitions: Record<ReturnStatus, ReturnStatus[]> = {
   draft: ['approved'],
-  approved: ['completed'],
+  approved: ['inspected', 'completed'],
+  inspected: ['completed'],
   completed: []
 };
 
@@ -49,6 +52,61 @@ export const listReturns = async (query: ListQuery) => {
   );
 };
 
+
+const validateReturnQuantities = async (
+  refId: string,
+  from: 'customer' | 'supplier',
+  newItems: { productId: string; qty: number }[]
+) => {
+  // 1. Fetch Original Document
+  let originalLines: { productId: Types.ObjectId; qty: number }[] = [];
+
+  if (from === 'customer') {
+    const doc = await DeliveryModel.findById(new Types.ObjectId(refId)).lean();
+    if (!doc) throw notFound('Original Delivery not found');
+    originalLines = doc.lines.map(l => ({ productId: l.productId, qty: l.qty }));
+  } else {
+    const doc = await ReceiptModel.findById(new Types.ObjectId(refId)).lean();
+    if (!doc) throw notFound('Original Receipt not found');
+    originalLines = doc.lines.map(l => ({ productId: l.productId, qty: l.qty }));
+  }
+
+  // 2. Fetch History of Returns for this Ref
+  const previousReturns = await ReturnModel.find({
+    refId: new Types.ObjectId(refId),
+    status: { $ne: 'rejected' } // Count all valid returns
+  }).lean();
+
+  // 3. Calculate already returned qty per product
+  const returnedMap = new Map<string, number>();
+  previousReturns.forEach(ret => {
+    ret.items.forEach(item => {
+      const pid = item.productId.toString();
+      returnedMap.set(pid, (returnedMap.get(pid) || 0) + item.qty);
+    });
+  });
+
+  // 4. Validate new items
+  for (const item of newItems) {
+    const pid = item.productId;
+    const originalLine = originalLines.find(l => l.productId.toString() === pid);
+
+    if (!originalLine) {
+      throw badRequest(`Product ${pid} was not part of the original transaction`);
+    }
+
+    const purchasedQty = originalLine.qty;
+    const previouslyReturned = returnedMap.get(pid) || 0;
+    const currentReturn = item.qty;
+
+    if (previouslyReturned + currentReturn > purchasedQty) {
+      throw badRequest(
+        `Return quantity (${currentReturn}) + Previous returns (${previouslyReturned}) exceeds purchased quantity (${purchasedQty}) for product ${pid}`
+      );
+    }
+  }
+};
+
 export const createReturn = async (
   payload: {
     code: string;
@@ -62,6 +120,11 @@ export const createReturn = async (
   if (existing) {
     throw conflict('Return code already exists');
   }
+
+  if (payload.refId) {
+    await validateReturnQuantities(payload.refId, payload.from, payload.items);
+  }
+
   for (const item of payload.items) {
     if (item.qty <= 0) {
       throw badRequest('Quantity must be positive');
@@ -182,29 +245,39 @@ export const transitionReturn = async (
 
   if (target === 'completed') {
     const defaultBin = await resolveDefaultBin();
-    const expiredItems: { productId: string; qty: number; reason: string; price: number }[] = [];
+    const itemsToDispose: { productId: string; qty: number; reason: string; price: number }[] = [];
+
     for (const item of returnDoc.items) {
       const product = await ProductModel.findById(item.productId);
-      if (!product) {
-        throw notFound('Product not found');
-      }
+      if (!product) throw notFound('Product not found');
+
       const isExpired = item.expDate ? item.expDate < new Date() : false;
+      const restockableQty = item.restockQty ?? (isExpired ? 0 : item.qty);
+      const disposalQty = item.disposeQty ?? (isExpired ? item.qty : 0);
+
       if (returnDoc.from === 'customer') {
-        await adjustInventory(item.productId.toString(), defaultBin, item.qty);
-        if (isExpired) {
-          expiredItems.push({
+        // 1. Phục hồi tồn kho khả dụng
+        if (restockableQty > 0) {
+          await adjustInventory(item.productId.toString(), defaultBin, restockableQty, { status: 'available' });
+        }
+        // 2. Tạm nhập hàng lỗi/hết hạn để chờ hủy
+        if (disposalQty > 0) {
+          await adjustInventory(item.productId.toString(), defaultBin, disposalQty, { status: 'quarantined' });
+          itemsToDispose.push({
             productId: item.productId.toString(),
-            qty: item.qty,
-            reason: item.reason,
+            qty: disposalQty,
+            reason: item.reason || 'damaged/expired',
             price: product.priceIn
           });
         }
       } else {
+        // Trả hàng về NCC (Supplier Return) - Xuất kho
         await adjustInventory(item.productId.toString(), defaultBin, -item.qty);
       }
     }
-    if (expiredItems.length) {
-      const disposal = await createDisposalForExpired(returnDoc, expiredItems, actorId, defaultBin);
+
+    if (itemsToDispose.length) {
+      const disposal = await createDisposalForExpired(returnDoc, itemsToDispose, actorId, defaultBin);
       returnDoc.disposalId = disposal ? (disposal._id as Types.ObjectId) : null;
     }
   }

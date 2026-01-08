@@ -42,30 +42,50 @@ export const listStocktakes = async (query: ListQuery) => {
   );
 };
 
-const enrichItemsWithSystemQty = async (
-  items: { productId: string; locationId: string; systemQty?: number; countedQty: number }[]
+const enrichItems = async (
+  items: { productId: string; locationId: string; systemQty?: number; countedQty: number, serials?: string[] }[]
 ) => {
+  const { ProductModel } = await import('../models/product.model.js');
+  const { SerialModel } = await import('../models/serial.model.js');
+
   const results = [] as {
     productId: Types.ObjectId;
     locationId: Types.ObjectId;
     systemQty: number;
     countedQty: number;
+    serials: string[];
   }[];
+
   for (const item of items) {
+    const product = await ProductModel.findById(item.productId).lean();
+
     const systemQty =
       typeof item.systemQty === 'number'
         ? item.systemQty
         : (
           await InventoryModel.findOne({
             productId: new Types.ObjectId(item.productId),
-            locationId: new Types.ObjectId(item.locationId)
+            locationId: new Types.ObjectId(item.locationId),
+            status: 'available'
           }).lean()
         )?.quantity ?? 0;
+
+    let systemSerials: string[] = [];
+    if (product && (product as any).manageBySerial) {
+      const found = await SerialModel.find({
+        productId: product._id,
+        locationId: new Types.ObjectId(item.locationId),
+        status: 'in_stock'
+      }).lean();
+      systemSerials = found.map(s => s.serialNumber);
+    }
+
     results.push({
       productId: new Types.ObjectId(item.productId),
       locationId: new Types.ObjectId(item.locationId),
       systemQty,
-      countedQty: item.countedQty
+      countedQty: item.countedQty,
+      serials: item.serials || systemSerials
     });
   }
   return results;
@@ -85,7 +105,7 @@ export const createStocktake = async (
   if (existing) {
     throw conflict('Stocktake code already exists');
   }
-  const items = await enrichItemsWithSystemQty(payload.items);
+  const items = await enrichItems(payload.items);
   const stocktake = await StocktakeModel.create({
     code: payload.code,
     date: payload.date,
@@ -122,7 +142,7 @@ export const updateStocktake = async (
   }
   if (payload.date) stocktake.date = payload.date;
   if (payload.items) {
-    stocktake.items = await enrichItemsWithSystemQty(payload.items);
+    stocktake.items = await enrichItems(payload.items);
   }
   if (payload.minutes !== undefined) stocktake.minutes = payload.minutes;
   if (payload.attachments !== undefined) stocktake.attachments = payload.attachments;
@@ -223,7 +243,7 @@ export const applyStocktake = async (id: string, actorId: string) => {
   if (!stocktake.adjustmentId) {
     throw badRequest('No adjustment linked to stocktake');
   }
-  await approveAdjustment(stocktake.adjustmentId.toString(), actorId);
+  await approveAdjustment(stocktake.adjustmentId.toString(), actorId, { ignoreLock: true });
   stocktake.status = 'applied';
   await stocktake.save();
   await recordAudit({
