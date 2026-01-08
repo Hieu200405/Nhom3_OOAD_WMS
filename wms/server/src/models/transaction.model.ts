@@ -6,6 +6,8 @@ export interface FinancialTransaction {
     type: FinancialTransactionType;
     status: FinancialTransactionStatus;
     amount: number;
+    paidAmount: number;
+    paymentDueDate?: Date;
     referenceId?: Types.ObjectId | string;
     referenceType?: 'Receipt' | 'Delivery' | 'Return' | 'Manual';
     date: Date;
@@ -14,7 +16,9 @@ export interface FinancialTransaction {
     updatedAt: Date;
 }
 
-export interface FinancialTransactionDocument extends FinancialTransaction, Document { }
+export interface FinancialTransactionDocument extends FinancialTransaction, Document {
+    _id: Types.ObjectId;
+}
 
 const financialTransactionSchema = new Schema<FinancialTransactionDocument>(
     {
@@ -22,6 +26,8 @@ const financialTransactionSchema = new Schema<FinancialTransactionDocument>(
         type: { type: String, enum: FINANCIAL_TRANSACTION_TYPES, required: true },
         status: { type: String, enum: FINANCIAL_TRANSACTION_STATUS, default: 'completed', required: true },
         amount: { type: Number, required: true },
+        paidAmount: { type: Number, default: 0, required: true },
+        paymentDueDate: { type: Date },
         referenceId: { type: Schema.Types.Mixed },
         referenceType: { type: String, enum: ['Receipt', 'Delivery', 'Return', 'Manual'], default: 'Manual' },
         date: { type: Date, default: Date.now, required: true },

@@ -16,7 +16,7 @@ export function PdfTestPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">PDF Test (Tiếng Việt)</h1>
+      <h1 className="text-2xl font-semibold mb-4">File PDF</h1>
       <p className="mb-4">Nhấn nút để xuất file PDF chứa tiếng Việt có dấu và bảng ví dụ.</p>
 
       <PDFButton

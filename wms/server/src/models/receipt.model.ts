@@ -6,6 +6,8 @@ export interface ReceiptLine {
   qty: number;
   priceIn: number;
   locationId?: Types.ObjectId | null;
+  batch?: string; // Batch/Lot number
+  expDate?: Date; // Expiry date
 }
 
 export interface Receipt {
@@ -20,14 +22,16 @@ export interface Receipt {
   updatedAt: Date;
 }
 
-export interface ReceiptDocument extends Receipt, Document {}
+export interface ReceiptDocument extends Receipt, Document { }
 
 const receiptLineSchema = new Schema<ReceiptLine>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     qty: { type: Number, required: true, min: 0 },
     priceIn: { type: Number, required: true, min: 0 },
-    locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode' }
+    locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode' },
+    batch: { type: String, trim: true },
+    expDate: { type: Date }
   },
   { _id: false }
 );

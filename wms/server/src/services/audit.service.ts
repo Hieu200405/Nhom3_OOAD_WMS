@@ -31,3 +31,67 @@ export const recordAudit = async ({ action, entity, entityId, actorId, payload }
     payload: payload ?? null
   });
 };
+
+/**
+ * List audit logs with pagination and filtering
+ */
+export const listAuditLogs = async (query: {
+  page?: string;
+  limit?: string;
+  entity?: string;
+  action?: string;
+  actorId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) => {
+  const { parsePagination, buildPagedResponse } = await import('../utils/pagination.js');
+  const { page, limit, skip } = parsePagination(query);
+
+  const filter: Record<string, unknown> = {};
+
+  if (query.entity) {
+    filter.entity = query.entity;
+  }
+
+  if (query.action) {
+    filter.action = new RegExp(query.action, 'i');
+  }
+
+  if (query.actorId) {
+    filter.actorId = new Types.ObjectId(query.actorId);
+  }
+
+  if (query.startDate || query.endDate) {
+    filter.createdAt = {};
+    if (query.startDate) {
+      (filter.createdAt as Record<string, unknown>).$gte = query.startDate;
+    }
+    if (query.endDate) {
+      (filter.createdAt as Record<string, unknown>).$lte = query.endDate;
+    }
+  }
+
+  const [total, items] = await Promise.all([
+    AuditLogModel.countDocuments(filter),
+    AuditLogModel.find(filter)
+      .populate('actorId', 'username email')
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit)
+      .lean()
+  ]);
+
+  return buildPagedResponse(
+    items.map((item) => ({
+      id: item._id.toString(),
+      action: item.action,
+      entity: item.entity,
+      entityId: item.entityId,
+      actor: item.actorId,
+      payload: item.payload,
+      createdAt: item.createdAt
+    })),
+    total,
+    { page, limit, skip, sort: '-createdAt' }
+  );
+};

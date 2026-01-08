@@ -6,6 +6,7 @@ import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { InfoCard } from '../../components/InfoCard.jsx';
+import { PDFExport } from '../../components/PDFButton.jsx';
 
 export function ReceiptDetailPage() {
   const { id } = useParams();
@@ -59,6 +60,23 @@ export function ReceiptDetailPage() {
 
   const supplierName = supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
 
+  // Prepare PDF data
+  const pdfColumns = [
+    { key: 'sku', header: 'SKU' },
+    { key: 'name', header: 'Tên sản phẩm' },
+    { key: 'quantity', header: 'Số lượng', export: (val) => val?.toLocaleString('vi-VN') },
+    { key: 'price', header: 'Đơn giá', export: (val) => formatCurrency(val) },
+    { key: 'total', header: 'Thành tiền', export: (val) => formatCurrency(val) }
+  ];
+
+  const pdfRows = receipt.lines.map(line => ({
+    sku: line.sku || '-',
+    name: line.name || line.productName || 'Product',
+    quantity: line.quantity || line.qty,
+    price: line.price || line.priceIn,
+    total: (line.quantity || line.qty) * (line.price || line.priceIn)
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -70,7 +88,35 @@ export function ReceiptDetailPage() {
           <ChevronLeft className="h-4 w-4" />
           {t('app.back')}
         </button>
-        <StatusBadge status={receipt.status} />
+        <div className="flex items-center gap-3">
+          <PDFExport
+            title="PHIẾU NHẬP KHO"
+            fileName={`phieu-nhap-${receipt.code || receipt.id}.pdf`}
+            columns={pdfColumns}
+            rows={pdfRows}
+            documentType="receipt"
+            documentNumber={receipt.code || receipt.id}
+            documentDate={receipt.date}
+            companyInfo={{
+              name: 'Hệ Thống Quản Lý Kho',
+              address: 'Địa chỉ công ty',
+              phone: '0123-456-789',
+              email: 'contact@wms.local'
+            }}
+            partnerInfo={supplier ? {
+              name: supplier.name,
+              address: supplier.address,
+              phone: supplier.contact
+            } : null}
+            metadata={{
+              'Trạng thái': receipt.status,
+              'Ghi chú': receipt.notes,
+              total: formatCurrency(receipt.total)
+            }}
+            showSignature={true}
+          />
+          <StatusBadge status={receipt.status} />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -194,6 +194,42 @@ export const transitionReceipt = async (
       referenceType: 'Receipt',
       note: `Auto-generated expense for Receipt ${receipt.code}`
     }, actorId);
+
+    // Auto-create Incident for shortages
+    const shortageLines = receipt.lines.filter(line => {
+      const actualQty = (line as any).actualQuantity ?? line.qty;
+      return actualQty < line.qty;
+    });
+
+    if (shortageLines.length > 0) {
+      try {
+        const { IncidentModel } = await import('../models/incident.model.js');
+        await IncidentModel.create({
+          type: 'shortage',
+          refType: 'receipt',
+          refId: receipt._id,
+          status: 'open',
+          lines: shortageLines.map(line => ({
+            productId: line.productId,
+            quantity: line.qty - ((line as any).actualQuantity ?? line.qty)
+          })),
+          note: `Tự động tạo từ phiếu nhập ${receipt.code}: Phát hiện thiếu hàng`,
+          action: 'replenish',
+          createdBy: new Types.ObjectId(actorId)
+        });
+
+        // Send shortage notification
+        const { createNotification } = await import('./notification.service.js');
+        await createNotification({
+          userId: actorId,
+          type: 'warning',
+          title: 'Phát hiện thiếu hàng',
+          message: `Phiếu nhập ${receipt.code} có ${shortageLines.length} sản phẩm thiếu. Đã tạo phiếu sự cố tự động.`
+        });
+      } catch (e) {
+        console.warn('Failed to create shortage incident:', e);
+      }
+    }
   }
 
   receipt.status = target;

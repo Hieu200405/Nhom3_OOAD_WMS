@@ -3,9 +3,7 @@ import { FinancialTransactionModel } from '../models/transaction.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
-// Define types locally as shared package might be inaccessible for now
-export type FinancialTransactionType = 'revenue' | 'expense' | 'income' | 'payment';
-export type FinancialTransactionStatus = 'pending' | 'completed' | 'cancelled';
+import type { FinancialTransactionType, FinancialTransactionStatus } from '@wms/shared';
 
 type ListQuery = {
     page?: string;
@@ -118,12 +116,12 @@ export const getTransactionStats = async () => {
         }
     ]);
 
-    const revenue = stats.find(s => s._id === 'revenue')?.totalAmount || 0;
+    const income = stats.find(s => s._id === 'income')?.totalAmount || 0;
     const expense = stats.find(s => s._id === 'expense')?.totalAmount || 0;
 
     return {
-        revenue,
+        revenue: income, // Keep 'revenue' key for backward compatibility with API consumers
         expense,
-        profit: revenue - expense
+        profit: income - expense
     };
 };

@@ -6,6 +6,7 @@ import { apiClient } from '../../services/apiClient.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { InfoCard } from '../../components/InfoCard.jsx';
+import { PDFExport } from '../../components/PDFButton.jsx';
 
 export function DeliveryDetailPage() {
   const { id } = useParams();
@@ -59,6 +60,23 @@ export function DeliveryDetailPage() {
 
   const customerName = customer?.name ?? delivery.customerName ?? delivery.customerId;
 
+  // Prepare PDF data
+  const pdfColumns = [
+    { key: 'sku', header: 'SKU' },
+    { key: 'name', header: 'Tên sản phẩm' },
+    { key: 'quantity', header: 'Số lượng', export: (val) => val?.toLocaleString('vi-VN') },
+    { key: 'price', header: 'Đơn giá', export: (val) => formatCurrency(val) },
+    { key: 'total', header: 'Thành tiền', export: (val) => formatCurrency(val) }
+  ];
+
+  const pdfRows = delivery.lines.map(line => ({
+    sku: line.sku || '-',
+    name: line.name || line.productName || 'Product',
+    quantity: line.quantity || line.qty,
+    price: line.price || line.priceOut,
+    total: (line.quantity || line.qty) * (line.price || line.priceOut)
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -70,7 +88,36 @@ export function DeliveryDetailPage() {
           <ChevronLeft className="h-4 w-4" />
           {t('app.back')}
         </button>
-        <StatusBadge status={delivery.status} />
+        <div className="flex items-center gap-3">
+          <PDFExport
+            title="PHIẾU XUẤT KHO"
+            fileName={`phieu-xuat-${delivery.code || delivery.id}.pdf`}
+            columns={pdfColumns}
+            rows={pdfRows}
+            documentType="delivery"
+            documentNumber={delivery.code || delivery.id}
+            documentDate={delivery.date}
+            companyInfo={{
+              name: 'Hệ Thống Quản Lý Kho',
+              address: 'Địa chỉ công ty',
+              phone: '0123-456-789',
+              email: 'contact@wms.local'
+            }}
+            partnerInfo={customer ? {
+              name: customer.name,
+              address: customer.address,
+              phone: customer.contact
+            } : null}
+            metadata={{
+              'Trạng thái': delivery.status,
+              'Ngày giao dự kiến': delivery.expectedDate ? formatDate(delivery.expectedDate) : '',
+              'Ghi chú': delivery.notes || delivery.note,
+              total: formatCurrency(delivery.total)
+            }}
+            showSignature={true}
+          />
+          <StatusBadge status={delivery.status} />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
