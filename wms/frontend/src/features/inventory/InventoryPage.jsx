@@ -7,6 +7,7 @@ import { formatNumber } from '../../utils/formatters.js';
 import toast from 'react-hot-toast';
 import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
 import { ReplenishmentModal } from './ReplenishmentModal.jsx';
+import { PageHeader } from '../../components/PageHeader.jsx';
 
 export function InventoryPage() {
   const { t } = useTranslation();
@@ -112,48 +113,44 @@ export function InventoryPage() {
 
   return (
     <div className="space-y-8 animate-in">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            {t('navigation.inventory')}
-          </h1>
-          <p className="mt-2 text-sm font-medium text-slate-500 italic opacity-80">
-            Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={categoryFilter}
-            className="input !py-2 !h-11 !rounded-2xl !bg-slate-100/50 dark:!bg-slate-900/50 min-w-[150px]"
-            onChange={(event) => setCategoryFilter(event.target.value)}
-          >
-            <option value="">Tất cả danh mục</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleCheckReplenishment}
-            className="btn btn-primary shadow-indigo-200 !h-11 !rounded-2xl"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Kiểm tra thông minh
-          </button>
-          <button
-            onClick={handleExport}
-            className="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 !h-11 !rounded-2xl"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            Xuất Excel
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('navigation.inventory')}
+        description="Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={categoryFilter}
+              className="input !py-2 !h-11 !rounded-2xl !bg-slate-100/50 dark:!bg-slate-900/50 min-w-[150px]"
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="">Tất cả danh mục</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleCheckReplenishment}
+              className="btn btn-primary shadow-indigo-200 !h-11 !rounded-2xl"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Kiểm tra thông minh
+            </button>
+            <button
+              onClick={handleExport}
+              className="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 !h-11 !rounded-2xl"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Xuất Excel
+            </button>
+          </div>
+        }
+      />
 
       <DataTable
         data={filteredInventory}
-        isLoading={loading}
+        loading={loading}
         columns={[
           {
             key: 'productId',
