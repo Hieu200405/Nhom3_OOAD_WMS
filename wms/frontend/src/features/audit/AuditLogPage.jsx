@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { History, Search, User, FileText, Calendar } from 'lucide-react';
 import { apiClient } from '../../services/apiClient.js';
 import { formatDateTime } from '../../utils/formatters.js';
+import { DataTable } from '../../components/DataTable.jsx';
 
 export function AuditLogPage() {
     const { t } = useTranslation();

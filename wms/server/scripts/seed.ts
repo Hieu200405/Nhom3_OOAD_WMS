@@ -59,7 +59,7 @@ function generateProductImage(category: string): string {
   // Generate placeholder image URL
   const colors = ['3498db', 'e74c3c', '2ecc71', 'f39c12', '9b59b6', '1abc9c'];
   const color = randomElement(colors);
-  return `https://via.placeholder.com/400x400/${color}/ffffff?text=${encodeURIComponent(category)}`;
+  return `https://placehold.co/400x400/${color}/ffffff?text=${encodeURIComponent(category)}`;
 }
 
 // Categories

@@ -51,6 +51,6 @@ const stocktakeSchema = new Schema<StocktakeDocument>(
   { timestamps: true }
 );
 
-stocktakeSchema.index({ code: 1 }, { unique: true });
+
 
 export const StocktakeModel: Model<StocktakeDocument> = (mongoose.models.Stocktake as Model<StocktakeDocument>) || model<StocktakeDocument>('Stocktake', stocktakeSchema);

@@ -61,7 +61,7 @@ const disposalSchema = new Schema<DisposalDocument>(
   { timestamps: true }
 );
 
-disposalSchema.index({ code: 1 }, { unique: true });
+
 
 disposalSchema.pre('save', function (next) {
   if (this.boardRequired && (!this.boardMembers || this.boardMembers.length === 0)) {

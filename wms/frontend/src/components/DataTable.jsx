@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from './forms/Input.jsx';
+import { useTranslation } from 'react-i18next';
 
 export function DataTable({
   title,
@@ -14,6 +15,7 @@ export function DataTable({
   actions,
   emptyMessage = 'No data',
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [sortState, setSortState] = useState({ key: null, direction: 'asc' });
   const [page, setPage] = useState(1);
