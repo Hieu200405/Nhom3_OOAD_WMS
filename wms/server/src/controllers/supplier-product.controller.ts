@@ -15,7 +15,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
 export const create = asyncHandler(async (req: Request, res: Response) => {
     const result = await createSupplierProduct(
         req.body,
-        req.user!.userId
+        req.user!.id
     );
     res.status(201).json(result);
 });
@@ -24,12 +24,12 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
     const result = await updateSupplierProduct(
         req.params.id,
         req.body,
-        req.user!.userId
+        req.user!.id
     );
     res.json(result);
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
-    await deleteSupplierProduct(req.params.id, req.user!.userId);
+    await deleteSupplierProduct(req.params.id, req.user!.id);
     res.status(204).send();
 });

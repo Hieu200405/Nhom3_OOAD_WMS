@@ -71,7 +71,7 @@ const deliverySchema = new Schema<DeliveryDocument>(
   { timestamps: true }
 );
 
-deliverySchema.index({ code: 1 }, { unique: true });
+
 deliverySchema.index({ customerId: 1, date: -1 });
 
 export const DeliveryModel: Model<DeliveryDocument> = (mongoose.models.Delivery as Model<DeliveryDocument>) || model<DeliveryDocument>('Delivery', deliverySchema);

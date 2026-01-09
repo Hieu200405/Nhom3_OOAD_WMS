@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'http://localhost:4000/api/v1/';
+const DEFAULT_BASE_URL = '/api/v1/';
 
 export async function apiClient(path, options = {}) {
   const {
@@ -29,7 +29,9 @@ export async function apiClient(path, options = {}) {
   // Reduced to pure real API call
   // console.log('[API Client] Calling:', normalizedPath);
 
-  const url = new URL(normalizedPath, baseUrl);
+  // Ensure baseUrl is absolute by resolving against window.location.origin if it's relative
+  const validBaseUrl = new URL(baseUrl, window.location.origin);
+  const url = new URL(normalizedPath, validBaseUrl);
   if (params && typeof params === 'object') {
     Object.entries(params).forEach(([key, value]) => {
       if (value != null) {

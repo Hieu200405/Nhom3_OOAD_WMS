@@ -65,6 +65,6 @@ const returnSchema = new Schema<ReturnDocument>(
   { timestamps: true }
 );
 
-returnSchema.index({ code: 1 }, { unique: true });
+
 
 export const ReturnModel: Model<ReturnDocument> = (mongoose.models.Return as Model<ReturnDocument>) || model<ReturnDocument>('Return', returnSchema);

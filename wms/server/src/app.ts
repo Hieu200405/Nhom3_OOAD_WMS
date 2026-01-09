@@ -17,7 +17,8 @@ const limiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   max: env.rateLimitMax,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: () => true // Completely disable rate limiting for debugging
 });
 
 export const createApp = () => {
@@ -25,21 +26,24 @@ export const createApp = () => {
 
   fs.mkdirSync(env.uploadDir, { recursive: true });
 
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: 'cross-origin' }
-    })
-  );
+  // CORS - allow all localhost ports
   app.use(
     cors({
-      origin: (requestOrigin, callback) => {
-        if (!requestOrigin || /^http:\/\/localhost:\d+$/.test(requestOrigin) || requestOrigin === env.clientUrl) {
+      origin: (origin, callback) => {
+        const allowed = !origin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        if (allowed) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
         }
       },
       credentials: true
+    })
+  );
+
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' }
     })
   );
 

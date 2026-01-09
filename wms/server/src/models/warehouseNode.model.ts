@@ -47,7 +47,7 @@ const warehouseNodeSchema = new Schema<WarehouseNodeDocument>(
   { timestamps: true }
 );
 
-warehouseNodeSchema.index({ code: 1 }, { unique: true });
+
 warehouseNodeSchema.index({ parentId: 1 });
 
 export const WarehouseNodeModel: Model<WarehouseNodeDocument> = (mongoose.models.WarehouseNode as Model<WarehouseNodeDocument>) || model<WarehouseNodeDocument>('WarehouseNode', warehouseNodeSchema);

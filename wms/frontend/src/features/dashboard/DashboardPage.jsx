@@ -288,10 +288,7 @@ function MetricCard({ icon: Icon, label, value, trend, trendUp, color }) {
             <Icon className="h-6 w-6" />
           </div>
           {trend && (
-            <span className={clsx(
-              "text-[10px] font-bold px-2 py-1 rounded-full",
-              trendUp ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
-            )}>
+            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${trendUp ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"}`}>
               {trend}
             </span>
           )}

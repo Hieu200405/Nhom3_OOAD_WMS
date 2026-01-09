@@ -8,7 +8,7 @@ let io: Server | null = null;
 export const initSocket = (httpServer: HttpServer) => {
     io = new Server(httpServer, {
         cors: {
-            origin: [env.clientUrl, 'http://localhost:5173'], // Allow env client url and standard vite port
+            origin: [env.clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'], // Allow env client url and standard vite port
             methods: ['GET', 'POST'],
             credentials: true
         },

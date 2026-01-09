@@ -51,7 +51,7 @@ const receiptSchema = new Schema<ReceiptDocument>(
   { timestamps: true }
 );
 
-receiptSchema.index({ code: 1 }, { unique: true });
+
 receiptSchema.index({ supplierId: 1, date: -1 });
 
 export const ReceiptModel: Model<ReceiptDocument> = (mongoose.models.Receipt as Model<ReceiptDocument>) || model<ReceiptDocument>('Receipt', receiptSchema);

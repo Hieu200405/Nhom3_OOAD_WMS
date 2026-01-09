@@ -41,6 +41,6 @@ const adjustmentSchema = new Schema<AdjustmentDocument>(
   { timestamps: true }
 );
 
-adjustmentSchema.index({ code: 1 }, { unique: true });
+
 
 export const AdjustmentModel: Model<AdjustmentDocument> = (mongoose.models.Adjustment as Model<AdjustmentDocument>) || model<AdjustmentDocument>('Adjustment', adjustmentSchema);
