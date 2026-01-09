@@ -9,7 +9,9 @@ export interface Category {
   updatedAt: Date;
 }
 
-export interface CategoryDocument extends Category, Document { }
+export interface CategoryDocument extends Category, Document {
+  _id: mongoose.Types.ObjectId;
+}
 
 const categorySchema = new Schema<CategoryDocument>(
   {

@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 // CommonJS version so it can be executed inside projects that use "type": "module"
 // Usage: node scripts/fetch-noto-fonts.cjs
 
@@ -71,7 +71,7 @@ const downloadWithCandidates = async (candidates, outPath) => {
   for (const url of candidates) {
     try {
       console.log('Trying', url);
-      // eslint-disable-next-line no-await-in-loop
+       
       await download(url, outPath);
       return;
     } catch (err) {

@@ -80,7 +80,7 @@ export const ensurePdfFonts = async () => {
       }
       
       // Expose chosen family on window for consumers (PDFButton will read this)
-      // eslint-disable-next-line no-underscore-dangle
+       
       window.__pdfFontFamily = familyName;
     })();
   }
