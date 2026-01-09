@@ -295,6 +295,22 @@ export function ProductsPage() {
     }
   };
 
+  const handleBulkDelete = async (ids) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${ids.length} sản phẩm đã chọn?`)) return;
+    const toastId = toast.loading('Đang xóa...');
+    try {
+      // Sequential delete to avoid overwhelming server or if backend doesn't support bulk
+      for (const id of ids) {
+        await apiClient.delete(`/products/${id}`);
+      }
+      toast.success(`Đã xóa ${ids.length} sản phẩm`, { id: toastId });
+      refreshProducts();
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi khi xóa sản phẩm', { id: toastId });
+    }
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -322,6 +338,17 @@ export function ProductsPage() {
 
       <DataTable
         data={filteredProducts}
+        enableSelection={true}
+        renderBulkActions={(selectedIds) => (
+          <button
+            type="button"
+            onClick={() => handleBulkDelete(selectedIds)}
+            className="inline-flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200"
+          >
+            <Trash2 className="h-4 w-4" />
+            Xóa ({selectedIds.length})
+          </button>
+        )}
         columns={[
           {
             key: 'image',

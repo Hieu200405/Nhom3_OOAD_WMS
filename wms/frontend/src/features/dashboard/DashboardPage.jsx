@@ -6,6 +6,7 @@ import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import { useAuth } from '../../app/auth-context.jsx';
 import { useSocket } from '../../app/socket-context.jsx';
+import { Skeleton } from '../../components/Skeleton.jsx';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 
@@ -68,8 +69,31 @@ export function DashboardPage() {
     };
   }, [data]);
 
+
+
+  // ... (existing imports)
+
+  // ... (in DashboardPage component)
   if (loading) {
-    return <div className="p-10 text-center">Loading dashboard...</div>;
+    return (
+      <div className="space-y-8 animate-in fade-in">
+        {/* Welcome Banner Skeleton */}
+        <Skeleton className="h-48 w-full rounded-3xl" />
+
+        {/* KPI Cards Skeleton */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
+          <Skeleton className="h-[400px] rounded-2xl lg:col-span-2 xl:col-span-2" />
+          <Skeleton className="h-[400px] rounded-2xl" />
+        </div>
+      </div>
+    );
   }
 
   return (
