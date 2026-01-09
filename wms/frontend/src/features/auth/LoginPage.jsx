@@ -59,8 +59,8 @@ export function LoginPage() {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Email / Tài khoản</label>
               <Input
+                label={t('login.username')}
                 className="!h-14 !rounded-2xl !border-transparent !bg-white/5 !px-6 !text-white !ring-indigo-500/50 transition-all focus:!bg-white/10"
                 value={form.username}
                 onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
@@ -70,8 +70,8 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-1">Mật khẩu</label>
               <Input
+                label={t('login.password')}
                 className="!h-14 !rounded-2xl !border-transparent !bg-white/5 !px-6 !text-white !ring-indigo-500/50 transition-all focus:!bg-white/10"
                 type="password"
                 value={form.password}

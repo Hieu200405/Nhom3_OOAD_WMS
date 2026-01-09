@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 // Helper script to download Noto Sans TTF files into frontend/src/assets/fonts/
 // Usage: node scripts/fetch-noto-fonts.js
 // This avoids committing large binary fonts to git if you prefer to manage them locally.

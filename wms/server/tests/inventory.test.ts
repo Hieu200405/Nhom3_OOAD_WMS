@@ -92,6 +92,25 @@ describe('Inventory Service & API', () => {
         expect(stockB?.quantity).toBe(20);
     });
 
+    it('should prevent moving negative quantity', async () => {
+        await adjustInventory(productId, binAId, 50);
+        await expect(moveInventory({
+            productId,
+            fromLocation: binAId,
+            toLocation: binBId,
+            qty: -10
+        })).rejects.toThrow();
+    });
+
+    it('should fail if source location does not have product', async () => {
+        await expect(moveInventory({
+            productId,
+            fromLocation: binBId, // Empty
+            toLocation: binAId,
+            qty: 10
+        })).rejects.toThrow('Insufficient stock');
+    });
+
     it('should list inventory via API', async () => {
         await adjustInventory(productId, binAId, 100);
 
@@ -104,5 +123,39 @@ describe('Inventory Service & API', () => {
         expect(res.body.data.length).toBe(1);
         expect(res.body.data[0].quantity).toBe(100);
         expect(res.body.data[0].locationId).toBe(binAId);
+    });
+
+    // Concurrency Test
+    it('should handle concurrent moves safely (prevention of double spending)', async () => {
+        await adjustInventory(productId, binAId, 100);
+
+        // Try to move 80 units twice simultaneously. Total needed 160, available 100.
+        // One should succeed, one should fail.
+        const movePromise1 = moveInventory({
+            productId,
+            fromLocation: binAId,
+            toLocation: binBId,
+            qty: 80
+        });
+
+        const movePromise2 = moveInventory({
+            productId,
+            fromLocation: binAId,
+            toLocation: binBId,
+            qty: 80
+        });
+
+        const results = await Promise.allSettled([movePromise1, movePromise2]);
+        const fulfilled = results.filter(r => r.status === 'fulfilled');
+        const rejected = results.filter(r => r.status === 'rejected');
+
+        expect(fulfilled.length).toBe(1);
+        expect(rejected.length).toBe(1);
+
+        const stockA = await InventoryModel.findOne({ productId, locationId: binAId });
+        const stockB = await InventoryModel.findOne({ productId, locationId: binBId });
+
+        expect(stockA?.quantity).toBe(20); // 100 - 80
+        expect(stockB?.quantity).toBe(80); // 0 + 80
     });
 });

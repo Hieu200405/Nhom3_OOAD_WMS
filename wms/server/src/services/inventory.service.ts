@@ -114,38 +114,59 @@ export const adjustInventory = async (
   const filter: Record<string, unknown> = {
     productId: new Types.ObjectId(productId),
     locationId: new Types.ObjectId(locationId),
-    status: options?.status ?? 'available'
+    status: options?.status ?? 'available',
+    batch: options?.batch ?? null
   };
-  if (options?.batch) {
-    filter.batch = options.batch;
-  } else {
-    filter.batch = null;
-  }
-  let doc = await InventoryModel.findOne(filter);
-  if (!doc) {
-    if (delta < 0 && !options?.allowNegative) {
-      throw conflict('Insufficient stock');
+
+  // Atomic Update Logic
+  if (delta < 0 && !options?.allowNegative) {
+    // Decrement: Ensure sufficient stock atomically
+    const doc = await InventoryModel.findOneAndUpdate(
+      {
+        ...filter,
+        quantity: { $gte: Math.abs(delta) } // Atomic check requirement
+      },
+      {
+        $inc: { quantity: delta },
+        // Set fields if they don't exist (though find query implies existence for decrement)
+        $setOnInsert: {
+          expDate: options?.expDate ?? null,
+        }
+      },
+      { new: true }
+    );
+
+    if (!doc) {
+      // Could be insufficient stock OR record doesn't exist
+      const existing = await InventoryModel.findOne(filter);
+      if (!existing || existing.quantity < Math.abs(delta)) {
+        throw conflict('Insufficient stock');
+      }
+      throw conflict('Concurrent update conflict or Insufficient stock');
     }
-    doc = new InventoryModel({
-      ...filter,
-      batch: options?.batch ?? null,
-      expDate: options?.expDate ?? null,
-      status: options?.status ?? 'available',
-      quantity: 0
-    });
-  }
-  const nextQty = doc.quantity + delta;
-  if (nextQty < 0 && !options?.allowNegative) {
-    throw conflict('Insufficient stock');
-  }
-  doc.quantity = Math.max(nextQty, 0);
-  if (options?.expDate) doc.expDate = options.expDate;
-  await doc.save();
 
-  // Check for low stock and send notifications
-  await checkLowStock(productId.toString());
+    // Check low stock asynchronously
+    checkLowStock(productId.toString()).catch(err => logger.warn('Low stock check failed', err));
+    return doc;
 
-  return doc;
+  } else {
+    // Increment or Allow Negative: Upsert
+    const doc = await InventoryModel.findOneAndUpdate(
+      filter,
+      {
+        $inc: { quantity: delta },
+        $set: options?.expDate ? { expDate: options.expDate } : {},
+        $setOnInsert: { created_at: new Date() } // Mongoose handles timestamps usually, but just in case
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    // Double check constraints if we allowed negative but result is unexpectedly weird? 
+    // (Not strictly needed if allowNegative is true)
+
+    checkLowStock(productId.toString()).catch(err => logger.warn('Low stock check failed', err));
+    return doc;
+  }
 };
 
 /**
@@ -404,7 +425,7 @@ export const reserveStock = async (productId: string, locationId: string, qty: n
   );
   if (!doc || doc.quantity < 0) {
     if (doc) await InventoryModel.updateOne({ _id: doc._id }, { $inc: { quantity: qty } }); // rollback
-    throw badRequest(`Không đủ hàng 'có sẵn' để giữ tại vị trí ${locationId}`);
+    throw conflict(`Không đủ hàng 'có sẵn' để giữ tại vị trí ${locationId}`);
   }
 
   // 2. Add to Reserved
