@@ -43,6 +43,20 @@ export const authService = {
     }
   },
 
+  async register({ fullName, email, password, role }) {
+    const { apiClient } = await import('./apiClient.js');
+    try {
+      const res = await apiClient('/auth/register', {
+        method: 'POST',
+        body: { email, password, fullName, role },
+      });
+
+      return res.data;
+    } catch (error) {
+      throw new Error(error.message || 'Registration failed. Check admin permissions.');
+    }
+  },
+
   logout() {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem(STORAGE_KEY);
