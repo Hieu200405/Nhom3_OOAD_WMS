@@ -64,8 +64,8 @@ npm run seed
 npm run dev
 ```
 *   **Frontend:** http://localhost:5173
-*   **Backend API:** http://localhost:4001/api/v1
-*   **Swagger Docs:** http://localhost:4001/api-docs
+*   **Backend API:** http://localhost:4000/api/v1
+*   **Swagger Docs:** http://localhost:4000/api-docs
 
 ## 🐳 Chạy với Docker
 ```bash
