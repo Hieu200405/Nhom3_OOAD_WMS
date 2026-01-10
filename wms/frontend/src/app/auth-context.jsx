@@ -14,6 +14,11 @@ export function AuthProvider({ children }) {
     return payload;
   };
 
+  const register = async (payload) => {
+    const user = await authService.register(payload);
+    return user;
+  };
+
   const logout = () => {
     authService.logout();
     setSession(null);
@@ -25,6 +30,7 @@ export function AuthProvider({ children }) {
       token: session?.token ?? null,
       isAuthenticated: Boolean(session?.user),
       login,
+      register,
       logout,
     }),
     [session],
