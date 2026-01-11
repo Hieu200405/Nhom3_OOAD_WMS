@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, MapPin, ExternalLink, Trash2, LayoutGrid } from "lucide-react";
+import { Plus, Pencil, MapPin, Trash2, LayoutGrid, ChevronDown, ChevronRight } from "lucide-react";
 import { WarehouseVisualMap } from "./WarehouseVisualMap.jsx";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal.jsx";
@@ -12,11 +12,11 @@ import { apiClient } from "../../services/apiClient.js";
 import toast from "react-hot-toast";
 
 const LEVELS = [
-  { value: "Warehouse", label: "Warehouse" },
-  { value: "Zone", label: "Zone" },
-  { value: "Row", label: "Row" },
-  { value: "Rack", label: "Rack" },
-  { value: "Bin", label: "Bin" }
+  { value: "warehouse", label: "Kho" },
+  { value: "zone", label: "Khu vực" },
+  { value: "aisle", label: "Dãy" },
+  { value: "rack", label: "Kệ" },
+  { value: "bin", label: "Ngăn" }
 ];
 
 const WAREHOUSE_TYPES = [
@@ -28,9 +28,15 @@ const WAREHOUSE_TYPES = [
   { value: 'HighValue', label: 'Kho giá trị cao' }
 ];
 
+const LEVEL_LABELS = Object.fromEntries(LEVELS.map((level) => [level.value, level.label]));
+const WAREHOUSE_TYPE_LABELS = Object.fromEntries(
+  WAREHOUSE_TYPES.map((type) => [type.value, type.label])
+);
+
+
 const emptyNode = {
   name: "",
-  type: "Warehouse",
+  type: "warehouse",
   code: "",
   barcode: "",
   warehouseType: "",
@@ -54,6 +60,8 @@ export function WarehouseStructurePage() {
   const [form, setForm] = useState(emptyNode);
   const [highlightId, setHighlightId] = useState(null);
   const [mapNode, setMapNode] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const [hasInitializedExpand, setHasInitializedExpand] = useState(false);
 
   const fetchNodes = useCallback(async () => {
     setLoading(true);
@@ -62,7 +70,7 @@ export function WarehouseStructurePage() {
       setNodes(res.data || res || []);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load warehouse structure');
+      toast.error('Thất bại khi tải cấu trúc kho');
     } finally {
       setLoading(false);
     }
@@ -108,12 +116,19 @@ export function WarehouseStructurePage() {
     return roots;
   }, [nodes]);
 
+  useEffect(() => {
+    if (!hasInitializedExpand && tree.length > 0) {
+      setExpandedIds(new Set(tree.map((node) => node.id)));
+      setHasInitializedExpand(true);
+    }
+  }, [tree, hasInitializedExpand]);
+
   const openCreateModal = (parent) => {
     setEditing(null);
     setForm({
       ...emptyNode,
-      parentId: parent?.id ?? null,
-      type: parent ? nextLevel(parent.type) : "Warehouse"
+      parentId: parent?.id ?? "",
+      type: parent ? nextLevel(parent.type) : "warehouse"
     });
     setOpen(true);
   };
@@ -135,6 +150,7 @@ export function WarehouseStructurePage() {
 
     const payload = {
       ...form,
+      parentId: form.parentId || undefined,
       lat: form.lat ? Number(form.lat) : undefined,
       lng: form.lng ? Number(form.lng) : undefined,
       capacity: Number(form.capacity) || 0
@@ -143,28 +159,28 @@ export function WarehouseStructurePage() {
     try {
       if (editing) {
         await apiClient(`/warehouse/${editing.id}`, { method: 'PUT', body: payload });
-        toast.success('Updated successfully');
+        toast.success('Cập nhật thành công');
       } else {
         await apiClient('/warehouse', { method: 'POST', body: payload });
-        toast.success('Created successfully');
+        toast.success('Tạo mới thành công');
       }
       setOpen(false);
       fetchNodes();
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Operation failed');
+      toast.error(error.message || 'Thất bại khi thực hiện thao tác');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this warehouse node?')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa node kho này không?')) return;
     try {
       await apiClient(`/warehouse/${id}`, { method: 'DELETE' });
-      toast.success('Deleted');
+      toast.success('Đã xóa thành công');
       fetchNodes();
     } catch (error) {
       console.error(error);
-      toast.error('Delete failed');
+      toast.error('Thất bại khi xóa');
     }
   }
 
@@ -178,9 +194,35 @@ export function WarehouseStructurePage() {
     } else if (editing) {
       setForm((prev) => ({ ...prev, barcode: value }));
     } else {
-      toast('Location not found');
+      toast('Không tìm thấy vị trí');
     }
   };
+
+  const toggleExpanded = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    const allIds = [];
+    const collect = (list) => {
+      list.forEach((item) => {
+        allIds.push(item.id);
+        if (item.children?.length) collect(item.children);
+      });
+    };
+    collect(tree);
+    setExpandedIds(new Set(allIds));
+  };
+
+  const collapseAll = () => setExpandedIds(new Set());
 
   return (
     <div className="space-y-5">
@@ -190,7 +232,7 @@ export function WarehouseStructurePage() {
             {t("warehouse.title")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Scan a barcode to jump to a location instantly.
+            Quét mã vạch để chuyển đến vị trí ngay lập tức.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -209,18 +251,45 @@ export function WarehouseStructurePage() {
       {loading ? (
         <div className="text-center py-10 text-slate-500">Loading structure...</div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {tree.map((node) => (
-            <WarehouseNodeCard
-              key={node.id}
-              node={node}
-              onAddChild={openCreateModal}
-              onEdit={openEditModal}
-              onDelete={handleDelete}
-              onViewMap={setMapNode}
-              highlightId={highlightId}
-            />
-          ))}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Cấu trúc phân cấp</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Mở rộng các nhánh để xem các vị trí con.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={expandAll}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Mở tất cả
+              </button>
+              <button
+                type="button"
+                onClick={collapseAll}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Thu gọn tất cả
+              </button>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
+            {tree.map((node) => (
+              <WarehouseNodeRow
+                key={node.id}
+                node={node}
+                depth={0}
+                expandedIds={expandedIds}
+                onToggle={toggleExpanded}
+                onAddChild={openCreateModal}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+                onViewMap={setMapNode}
+                highlightId={highlightId}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -272,7 +341,7 @@ export function WarehouseStructurePage() {
             onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
             options={LEVELS}
           />
-          {form.type === 'Warehouse' && (
+          {form.type === 'warehouse' && (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50 space-y-3">
               <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Thông tin kho</h4>
               <Select
@@ -349,7 +418,7 @@ export function WarehouseStructurePage() {
             onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
             required
           />
-          {['Bin', 'Rack'].includes(form.type) && (
+          {['bin', 'rack'].includes(form.type) && (
             <Input
               label="Sức chứa tối đa (Số lượng SP)"
               type="number"
@@ -371,94 +440,126 @@ export function WarehouseStructurePage() {
 }
 
 
-function WarehouseNodeCard({ node, onAddChild, onEdit, onDelete, onViewMap, highlightId }) {
+function WarehouseNodeRow({
+  node,
+  depth,
+  expandedIds,
+  onToggle,
+  onAddChild,
+  onEdit,
+  onDelete,
+  onViewMap,
+  highlightId
+}) {
   const displayAddressParts = [node.address, node.ward, node.city, node.province].filter(Boolean);
   const fullAddress = displayAddressParts.join(', ');
-
-  const mapUrl = node.lat && node.lng
-    ? `https://www.google.com/maps?q=${node.lat},${node.lng}`
-    : fullAddress
-      ? `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}`
-      : null;
+  const hasChildren = Boolean(node.children && node.children.length > 0);
+  const isExpanded = expandedIds.has(node.id);
 
   return (
-    <div
-      id={`node-${node.id}`}
-      className={`card space-y-4 ${highlightId === node.id ? "border-indigo-500 shadow-lg shadow-indigo-200" : ""}`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <Tag label={node.type} />
-            {node.warehouseType && <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">{node.warehouseType}</span>}
-          </div>
-          <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            {node.name}
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {node.code} {node.barcode ? `| ${node.barcode}` : ""}
-            {node.capacity > 0 && <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500 border border-slate-200">Max: {node.capacity}</span>}
-          </p>
-          {fullAddress && (
-            <div className="mt-1 flex items-start gap-1 text-xs text-slate-500">
-              <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>{fullAddress}</span>
-            </div>
+    <div>
+      <div
+        id={`node-${node.id}`}
+        className={`flex flex-wrap items-start gap-3 px-4 py-3 ${
+          highlightId === node.id
+            ? "bg-indigo-50/70 ring-1 ring-indigo-200 dark:bg-indigo-500/10"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="flex items-start gap-2" style={{ paddingLeft: `${depth * 20}px` }}>
+          {hasChildren ? (
+            <button
+              type="button"
+              onClick={() => onToggle(node.id)}
+              className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              aria-label={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+          ) : (
+            <div className="h-6 w-6" />
           )}
         </div>
-        <div className="flex gap-2">
-          {mapUrl && (
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/30"
-              title="Mở bản đồ"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </a>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag
+              label={LEVEL_LABELS[node.type] || LEVEL_LABELS[String(node.type || "").toLowerCase()] || node.type}
+            />
+            {node.warehouseType && (
+              <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                {WAREHOUSE_TYPE_LABELS[node.warehouseType] || node.warehouseType}
+              </span>
+            )}
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {node.name}
+            </h3>
+            {hasChildren && (
+              <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                {node.children.length} Nhánh
+              </span>
+            )}
+          </div>
+          {node.capacity > 0 && (
+            <div className="mt-1">
+              <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                Max: {node.capacity}
+              </span>
+            </div>
           )}
+          {fullAddress ? null : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onEdit(node)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
           </button>
           <button
             type="button"
             onClick={() => onDelete(node.id)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-300 text-rose-600 transition hover:bg-rose-100 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-100 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
           </button>
-          {node.type !== "Bin" ? (
+          {node.type !== "bin" ? (
             <>
               <button
                 type="button"
                 onClick={() => onViewMap(node)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-teal-300 text-teal-600 transition hover:bg-teal-50 dark:border-teal-600 dark:text-teal-200 dark:hover:bg-teal-500/10"
-                title="Xem bản đồ trực quan"
+                className="inline-flex items-center gap-1 rounded-lg border border-teal-300 px-2 py-1 text-xs font-medium text-teal-600 transition hover:bg-teal-50 dark:border-teal-600 dark:text-teal-200 dark:hover:bg-teal-500/10"
+                title="Visual map"
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Map view
               </button>
               <button
                 type="button"
                 onClick={() => onAddChild(node)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-indigo-300 text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-200 dark:hover:bg-indigo-500/10"
+                className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-200 dark:hover:bg-indigo-500/10"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
+                Add child
               </button>
             </>
           ) : null}
         </div>
       </div>
-      {node.children && node.children.length > 0 ? (
-        <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+
+      {hasChildren && isExpanded ? (
+        <div className="space-y-1">
           {node.children.map((child) => (
-            <WarehouseNodeCard
+            <WarehouseNodeRow
               key={child.id}
               node={child}
+              depth={depth + 1}
+              expandedIds={expandedIds}
+              onToggle={onToggle}
               onAddChild={onAddChild}
               onEdit={onEdit}
               onDelete={onDelete}
