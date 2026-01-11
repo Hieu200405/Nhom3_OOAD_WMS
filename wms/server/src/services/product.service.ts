@@ -4,6 +4,7 @@ import { CategoryModel } from '../models/category.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
+import { createSupplierProduct } from './supplier-product.service.js';
 
 type ListQuery = {
   page?: string;
@@ -49,16 +50,8 @@ export const listProducts = async (query: ListQuery) => {
       .lean() // Return plain objects for better performance
   ]);
 
-  const data = items.map((product) => ({
-    id: product._id.toString(),
-    sku: product.sku,
-    name: product.name,
-    unit: product.unit,
-    priceIn: product.priceIn,
-    priceOut: product.priceOut,
-    minStock: product.minStock,
-    image: product.image,
-    category: (() => {
+  const data = items.map((product) => {
+    const category = (() => {
       const categoryRef = product.categoryId as CategoryLean | undefined;
       if (!categoryRef) {
         return null;
@@ -70,11 +63,23 @@ export const listProducts = async (query: ListQuery) => {
         return { id: categoryRef._id.toString(), name: categoryRef.name ?? null };
       }
       return null;
-    })(),
+    })();
+    return {
+    id: product._id.toString(),
+    sku: product.sku,
+    name: product.name,
+    unit: product.unit,
+    priceIn: product.priceIn,
+    priceOut: product.priceOut,
+    minStock: product.minStock,
+    image: product.image,
+    categoryId: category?.id ?? null,
+    category,
     description: product.description,
     supplierIds: (product.supplierIds || []).map((id: any) => id.toString()),
     createdAt: product.createdAt
-  }));
+    };
+  });
 
   return buildPagedResponse(data, total, { page, limit, sort, skip });
 };
@@ -84,6 +89,7 @@ export const createProduct = async (
     sku: string;
     name: string;
     categoryId: string;
+    preferredSupplierId: string;
     unit: string;
     priceIn: number;
     priceOut: number;
@@ -112,15 +118,26 @@ export const createProduct = async (
     suppliers = payload.supplierIds.map(id => new Types.ObjectId(id));
   }
 
+  const { preferredSupplierId, ...productPayload } = payload;
   const product = await ProductModel.create({
-    ...payload,
+    ...productPayload,
     categoryId: category._id,
     supplierIds: suppliers
   });
+  const productId = (product as { _id: Types.ObjectId })._id.toString();
+  await createSupplierProduct(
+    {
+      supplierId: preferredSupplierId,
+      productId,
+      priceIn: payload.priceIn,
+      isPreferred: true
+    },
+    actorId
+  );
   await recordAudit({
     action: 'product.created',
     entity: 'Product',
-    entityId: product._id,
+    entityId: productId,
     actorId,
     payload
   });

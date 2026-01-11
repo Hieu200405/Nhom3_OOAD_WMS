@@ -27,6 +27,16 @@ export function DataTable({
   const [density, setDensity] = useState('normal');
   const [selected, setSelected] = useState(new Set());
 
+  useEffect(() => {
+    if (!enableSelection) return;
+    const validIds = new Set(data.map((row) => row.id).filter(Boolean));
+    const nextSelected = new Set(Array.from(selected).filter((id) => validIds.has(id)));
+    if (nextSelected.size !== selected.size) {
+      setSelected(nextSelected);
+      onSelectionChange?.(Array.from(nextSelected));
+    }
+  }, [data, enableSelection, onSelectionChange, selected]);
+
   // Filter Logic
   const filtered = useMemo(() => {
     if (!searchable || !search.trim()) return data;
