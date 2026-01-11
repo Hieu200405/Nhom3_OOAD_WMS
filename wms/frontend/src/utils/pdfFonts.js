@@ -38,7 +38,26 @@ const loadFontFile = async (href) => {
   return arrayBufferToBase64(buffer);
 };
 
-export const ensurePdfFonts = async () => {
+const registerFont = (doc, fileName, family, style, base64) => {
+  if (doc && typeof doc.addFileToVFS === 'function' && typeof doc.addFont === 'function') {
+    doc.addFileToVFS(fileName, base64);
+    doc.addFont(fileName, family, style);
+    return;
+  }
+  if (jsPDF?.API?.addFileToVFS && jsPDF?.API?.addFont) {
+    jsPDF.API.addFileToVFS(fileName, base64);
+    jsPDF.API.addFont(fileName, family, style);
+    return;
+  }
+  if (typeof jsPDF?.addFileToVFS === 'function' && typeof jsPDF?.addFont === 'function') {
+    jsPDF.addFileToVFS(fileName, base64);
+    jsPDF.addFont(fileName, family, style);
+    return;
+  }
+  throw new Error('jsPDF font registration is not supported in this build.');
+};
+
+export const ensurePdfFonts = async (doc) => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -52,29 +71,23 @@ export const ensurePdfFonts = async () => {
         // 1) Try local Noto files (best: offline + full glyphs)
         regularBase64 = await loadFontFile(LOCAL_NOTO_REGULAR);
         semiBoldBase64 = await loadFontFile(LOCAL_NOTO_BOLD);
-        jsPDF.addFileToVFS('NotoSans-Regular.ttf', regularBase64);
-        jsPDF.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-        jsPDF.addFileToVFS('NotoSans-Bold.ttf', semiBoldBase64);
-        jsPDF.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+        registerFont(doc, 'NotoSans-Regular.ttf', 'NotoSans', 'normal', regularBase64);
+        registerFont(doc, 'NotoSans-Bold.ttf', 'NotoSans', 'bold', semiBoldBase64);
         familyName = 'NotoSans';
       } catch (errLocal) {
         try {
           // 2) Try fetching Noto from remote (runtime fetch)
           regularBase64 = await loadFontFile(NOTO_REGULAR_URL);
           semiBoldBase64 = await loadFontFile(NOTO_BOLD_URL);
-          jsPDF.addFileToVFS('NotoSans-Regular.ttf', regularBase64);
-          jsPDF.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-          jsPDF.addFileToVFS('NotoSans-Bold.ttf', semiBoldBase64);
-          jsPDF.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+          registerFont(doc, 'NotoSans-Regular.ttf', 'NotoSans', 'normal', regularBase64);
+          registerFont(doc, 'NotoSans-Bold.ttf', 'NotoSans', 'bold', semiBoldBase64);
           familyName = 'NotoSans';
         } catch (err) {
           // 3) Fall back to bundled Inter font files (may not have full VI glyphs)
           regularBase64 = await loadFontFile(INTER_REGULAR_URL);
           semiBoldBase64 = await loadFontFile(INTER_SEMIBOLD_URL);
-          jsPDF.addFileToVFS('Inter-Regular.ttf', regularBase64);
-          jsPDF.addFont('Inter-Regular.ttf', 'Inter', 'normal');
-          jsPDF.addFileToVFS('Inter-SemiBold.ttf', semiBoldBase64);
-          jsPDF.addFont('Inter-SemiBold.ttf', 'Inter', 'bold');
+          registerFont(doc, 'Inter-Regular.ttf', 'Inter', 'normal', regularBase64);
+          registerFont(doc, 'Inter-SemiBold.ttf', 'Inter', 'bold', semiBoldBase64);
           familyName = 'Inter';
         }
       }

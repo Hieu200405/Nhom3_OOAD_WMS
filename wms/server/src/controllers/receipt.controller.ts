@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import {
   listReceipts,
+  getReceipt,
   createReceipt,
   updateReceipt,
   deleteReceipt,
@@ -14,6 +15,11 @@ import { AuditLogModel } from '../models/auditLog.model.js';
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const result = await listReceipts(req.query as any);
   res.json(result);
+});
+
+export const getById = asyncHandler(async (req: Request, res: Response) => {
+  const receipt = await getReceipt(req.params.id);
+  res.json({ data: receipt });
 });
 
 export const exportData = asyncHandler(async (req: Request, res: Response) => {
@@ -50,7 +56,7 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const transition = asyncHandler(async (req: Request, res: Response) => {
-  const receipt = await transitionReceipt(req.params.id, req.body.to, req.user!.id);
+  const receipt = await transitionReceipt(req.params.id, req.body.to, req.user!.id, req.body.note);
   res.json({ data: receipt });
 });
 

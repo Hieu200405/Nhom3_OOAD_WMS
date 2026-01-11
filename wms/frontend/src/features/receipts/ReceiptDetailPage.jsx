@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
@@ -16,7 +16,6 @@ export function ReceiptDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState(null);
-  const [supplier, setSupplier] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,14 +23,6 @@ export function ReceiptDetailPage() {
         const res = await apiClient(`/receipts/${id}`);
         setReceipt(res.data);
 
-        if (res.data.supplierId) {
-          try {
-            const supRes = await apiClient(`/partners?type=supplier&id=${res.data.supplierId}`);
-            if (Array.isArray(supRes.data)) {
-              setSupplier(supRes.data.find(s => s.id === res.data.supplierId));
-            }
-          } catch (e) { console.error('Failed to load supplier', e); }
-        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -59,7 +50,15 @@ export function ReceiptDetailPage() {
     );
   }
 
-  const supplierName = supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
+  const supplierName = receipt.supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
+  const metadata = {
+    'Trang thai': receipt.status,
+    'Ghi chu': receipt.notes,
+    total: formatCurrency(receipt.total)
+  };
+  if (receipt.rejectedNote) {
+    metadata['Ly do tu choi'] = receipt.rejectedNote;
+  }
 
   // Prepare PDF data
   const pdfColumns = [
@@ -104,16 +103,12 @@ export function ReceiptDetailPage() {
               phone: '0123-456-789',
               email: 'contact@wms.local'
             }}
-            partnerInfo={supplier ? {
-              name: supplier.name,
-              address: supplier.address,
-              phone: supplier.contact
+            partnerInfo={receipt.supplier ? {
+              name: receipt.supplier.name,
+              address: receipt.supplier.address,
+              phone: receipt.supplier.contact
             } : null}
-            metadata={{
-              'Trạng thái': receipt.status,
-              'Ghi chú': receipt.notes,
-              total: formatCurrency(receipt.total)
-            }}
+            metadata={metadata}
             showSignature={true}
           />
           <StatusBadge status={receipt.status} />
@@ -164,7 +159,8 @@ export function ReceiptDetailPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {receipt.notes ? <InfoCard title={t('app.notes')} value={receipt.notes} /> : null}
+        {receipt.notes ? <InfoCard title={t('Ghi chú')} value={receipt.notes} /> : null}
+        {receipt.rejectedNote ? <InfoCard title="Lý do từ chối" value={receipt.rejectedNote} /> : null}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">

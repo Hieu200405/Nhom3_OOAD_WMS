@@ -44,9 +44,13 @@ export function ReceiptsPage() {
   const [receipts, setReceipts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [supplierProducts, setSupplierProducts] = useState([]);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -54,11 +58,13 @@ export function ReceiptsPage() {
       const [recRes, supRes, prodRes] = await Promise.all([
         apiClient('/receipts'),
         apiClient('/partners', { params: { type: 'supplier' } }),
-        apiClient('/products')
+        apiClient('/products'),
       ]);
+      const supplierProductRes = await apiClient('/supplier-products', { params: { limit: 1000 } });
       setReceipts(recRes.data || []);
       setSuppliers(supRes.data || []);
       setProducts(prodRes.data || []);
+      setSupplierProducts(supplierProductRes.data || []);
     } catch (error) {
       console.error(error);
       toast.error('Failed to load receipts data');
@@ -90,6 +96,84 @@ export function ReceiptsPage() {
     () => suppliers.map((s) => ({ value: s.id, label: s.name })),
     [suppliers],
   );
+
+  const normalizeId = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    return value.id || value._id || '';
+  };
+
+  const supplierProductInfo = useMemo(() => {
+    const bySupplier = new Map();
+    const priceBySupplierProduct = new Map();
+    supplierProducts.forEach((item) => {
+      const supplierId = normalizeId(item.supplierId);
+      const productId = normalizeId(item.productId);
+      if (!supplierId || !productId) return;
+      if (!bySupplier.has(supplierId)) {
+        bySupplier.set(supplierId, new Set());
+      }
+      bySupplier.get(supplierId).add(productId);
+      if (typeof item.priceIn === 'number') {
+        priceBySupplierProduct.set(`${supplierId}:${productId}`, item.priceIn);
+      }
+    });
+    return {
+      hasData: supplierProducts.length > 0,
+      bySupplier,
+      priceBySupplierProduct
+    };
+  }, [supplierProducts]);
+
+  const getAllowedProductIds = useCallback((supplierId) => {
+    if (!supplierId) return new Set();
+    if (supplierProductInfo.hasData) {
+      return new Set(supplierProductInfo.bySupplier.get(supplierId) ?? []);
+    }
+    const fallback = products
+      .filter((product) => (product.supplierIds || []).includes(supplierId))
+      .map((product) => product.id);
+    return new Set(fallback);
+  }, [products, supplierProductInfo]);
+
+  const getPriceForSupplierProduct = useCallback((supplierId, productId) => {
+    if (!supplierId || !productId) return undefined;
+    const key = `${supplierId}:${productId}`;
+    if (supplierProductInfo.priceBySupplierProduct.has(key)) {
+      return supplierProductInfo.priceBySupplierProduct.get(key);
+    }
+    const product = products.find((item) => item.id === productId);
+    return typeof product?.priceIn === 'number' ? product.priceIn : undefined;
+  }, [products, supplierProductInfo]);
+
+  const filteredProducts = useMemo(() => {
+    if (!form.supplierId) return products;
+    const allowedIds = getAllowedProductIds(form.supplierId);
+    return products.filter((product) => allowedIds.has(product.id));
+  }, [form.supplierId, getAllowedProductIds, products]);
+
+  const handleSupplierChange = (event) => {
+    const supplierId = event.target.value;
+    setForm((prev) => {
+      const allowedIds = getAllowedProductIds(supplierId);
+      const nextLines = prev.lines.map((line) => {
+        if (!line.productId) return line;
+        if (!allowedIds.has(line.productId)) {
+          return { ...line, productId: '', price: 0 };
+        }
+        const nextPrice = getPriceForSupplierProduct(supplierId, line.productId);
+        if (typeof nextPrice === 'number') {
+          return { ...line, price: nextPrice };
+        }
+        return line;
+      });
+      return {
+        ...prev,
+        supplierId,
+        lines: nextLines
+      };
+    });
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -132,11 +216,11 @@ export function ReceiptsPage() {
     }
   };
 
-  const transition = async (receipt, status) => {
+  const transition = async (receipt, status, note) => {
     try {
       await apiClient(`/receipts/${receipt.id}/transition`, {
         method: 'POST',
-        body: { to: status }
+        body: { to: status, note }
       });
       toast.success(t('notifications.statusChanged'));
       fetchData();
@@ -166,7 +250,16 @@ export function ReceiptsPage() {
     {
       key: 'supplierId',
       header: t('receipts.supplier'),
-      render: (value) => suppliers.find((supplier) => supplier.id === value)?.name ?? value,
+      render: (value, row) => {
+        const supplierRef = row?.supplier ?? value;
+        const supplierId = normalizeId(supplierRef);
+        return (
+          row?.supplier?.name ??
+          suppliers.find((supplier) => supplier.id === supplierId)?.name ??
+          supplierId ??
+          value
+        );
+      },
     },
     {
       key: 'date',
@@ -181,7 +274,14 @@ export function ReceiptsPage() {
     {
       key: 'totalAmount',
       header: t('app.total'),
-      render: (value) => formatCurrency(value || 0),
+      render: (value, row) => {
+        if (typeof value === 'number') return formatCurrency(value);
+        const total = (row?.lines || []).reduce(
+          (sum, line) => sum + (Number(line.qty) || 0) * (Number(line.priceIn) || 0),
+          0
+        );
+        return formatCurrency(total);
+      },
     },
     {
       key: 'actions',
@@ -201,7 +301,15 @@ export function ReceiptsPage() {
             <RoleGuard key={action.status} roles={action.roles}>
               <button
                 type="button"
-                onClick={() => transition(row, action.status)}
+              onClick={() => {
+                if (action.requiresNote) {
+                  setRejectTarget(row);
+                  setRejectNote('');
+                  setRejectOpen(true);
+                  return;
+                }
+                transition(row, action.status);
+              }}
                 className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition
                   ${action.variant === 'danger'
                     ? 'bg-red-600 hover:bg-red-500'
@@ -290,16 +398,17 @@ export function ReceiptsPage() {
           <Select
             label={t('receipts.supplier')}
             value={form.supplierId}
-            onChange={(event) => setForm((prev) => ({ ...prev, supplierId: event.target.value }))}
+            onChange={handleSupplierChange}
             options={supplierOptions}
-            placeholder="Select supplier"
+            placeholder="Chọn nhà cung cấp"
             required
           />
 
           <LineItemsEditor
-            products={products}
+            products={filteredProducts}
             value={form.lines}
             onChange={(lines) => setForm((prev) => ({ ...prev, lines }))}
+            getPriceForProduct={(productId) => getPriceForSupplierProduct(form.supplierId, productId)}
           />
           <Input
             label="Ghi chú"
@@ -310,6 +419,63 @@ export function ReceiptsPage() {
             {t('app.total')}: {formatCurrency(form.lines.reduce((sum, line) => sum + line.quantity * line.price, 0))}
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={rejectOpen}
+        onClose={() => {
+          setRejectOpen(false);
+          setRejectNote('');
+          setRejectTarget(null);
+        }}
+        title="Từ chối phiếu nhập"
+        maxWidth="max-w-xl"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setRejectOpen(false);
+                setRejectNote('');
+                setRejectTarget(null);
+              }}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {t('app.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!rejectTarget) return;
+                transition(rejectTarget, ReceiptStatus.REJECTED, rejectNote.trim());
+                setRejectOpen(false);
+                setRejectNote('');
+                setRejectTarget(null);
+              }}
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500"
+            >
+              Reject
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Bạn có thể ghi chú lý do từ chối để tiện theo dõi sau này.
+          </p>
+          <label className="flex flex-col gap-2 text-sm">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1 leading-none">
+              Ghi chú (tùy chọn)
+            </span>
+            <textarea
+              rows={4}
+              value={rejectNote}
+              onChange={(event) => setRejectNote(event.target.value)}
+              placeholder="VD: Sai nhà cung cấp, sai giá nhập..."
+              className="input min-h-[96px] resize-y"
+            />
+          </label>
+        </div>
       </Modal>
     </div>
   );
@@ -326,12 +492,26 @@ function availableActions(receipt, role) {
       roles: managerRoles,
       variant: 'success',
     });
+    actions.push({
+      status: ReceiptStatus.REJECTED,
+      label: 'Reject',
+      roles: managerRoles,
+      variant: 'danger',
+      requiresNote: true,
+    });
   }
   if (receipt.status === ReceiptStatus.APPROVED) {
     actions.push({
       status: ReceiptStatus.SUPPLIER_CONFIRMED,
       label: 'Supplier confirmed',
       roles: managerRoles,
+    });
+    actions.push({
+      status: ReceiptStatus.REJECTED,
+      label: 'Reject',
+      roles: managerRoles,
+      variant: 'danger',
+      requiresNote: true,
     });
   }
   if (receipt.status === ReceiptStatus.SUPPLIER_CONFIRMED) {

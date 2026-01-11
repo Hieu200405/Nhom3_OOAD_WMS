@@ -65,7 +65,7 @@ components:
       enum: [warehouse, zone, aisle, rack, bin]
     ReceiptStatus:
       type: string
-      enum: [draft, approved, supplierConfirmed, completed]
+      enum: [draft, approved, supplierConfirmed, completed, rejected]
     DeliveryStatus:
       type: string
       enum: [draft, approved, prepared, delivered, completed, cancelled]
@@ -2520,7 +2520,9 @@ paths:
               properties:
                 to:
                   type: string
-                  enum: [approved, supplierConfirmed, completed]
+                  enum: [approved, supplierConfirmed, completed, rejected]
+                note:
+                  type: string
       responses:
         '200':
           description: Updated

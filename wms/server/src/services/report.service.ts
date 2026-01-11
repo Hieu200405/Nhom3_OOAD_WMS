@@ -27,7 +27,7 @@ export const getDashboardStats = async () => {
     totalInventoryValueResult
   ] = await Promise.all([
     ProductModel.countDocuments(),
-    ReceiptModel.countDocuments({ status: { $ne: 'completed' } }),
+    ReceiptModel.countDocuments({ status: { $nin: ['completed', 'rejected'] } }),
     DeliveryModel.countDocuments({ status: { $ne: 'completed' } }),
     IncidentModel.countDocuments({ status: { $ne: 'resolved' } }),
     InventoryModel.aggregate([

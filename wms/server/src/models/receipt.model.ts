@@ -18,6 +18,7 @@ export interface Receipt {
   status: ReceiptStatus;
   lines: ReceiptLine[];
   notes?: string;
+  rejectedNote?: string;
   attachments: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,7 @@ const receiptSchema = new Schema<ReceiptDocument>(
     status: { type: String, enum: RECEIPT_STATUS, default: 'draft', required: true },
     lines: { type: [receiptLineSchema], default: [] },
     notes: { type: String, trim: true },
+    rejectedNote: { type: String, trim: true },
     attachments: { type: [String], default: [] }
   },
   { timestamps: true }
