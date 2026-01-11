@@ -52,12 +52,12 @@ export function ReceiptDetailPage() {
 
   const supplierName = receipt.supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
   const metadata = {
-    'Trang thai': receipt.status,
-    'Ghi chu': receipt.notes,
-    total: formatCurrency(receipt.total)
+    'Trạng thái': receipt.status,
+    'Ghi chú': receipt.notes,
+    'Tổng cộng': formatCurrency(receipt.total)
   };
   if (receipt.rejectedNote) {
-    metadata['Ly do tu choi'] = receipt.rejectedNote;
+    metadata['Lý do từ chối'] = receipt.rejectedNote;
   }
 
   // Prepare PDF data
