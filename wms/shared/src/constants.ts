@@ -7,7 +7,7 @@ export type PartnerType = (typeof PARTNER_TYPES)[number];
 export const WAREHOUSE_NODE_TYPES = ['warehouse', 'zone', 'aisle', 'rack', 'bin'] as const;
 export type WarehouseNodeType = (typeof WAREHOUSE_NODE_TYPES)[number];
 
-export const RECEIPT_STATUS = ['draft', 'approved', 'supplierConfirmed', 'completed'] as const;
+export const RECEIPT_STATUS = ['draft', 'approved', 'supplierConfirmed', 'completed', 'rejected'] as const;
 export type ReceiptStatus = (typeof RECEIPT_STATUS)[number];
 
 export const DELIVERY_STATUS = ['draft', 'approved', 'prepared', 'delivered', 'completed', 'cancelled'] as const;

@@ -8,6 +8,7 @@ export function LineItemsEditor({
   onChange,
   showPrice = true,
   minRows = 1,
+  getPriceForProduct,
 }) {
   const productOptions = products.map((product) => ({
     value: product.id,
@@ -47,19 +48,27 @@ export function LineItemsEditor({
           <div className="flex items-start gap-3">
             <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
               <Select
-                label="Product"
+                label="Sản phẩm"
                 value={line.productId}
                 onChange={(event) =>
-                  updateLine(index, {
-                    productId: event.target.value,
-                  })
+                  updateLine(index, (() => {
+                    const productId = event.target.value;
+                    const next = { productId };
+                    if (getPriceForProduct) {
+                      const price = getPriceForProduct(productId);
+                      if (typeof price === 'number') {
+                        next.price = price;
+                      }
+                    }
+                    return next;
+                  })())
                 }
                 options={productOptions}
-                placeholder="Select product"
+                placeholder="Chọn sản phẩm"
                 required
               />
               <NumberInput
-                label="Quantity"
+                label="Số lượng"
                 min={1}
                 value={line.quantity}
                 onChange={(event) =>
@@ -71,7 +80,7 @@ export function LineItemsEditor({
               />
               {showPrice ? (
                 <NumberInput
-                  label="Unit price"
+                  label="Đơn giá"
                   min={0}
                   value={line.price}
                   onChange={(event) =>
@@ -100,7 +109,7 @@ export function LineItemsEditor({
         className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         <PlusCircle className="h-4 w-4" />
-        Add line item
+        Thêm dòng sản phẩm
       </button>
     </div>
   );

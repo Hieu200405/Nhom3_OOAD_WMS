@@ -12,10 +12,11 @@ import { notifyResourceUpdate } from './socket.service.js';
 import type { ReceiptStatus } from '@wms/shared';
 
 const allowedTransitions: Record<ReceiptStatus, ReceiptStatus[]> = {
-  draft: ['approved'],
-  approved: ['supplierConfirmed'],
+  draft: ['approved', 'rejected'],
+  approved: ['supplierConfirmed', 'rejected'],
   supplierConfirmed: ['completed'],
-  completed: []
+  completed: [],
+  rejected: []
 };
 
 type ListQuery = {
@@ -56,6 +57,48 @@ export const listReceipts = async (query: ListQuery) => {
     total,
     { page, limit, sort, skip }
   );
+};
+
+export const getReceipt = async (id: string) => {
+  const receipt = await ReceiptModel.findById(new Types.ObjectId(id))
+    .populate('supplierId', 'name code address contact')
+    .populate('lines.productId', 'sku name unit')
+    .lean();
+  if (!receipt) {
+    throw notFound('Receipt not found');
+  }
+
+  const supplier = receipt.supplierId as any;
+  const lines = (receipt.lines || []).map((line: any) => {
+    const product = line.productId as any;
+    const productId = product?._id?.toString?.() ?? product?.toString?.() ?? line.productId?.toString?.();
+    return {
+      ...line,
+      productId,
+      sku: product?.sku ?? line.sku,
+      productName: product?.name ?? line.productName
+    };
+  });
+
+  const total = lines.reduce(
+    (sum: number, line: any) => sum + (Number(line.qty) || 0) * (Number(line.priceIn) || 0),
+    0
+  );
+
+  return {
+    id: receipt._id.toString(),
+    code: receipt.code,
+    supplierId: supplier?._id?.toString?.() ?? receipt.supplierId?.toString?.(),
+    supplier,
+    supplierName: supplier?.name,
+    date: receipt.date,
+    status: receipt.status,
+    lines,
+    notes: receipt.notes,
+    rejectedNote: receipt.rejectedNote,
+    attachments: receipt.attachments,
+    total
+  };
 };
 
 export const createReceipt = async (
@@ -180,13 +223,19 @@ const ensureTransition = (current: ReceiptStatus, target: ReceiptStatus) => {
 export const transitionReceipt = async (
   id: string,
   target: ReceiptStatus,
-  actorId: string
+  actorId: string,
+  note?: string
 ) => {
   const receipt = await ReceiptModel.findById(new Types.ObjectId(id));
   if (!receipt) {
     throw notFound('Receipt not found');
   }
   ensureTransition(receipt.status, target);
+
+  if (target === 'rejected') {
+    const trimmed = typeof note === 'string' ? note.trim() : '';
+    receipt.rejectedNote = trimmed || undefined;
+  }
 
   if (target === 'completed') {
     const { ProductModel } = await import('../models/product.model.js');
@@ -322,7 +371,7 @@ export const transitionReceipt = async (
     entity: 'Receipt',
     entityId: receipt._id,
     actorId,
-    payload: { status: target }
+    payload: { status: target, rejectedNote: receipt.rejectedNote }
   });
 
   // Create notification

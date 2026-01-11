@@ -9,6 +9,7 @@ export const ReceiptStatus = {
   APPROVED: 'approved',
   SUPPLIER_CONFIRMED: 'supplierConfirmed',
   COMPLETED: 'completed',
+  REJECTED: 'rejected',
 };
 
 export const DeliveryStatus = {

@@ -35,9 +35,8 @@ export function PDFExport({
         await onBeforeExport();
       }
 
-      await ensurePdfFonts();
-
       const doc = new jsPDF('p', 'pt', 'a4');
+      await ensurePdfFonts(doc);
       const family = (typeof window !== 'undefined' && window.__pdfFontFamily) || 'Inter';
       const pageWidth = doc.internal.pageSize.getWidth();
       let currentY = 40;

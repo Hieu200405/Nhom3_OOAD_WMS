@@ -31,16 +31,18 @@ const updateSchema = z.object({
   attachments: z.array(z.string()).optional()
 });
 
-const receiptTransitionTargets = ['approved', 'supplierConfirmed', 'completed'] as const;
+const receiptTransitionTargets = ['approved', 'supplierConfirmed', 'completed', 'rejected'] as const;
 
 const transitionSchema = z.object({
-  to: z.enum(receiptTransitionTargets)
+  to: z.enum(receiptTransitionTargets),
+  note: z.string().optional()
 });
 
 router.use(auth);
 
 router.get('/:id/audit-logs', controller.getAuditLogs);
 router.get('/export', controller.exportData);
+router.get('/:id', controller.getById);
 router.get('/', controller.list);
 router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
 router.put('/:id', requireRole('Staff', 'Manager', 'Admin'), validate({ body: updateSchema }), controller.update);
