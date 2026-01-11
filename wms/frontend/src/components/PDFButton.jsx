@@ -66,7 +66,7 @@ export function PDFExport({
       doc.setFont(family, 'bold');
       doc.setFontSize(16);
       doc.text(title, pageWidth / 2, currentY, { align: 'center' });
-      currentY += 5;
+      currentY += 18;
 
       // Document number and date
       if (documentNumber) {

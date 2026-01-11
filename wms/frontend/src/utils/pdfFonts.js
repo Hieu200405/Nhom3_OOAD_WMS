@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 
 let fontPromise;
+let cachedFont;
 
 const arrayBufferToBase64 = (buffer) => {
   let binary = '';
@@ -57,45 +58,67 @@ const registerFont = (doc, fileName, family, style, base64) => {
   throw new Error('jsPDF font registration is not supported in this build.');
 };
 
+const loadFontData = async () => {
+  // Try loading Noto Sans first (good Vietnamese coverage). If network fails, fall back to Inter.
+  let regularBase64;
+  let semiBoldBase64;
+  let familyName = 'Inter';
+  let regularFile = 'Inter-Regular.ttf';
+  let boldFile = 'Inter-SemiBold.ttf';
+  try {
+    // 1) Try local Noto files (best: offline + full glyphs)
+    regularBase64 = await loadFontFile(LOCAL_NOTO_REGULAR);
+    semiBoldBase64 = await loadFontFile(LOCAL_NOTO_BOLD);
+    familyName = 'NotoSans';
+    regularFile = 'NotoSans-Regular.ttf';
+    boldFile = 'NotoSans-Bold.ttf';
+  } catch (errLocal) {
+    try {
+      // 2) Try fetching Noto from remote (runtime fetch)
+      regularBase64 = await loadFontFile(NOTO_REGULAR_URL);
+      semiBoldBase64 = await loadFontFile(NOTO_BOLD_URL);
+      familyName = 'NotoSans';
+      regularFile = 'NotoSans-Regular.ttf';
+      boldFile = 'NotoSans-Bold.ttf';
+    } catch (err) {
+      // 3) Fall back to bundled Inter font files (may not have full VI glyphs)
+      regularBase64 = await loadFontFile(INTER_REGULAR_URL);
+      semiBoldBase64 = await loadFontFile(INTER_SEMIBOLD_URL);
+      familyName = 'Inter';
+      regularFile = 'Inter-Regular.ttf';
+      boldFile = 'Inter-SemiBold.ttf';
+    }
+  }
+
+  return {
+    familyName,
+    regularBase64,
+    semiBoldBase64,
+    regularFile,
+    boldFile
+  };
+};
+
 export const ensurePdfFonts = async (doc) => {
   if (typeof window === 'undefined') {
     return;
   }
   if (!fontPromise) {
-    fontPromise = (async () => {
-      // Try loading Noto Sans first (good Vietnamese coverage). If network fails, fall back to Inter.
-      let regularBase64;
-      let semiBoldBase64;
-      let familyName = 'Inter';
-      try {
-        // 1) Try local Noto files (best: offline + full glyphs)
-        regularBase64 = await loadFontFile(LOCAL_NOTO_REGULAR);
-        semiBoldBase64 = await loadFontFile(LOCAL_NOTO_BOLD);
-        registerFont(doc, 'NotoSans-Regular.ttf', 'NotoSans', 'normal', regularBase64);
-        registerFont(doc, 'NotoSans-Bold.ttf', 'NotoSans', 'bold', semiBoldBase64);
-        familyName = 'NotoSans';
-      } catch (errLocal) {
-        try {
-          // 2) Try fetching Noto from remote (runtime fetch)
-          regularBase64 = await loadFontFile(NOTO_REGULAR_URL);
-          semiBoldBase64 = await loadFontFile(NOTO_BOLD_URL);
-          registerFont(doc, 'NotoSans-Regular.ttf', 'NotoSans', 'normal', regularBase64);
-          registerFont(doc, 'NotoSans-Bold.ttf', 'NotoSans', 'bold', semiBoldBase64);
-          familyName = 'NotoSans';
-        } catch (err) {
-          // 3) Fall back to bundled Inter font files (may not have full VI glyphs)
-          regularBase64 = await loadFontFile(INTER_REGULAR_URL);
-          semiBoldBase64 = await loadFontFile(INTER_SEMIBOLD_URL);
-          registerFont(doc, 'Inter-Regular.ttf', 'Inter', 'normal', regularBase64);
-          registerFont(doc, 'Inter-SemiBold.ttf', 'Inter', 'bold', semiBoldBase64);
-          familyName = 'Inter';
-        }
-      }
-      
-      // Expose chosen family on window for consumers (PDFButton will read this)
-       
-      window.__pdfFontFamily = familyName;
-    })();
+    fontPromise = loadFontData()
+      .then((data) => {
+        cachedFont = data;
+        window.__pdfFontFamily = data.familyName;
+        return data;
+      })
+      .catch((err) => {
+        fontPromise = null;
+        throw err;
+      });
   }
-  return fontPromise;
+  const data = await fontPromise;
+  if (doc && data) {
+    registerFont(doc, data.regularFile, data.familyName, 'normal', data.regularBase64);
+    registerFont(doc, data.boldFile, data.familyName, 'bold', data.semiBoldBase64);
+  }
+  return data ?? cachedFont;
 };
