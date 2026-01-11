@@ -12,6 +12,7 @@ const baseSchema = z.object({
   sku: z.string().min(1),
   name: z.string().min(1),
   categoryId: objectIdSchema,
+  preferredSupplierId: objectIdSchema,
   unit: z.string().min(1),
   priceIn: z.number().nonnegative(),
   priceOut: z.number().nonnegative(),

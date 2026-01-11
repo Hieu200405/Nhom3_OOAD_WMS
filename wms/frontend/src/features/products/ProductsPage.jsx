@@ -16,6 +16,7 @@ const emptyProduct = {
   sku: '',
   name: '',
   categoryId: '',
+  preferredSupplierId: '',
   priceIn: 0,
   priceOut: 0,
   unit: '',
@@ -30,7 +31,7 @@ const emptySupplierProduct = {
   priceIn: 0,
   currency: 'VND',
   isPreferred: false,
-  sku: ''
+  supplierSku: ''
 };
 
 export function ProductsPage() {
@@ -146,9 +147,14 @@ export function ProductsPage() {
     event.preventDefault();
     try {
       if (editing) {
-        await apiClient(`/products/${editing.id}`, { method: 'PUT', body: form });
+        const { preferredSupplierId, ...updatePayload } = form;
+        await apiClient(`/products/${editing.id}`, { method: 'PUT', body: updatePayload });
         toast.success('Cập nhật sản phẩm thành công');
       } else {
+        if (!form.preferredSupplierId) {
+          toast.error('Vui lòng chọn nhà cung cấp');
+          return;
+        }
         await apiClient('/products', { method: 'POST', body: form });
         toast.success('Tạo sản phẩm thành công');
       }
@@ -214,7 +220,15 @@ export function ProductsPage() {
     e.preventDefault();
     if (!editing) return;
     try {
-      const payload = { ...supplierForm, productId: editing.id };
+      const supplierId =
+        typeof supplierForm.supplierId === 'string'
+          ? supplierForm.supplierId
+          : supplierForm.supplierId?.id || supplierForm.supplierId?._id || '';
+      if (!supplierId) {
+        toast.error('Vui lòng chọn một nhà cung cấp');
+        return;
+      }
+      const payload = { ...supplierForm, supplierId, productId: editing.id };
 
       if (editingSP) {
         await apiClient(`/supplier-products/${editingSP.id}`, {
@@ -232,6 +246,10 @@ export function ProductsPage() {
 
       setSupplierView('list');
       fetchSupplierProducts(editing.id);
+      if (payload.isPreferred && typeof payload.priceIn === 'number') {
+        setForm((prev) => ({ ...prev, priceIn: payload.priceIn }));
+      }
+      refreshProducts();
     } catch (error) {
       console.error(error);
       toast.error(error.message || 'Lỗi khi lưu NCC');
@@ -258,11 +276,11 @@ export function ProductsPage() {
 
   const startEditSupplier = (sp) => {
     setSupplierForm({
-      supplierId: sp.supplierId?.id || sp.supplierId,
+      supplierId: sp.supplierId?.id || sp.supplierId?._id || sp.supplierId,
       priceIn: sp.priceIn,
       currency: sp.currency,
       isPreferred: sp.isPreferred,
-      sku: sp.sku || ''
+      supplierSku: sp.supplierSku || ''
     });
     setEditingSP(sp);
     setSupplierView('add');
@@ -530,6 +548,16 @@ export function ProductsPage() {
                 placeholder="Chọn danh mục"
                 required
               />
+              {!editing ? (
+                <Select
+                  label="Nhà cung cấp ưu tiên"
+                  value={form.preferredSupplierId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, preferredSupplierId: event.target.value }))}
+                  options={supplierOptions}
+                  placeholder="Chọn nhà cung cấp"
+                  required
+                />
+              ) : null}
               <Input
                 label={t('products.unit')}
                 value={form.unit}
@@ -603,7 +631,7 @@ export function ProductsPage() {
                               <td className="px-4 py-2 text-center">
                                 {sp.isPreferred && <Check className="h-4 w-4 inline text-green-500" />}
                               </td>
-                              <td className="px-4 py-2 text-slate-500">{sp.sku || '-'}</td>
+                              <td className="px-4 py-2 text-slate-500">{sp.supplierSku || '-'}</td>
                               <td className="px-4 py-2 text-right">
                                 <button onClick={() => startEditSupplier(sp)} className="text-slate-400 hover:text-indigo-600 mr-2"><Pencil className="h-3 w-3" /></button>
                                 <button onClick={() => handleDeleteSupplierProduct(sp.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
@@ -626,10 +654,11 @@ export function ProductsPage() {
                 </div>
 
                 <Select
-                  label="Chọn Nhà cung cấp"
+                  label="Chọn nhà cung cấp"
                   value={supplierForm.supplierId}
                   onChange={(e) => setSupplierForm(prev => ({ ...prev, supplierId: e.target.value }))}
                   options={supplierOptions}
+                  placeholder="Nhà cung cấp"
                   required
                   disabled={!!editingSP}
                 />
@@ -653,8 +682,8 @@ export function ProductsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="Mã SKU của NCC (Tùy chọn)"
-                    value={supplierForm.sku}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, sku: e.target.value }))}
+                    value={supplierForm.supplierSku}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, supplierSku: e.target.value }))}
                   />
                   <div className="flex items-center pt-8">
                     <input
@@ -682,3 +711,5 @@ export function ProductsPage() {
     </div>
   );
 }
+
+

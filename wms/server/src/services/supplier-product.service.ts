@@ -76,6 +76,13 @@ export const createSupplierProduct = async (
 
     const sp = await SupplierProductModel.create(payload);
 
+    if (payload.isPreferred && typeof payload.priceIn === 'number') {
+        await ProductModel.updateOne(
+            { _id: sp.productId },
+            { $set: { priceIn: payload.priceIn } }
+        );
+    }
+
     await recordAudit({
         action: 'supplier_product.created',
         entity: 'SupplierProduct',
@@ -104,6 +111,13 @@ export const updateSupplierProduct = async (
 
     Object.assign(sp, payload);
     await sp.save();
+
+    if (sp.isPreferred && typeof sp.priceIn === 'number') {
+        await ProductModel.updateOne(
+            { _id: sp.productId },
+            { $set: { priceIn: sp.priceIn } }
+        );
+    }
 
     await recordAudit({
         action: 'supplier_product.updated',
