@@ -1,6 +1,8 @@
-import { PlusCircle, Trash2 } from 'lucide-react';
+﻿import { PlusCircle, Trash2 } from 'lucide-react';
 import { Select } from './forms/Select.jsx';
 import { NumberInput } from './forms/NumberInput.jsx';
+import { Input } from './forms/Input.jsx';
+import { DatePicker } from './forms/DatePicker.jsx';
 
 export function LineItemsEditor({
   products = [],
@@ -9,11 +11,17 @@ export function LineItemsEditor({
   showPrice = true,
   minRows = 1,
   getPriceForProduct,
+  locationOptions = [],
 }) {
   const productOptions = products.map((product) => ({
     value: product.id,
     label: `${product.sku} - ${product.name}`,
   }));
+
+  const showLocation = Array.isArray(locationOptions);
+  const primaryCols = showLocation
+    ? (showPrice ? 'md:grid-cols-4' : 'md:grid-cols-3')
+    : (showPrice ? 'md:grid-cols-3' : 'md:grid-cols-2');
 
   const updateLine = (index, changes) => {
     const next = value.map((line, idx) => (idx === index ? { ...line, ...changes } : line));
@@ -28,6 +36,9 @@ export function LineItemsEditor({
         productId: '',
         quantity: 1,
         price: 0,
+        locationId: '',
+        batch: '',
+        expDate: '',
       },
     ]);
   };
@@ -46,51 +57,89 @@ export function LineItemsEditor({
           className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/60"
         >
           <div className="flex items-start gap-3">
-            <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
-              <Select
-                label="Sản phẩm"
-                value={line.productId}
-                onChange={(event) =>
-                  updateLine(index, (() => {
-                    const productId = event.target.value;
-                    const next = { productId };
-                    if (getPriceForProduct) {
-                      const price = getPriceForProduct(productId);
-                      if (typeof price === 'number') {
-                        next.price = price;
+            <div className="flex-1 space-y-3">
+              <div className={`grid grid-cols-1 gap-3 ${primaryCols}`}>
+                <Select
+                  label="Sản phẩm"
+                  value={line.productId}
+                  onChange={(event) =>
+                    updateLine(index, (() => {
+                      const productId = event.target.value;
+                      const next = { productId };
+                      if (getPriceForProduct) {
+                        const price = getPriceForProduct(productId);
+                        if (typeof price === 'number') {
+                          next.price = price;
+                        }
                       }
+                      return next;
+                    })())
+                  }
+                  options={productOptions}
+                  placeholder="Chọn sản phẩm"
+                  required
+                />
+                {showLocation ? (
+                  <Select
+                    label="Vị trí kho"
+                    value={line.locationId || ''}
+                    onChange={(event) =>
+                      updateLine(index, {
+                        locationId: event.target.value,
+                      })
                     }
-                    return next;
-                  })())
-                }
-                options={productOptions}
-                placeholder="Chọn sản phẩm"
-                required
-              />
-              <NumberInput
-                label="Số lượng"
-                min={1}
-                value={line.quantity}
-                onChange={(event) =>
-                  updateLine(index, {
-                    quantity: Number(event.target.value),
-                  })
-                }
-                required
-              />
-              {showPrice ? (
+                    options={locationOptions}
+                    placeholder="Chọn vị trí"
+                    required
+                  />
+                ) : null}
+
                 <NumberInput
-                  label="Đơn giá"
-                  min={0}
-                  value={line.price}
+                  label="Số lượng"
+                  min={1}
+                  value={line.quantity}
                   onChange={(event) =>
                     updateLine(index, {
-                      price: Number(event.target.value),
+                      quantity: Number(event.target.value),
                     })
                   }
                   required
                 />
-              ) : null}
+                {showPrice ? (
+                  <NumberInput
+                    label="Đơn giá"
+                    min={0}
+                    value={line.price}
+                    onChange={(event) =>
+                      updateLine(index, {
+                        price: Number(event.target.value),
+                      })
+                    }
+                    required
+                  />
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input
+                  label="Lô/Số hiệu (tùy chọn)"
+                  value={line.batch || ''}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      batch: event.target.value,
+                    })
+                  }
+                  placeholder="Lô/Số hiệu"
+                />
+                <DatePicker
+                  label="Ngày hết hạn (tùy chọn)"
+                  value={line.expDate || ''}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      expDate: event.target.value,
+                    })
+                  }
+                />
+              </div>
             </div>
             <button
               type="button"

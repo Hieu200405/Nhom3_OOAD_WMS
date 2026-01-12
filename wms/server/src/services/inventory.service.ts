@@ -42,10 +42,19 @@ export const listInventory = async (query: InventoryQuery) => {
     InventoryModel.find(filter).sort(sort).skip(skip).limit(limit).lean()
   ]);
 
+  const locationIds = [...new Set(items.map((item) => item.locationId.toString()))];
+  const locationRows = await WarehouseNodeModel.find({ _id: { $in: locationIds } })
+    .select('name code')
+    .lean();
+  const locationMap = new Map(
+    locationRows.map((loc) => [loc._id.toString(), { id: loc._id.toString(), name: loc.name, code: loc.code }])
+  );
+
   const data = items.map((item) => ({
     id: item._id.toString(),
     productId: item.productId.toString(),
     locationId: item.locationId.toString(),
+    location: locationMap.get(item.locationId.toString()) ?? null,
     quantity: item.quantity,
     status: (item as any).status ?? 'available',
     batch: item.batch ?? null,
