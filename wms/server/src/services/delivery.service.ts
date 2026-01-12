@@ -6,18 +6,19 @@ import { ProductModel } from '../models/product.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
-import { adjustInventory, ensureStock, reserveStock, releaseStock, suggestPicking } from './inventory.service.js';
+import { adjustInventory, ensureStock, reserveStock, releaseStock } from './inventory.service.js';
 import { notifyResourceUpdate } from './socket.service.js';
 import type { DeliveryStatus } from '@wms/shared';
 import { getSetting } from './setting.service.js';
 
 const allowedTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
-  draft: ['approved', 'cancelled'],
-  approved: ['prepared', 'cancelled'],
+  draft: ['approved', 'cancelled', 'rejected'],
+  approved: ['prepared', 'cancelled', 'rejected'],
   prepared: ['delivered', 'cancelled'],
   delivered: ['completed'],
   completed: [],
-  cancelled: []
+  cancelled: [],
+  rejected: []
 };
 
 const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate = false) => {
@@ -35,6 +36,10 @@ const validateDeliveryRules = async (deliveryData: any, customer: any, isUpdate 
   const exportDate = new Date(deliveryData.date);
   const expectedDate = new Date(deliveryData.expectedDate);
   const diffDays = (expectedDate.getTime() - exportDate.getTime()) / (1000 * 3600 * 24);
+
+  if (expectedDate.getTime() < exportDate.getTime()) {
+    throw badRequest('Expected delivery date must be on or after export date');
+  }
 
   if (diffDays > slaDays && !deliveryData.notes?.includes('[EXCEPTION]')) {
     throw badRequest(`Delivery window (${Math.ceil(diffDays)} days) exceeds SLA limit of ${slaDays} days for ${customer.type} customers. Manager must add "[EXCEPTION]" to notes to override.`);
@@ -68,18 +73,73 @@ export const listDeliveries = async (query: ListQuery) => {
   ]);
 
   return buildPagedResponse(
-    items.map((item) => ({
-      id: item._id.toString(),
-      code: item.code,
-      customer: item.customerId,
-      date: item.date,
-      status: item.status,
-      lines: item.lines,
-      notes: item.notes
-    })),
+    items.map((item: any) => {
+      const totalAmount = (item.lines || []).reduce(
+        (sum: number, line: any) => sum + (Number(line.qty) || 0) * (Number(line.priceOut) || 0),
+        0
+      );
+      return {
+        id: item._id.toString(),
+        code: item.code,
+        customer: item.customerId,
+        customerId: item.customerId?._id?.toString?.() ?? item.customerId?.toString?.(),
+        customerName: item.customerId?.name,
+        date: item.date,
+        expectedDate: item.expectedDate,
+        status: item.status,
+        lines: item.lines,
+        notes: item.notes,
+        totalAmount
+      };
+    }),
     total,
     { page, limit, sort, skip }
   );
+};
+
+export const getDelivery = async (id: string) => {
+  const delivery = await DeliveryModel.findById(new Types.ObjectId(id))
+    .populate('customerId', 'name code address contact')
+    .populate('lines.productId', 'sku name unit')
+    .lean();
+  if (!delivery) {
+    throw notFound('Delivery not found');
+  }
+
+  const customer = delivery.customerId as any;
+  const lines = (delivery.lines || []).map((line: any) => {
+    const product = line.productId as any;
+    const productId = product?._id?.toString?.() ?? product?.toString?.() ?? line.productId?.toString?.();
+    return {
+      ...line,
+      productId,
+      sku: product?.sku ?? line.sku,
+      productName: product?.name ?? line.productName
+    };
+  });
+
+  const total = lines.reduce(
+    (sum: number, line: any) => sum + (Number(line.qty) || 0) * (Number(line.priceOut) || 0),
+    0
+  );
+
+  return {
+    id: delivery._id.toString(),
+    code: delivery.code,
+    customerId: customer?._id?.toString?.() ?? delivery.customerId?.toString?.(),
+    customer,
+    customerName: customer?.name,
+    date: delivery.date,
+    expectedDate: delivery.expectedDate,
+    status: delivery.status,
+    lines,
+    notes: delivery.notes,
+    rejectedNote: delivery.rejectedNote,
+    total,
+    carrier: delivery.carrier,
+    trackingNumber: delivery.trackingNumber,
+    shippingFee: delivery.shippingFee
+  };
 };
 
 export const createDelivery = async (
@@ -114,27 +174,22 @@ export const createDelivery = async (
       throw badRequest('Số lượng phải lớn hơn 0');
     }
 
-    if (line.locationId) {
-      finalLines.push({
-        productId: new Types.ObjectId(line.productId),
-        qty: line.qty,
-        priceOut: line.priceOut,
-        locationId: new Types.ObjectId(line.locationId)
-      });
-    } else {
-      // FEFO Picking Suggestion
-      const suggestions = await suggestPicking(line.productId, line.qty);
-      for (const sug of suggestions) {
-        finalLines.push({
-          productId: new Types.ObjectId(line.productId),
-          qty: sug.qty,
-          priceOut: line.priceOut,
-          locationId: new Types.ObjectId(sug.locationId),
-          batch: sug.batch
-        });
-      }
+    if (!line.locationId) {
+      throw badRequest('Location is required for delivery lines');
     }
+    finalLines.push({
+      productId: new Types.ObjectId(line.productId),
+      qty: line.qty,
+      priceOut: line.priceOut,
+      locationId: new Types.ObjectId(line.locationId)
+    });
   }
+
+  await ensureStock(finalLines.map((line) => ({
+    productId: line.productId.toString(),
+    locationId: line.locationId.toString(),
+    qty: line.qty
+  })));
 
   // Validate additional constraints (Qty limit, SLA)
   await validateDeliveryRules({ ...payload, lines: finalLines }, customer);
@@ -190,26 +245,21 @@ export const updateDelivery = async (
         throw notFound('Không tìm thấy sản phẩm');
       }
 
-      if (line.locationId) {
-        finalLines.push({
-          productId: new Types.ObjectId(line.productId),
-          qty: line.qty,
-          priceOut: line.priceOut,
-          locationId: new Types.ObjectId(line.locationId)
-        });
-      } else {
-        const suggestions = await suggestPicking(line.productId, line.qty);
-        for (const sug of suggestions) {
-          finalLines.push({
-            productId: new Types.ObjectId(line.productId),
-            qty: sug.qty,
-            priceOut: line.priceOut,
-            locationId: new Types.ObjectId(sug.locationId),
-            batch: sug.batch
-          });
-        }
+      if (!line.locationId) {
+        throw badRequest('Location is required for delivery lines');
       }
+      finalLines.push({
+        productId: new Types.ObjectId(line.productId),
+        qty: line.qty,
+        priceOut: line.priceOut,
+        locationId: new Types.ObjectId(line.locationId)
+      });
     }
+    await ensureStock(finalLines.map((line) => ({
+      productId: line.productId.toString(),
+      locationId: line.locationId.toString(),
+      qty: line.qty
+    })));
     delivery.lines = finalLines;
   }
   await delivery.save();
@@ -236,7 +286,8 @@ const ensureTransition = (current: DeliveryStatus, target: DeliveryStatus) => {
 export const transitionDelivery = async (
   id: string,
   target: DeliveryStatus,
-  actorId: string
+  actorId: string,
+  note?: string
 ) => {
   const delivery = await DeliveryModel.findById(new Types.ObjectId(id));
   if (!delivery) {
@@ -244,6 +295,11 @@ export const transitionDelivery = async (
   }
   const oldStatus = delivery.status;
   ensureTransition(oldStatus, target);
+
+  if (target === 'rejected') {
+    const trimmed = typeof note === 'string' ? note.trim() : '';
+    (delivery as any).rejectedNote = trimmed || undefined;
+  }
 
   if (['approved', 'prepared'].includes(target)) {
     for (const line of delivery.lines) {
@@ -278,10 +334,19 @@ export const transitionDelivery = async (
     }
   }
 
-  if (target === 'cancelled' && ['approved', 'prepared', 'delivered'].includes(oldStatus)) {
-    // Release Stock
+  if (target === 'prepared' && oldStatus === 'approved') {
     for (const line of delivery.lines) {
-      await releaseStock(line.productId.toString(), line.locationId!.toString(), line.qty, line.batch ?? undefined);
+      await adjustInventory(line.productId.toString(), line.locationId!.toString(), -line.qty, { status: 'reserved', batch: line.batch });
+    }
+  }
+
+  if (target === 'cancelled' && ['approved', 'prepared', 'delivered'].includes(oldStatus)) {
+    for (const line of delivery.lines) {
+      if (oldStatus === 'approved') {
+        await releaseStock(line.productId.toString(), line.locationId!.toString(), line.qty, line.batch ?? undefined);
+      } else {
+        await adjustInventory(line.productId.toString(), line.locationId!.toString(), line.qty, { status: 'available', batch: line.batch });
+      }
     }
   }
 
@@ -320,8 +385,6 @@ export const transitionDelivery = async (
         );
       }
 
-      // Important: Deduct from RESERVED status because it was reserved on approval
-      await adjustInventory(line.productId.toString(), line.locationId.toString(), -line.qty, { status: 'reserved', batch: line.batch });
     }
 
     // Auto-create Revenue Transaction
@@ -360,12 +423,12 @@ export const transitionDelivery = async (
     entity: 'Delivery',
     entityId: delivery._id,
     actorId,
-    payload: { status: target }
+    payload: { status: target, rejectedNote: (delivery as any).rejectedNote }
   });
 
   notifyResourceUpdate('delivery', 'update', delivery);
   notifyResourceUpdate('dashboard', 'refresh');
-  if (target === 'completed') {
+  if (target === 'completed' || target === 'prepared') {
     notifyResourceUpdate('inventory', 'update');
   }
 

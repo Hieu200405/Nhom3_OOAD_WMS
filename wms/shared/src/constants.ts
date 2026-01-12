@@ -10,7 +10,7 @@ export type WarehouseNodeType = (typeof WAREHOUSE_NODE_TYPES)[number];
 export const RECEIPT_STATUS = ['draft', 'approved', 'supplierConfirmed', 'completed', 'rejected'] as const;
 export type ReceiptStatus = (typeof RECEIPT_STATUS)[number];
 
-export const DELIVERY_STATUS = ['draft', 'approved', 'prepared', 'delivered', 'completed', 'cancelled'] as const;
+export const DELIVERY_STATUS = ['draft', 'approved', 'prepared', 'delivered', 'completed', 'cancelled', 'rejected'] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUS)[number];
 
 export const STOCKTAKE_STATUS = ['draft', 'approved', 'applied'] as const;

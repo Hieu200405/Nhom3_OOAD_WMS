@@ -31,13 +31,15 @@ const updateSchema = z.object({
 });
 
 const transitionSchema = z.object({
-  to: z.enum(['approved', 'prepared', 'delivered', 'completed'] as const)
+  to: z.enum(['approved', 'prepared', 'delivered', 'completed', 'rejected'] as const),
+  note: z.string().optional()
 });
 
 router.use(auth);
 
 router.get('/export', controller.exportData);
 router.get('/:id/audit-logs', controller.getAuditLogs);
+router.get('/:id', controller.getById);
 router.get('/', controller.list);
 // Route for smart allocation
 router.post('/allocate', requireRole('Staff', 'Manager', 'Admin'), controller.allocateInventory);

@@ -7,9 +7,10 @@ import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
 import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import { adjustInventory } from './inventory.service.js';
-import { resolveDefaultBin } from './warehouse.service.js';
 import { notifyResourceUpdate } from './socket.service.js';
 import type { ReceiptStatus } from '@wms/shared';
+import { WarehouseNodeModel } from '../models/warehouseNode.model.js';
+import { InventoryModel } from '../models/inventory.model.js';
 
 const allowedTransitions: Record<ReceiptStatus, ReceiptStatus[]> = {
   draft: ['approved', 'rejected'],
@@ -74,6 +75,7 @@ export const getReceipt = async (id: string) => {
     const productId = product?._id?.toString?.() ?? product?.toString?.() ?? line.productId?.toString?.();
     return {
       ...line,
+      locationId: line.locationId?.toString?.() ?? line.locationId ?? undefined,
       productId,
       sku: product?.sku ?? line.sku,
       productName: product?.name ?? line.productName
@@ -101,12 +103,82 @@ export const getReceipt = async (id: string) => {
   };
 };
 
+const validateLocations = async (lines: { locationId?: string }[]) => {
+  const rawIds = lines.map((line) => line.locationId).filter(Boolean) as string[];
+  const uniqueIds = [...new Set(rawIds)];
+  if (uniqueIds.length === 0) return;
+
+  const objectIds = uniqueIds.map((id) => new Types.ObjectId(id));
+  const locations = await WarehouseNodeModel.find({ _id: { $in: objectIds } })
+    .select('type')
+    .lean();
+  if (locations.length !== uniqueIds.length) {
+    throw notFound('Location not found');
+  }
+  const invalid = locations.find((loc) => loc.type !== 'bin');
+  if (invalid) {
+    throw badRequest('Location must be a bin');
+  }
+};
+
+const ensureCapacityAvailable = async (
+  lines: { locationId?: string; qty: number }[]
+) => {
+  const requestedByLocation = new Map<string, number>();
+  lines.forEach((line) => {
+    if (!line.locationId) return;
+    const current = requestedByLocation.get(line.locationId) || 0;
+    requestedByLocation.set(line.locationId, current + line.qty);
+  });
+
+  const locationIds = [...requestedByLocation.keys()];
+  if (locationIds.length === 0) {
+    throw badRequest('Location is required for receipt lines');
+  }
+
+  const locations = await WarehouseNodeModel.find({ _id: { $in: locationIds } })
+    .select('capacity')
+    .lean();
+  const capacityMap = new Map(
+    locations.map((loc) => [loc._id.toString(), loc.capacity || 0])
+  );
+
+  for (const [locationId, requestQty] of requestedByLocation.entries()) {
+    const capacity = capacityMap.get(locationId) || 0;
+    if (capacity <= 0) continue;
+
+    const total = await InventoryModel.aggregate([
+      { $match: { locationId: new Types.ObjectId(locationId) } },
+      { $group: { _id: null, totalQty: { $sum: '$quantity' } } }
+    ]);
+    const currentQty = total[0]?.totalQty || 0;
+    if (currentQty + requestQty > capacity) {
+      throw conflict(
+        `Location capacity exceeded. Max: ${capacity}, Current: ${currentQty}, Adding: ${requestQty}`
+      );
+    }
+  }
+};
+
+const validateExpiryDates = (
+  lines: { expDate?: Date; productId: string }[],
+  receiptDate: Date
+) => {
+  const receiptTime = receiptDate.getTime();
+  for (const line of lines) {
+    if (!line.expDate) continue;
+    if (line.expDate.getTime() < receiptTime) {
+      throw badRequest(`Expiry date must be on or after receipt date for product ${line.productId}`);
+    }
+  }
+};
+
 export const createReceipt = async (
   payload: {
     code: string;
     supplierId: string;
     date: Date;
-    lines: { productId: string; qty: number; priceIn: number; locationId?: string }[];
+    lines: { productId: string; qty: number; priceIn: number; locationId?: string; batch?: string; expDate?: Date }[];
     notes?: string;
     attachments?: string[];
   },
@@ -132,8 +204,28 @@ export const createReceipt = async (
       throw badRequest('Quantity must be positive');
     }
   }
+  await validateLocations(payload.lines);
+  await ensureCapacityAvailable(payload.lines);
+  validateExpiryDates(payload.lines, payload.date);
+
+  const lines = await Promise.all(payload.lines.map(async (line) => {
+    let locationId = line.locationId;
+    if (!locationId) {
+      const suggested = await import('./warehouse.service.js').then(s => s.suggestPutAway(line.productId, line.qty));
+      if (suggested) locationId = suggested;
+    }
+    return {
+      productId: new Types.ObjectId(line.productId),
+      qty: line.qty,
+      priceIn: line.priceIn,
+      locationId: locationId ? new Types.ObjectId(locationId) : undefined,
+      batch: line.batch?.trim() || undefined,
+      expDate: line.expDate
+    };
+  }));
   const receipt = await ReceiptModel.create({
     ...payload,
+    lines,
     supplierId: supplier._id,
     attachments: payload.attachments ?? []
   });
@@ -159,7 +251,7 @@ export const updateReceipt = async (
   id: string,
   payload: Partial<{
     date: Date;
-    lines: { productId: string; qty: number; priceIn: number; locationId?: string }[];
+    lines: { productId: string; qty: number; priceIn: number; locationId?: string; batch?: string; expDate?: Date }[];
     notes?: string;
     attachments?: string[];
   }>,
@@ -176,6 +268,10 @@ export const updateReceipt = async (
   if (payload.notes !== undefined) receipt.notes = payload.notes;
   if (payload.attachments) receipt.attachments = payload.attachments;
   if (payload.lines) {
+    await validateLocations(payload.lines);
+    await ensureCapacityAvailable(payload.lines);
+    const effectiveDate = payload.date ?? receipt.date;
+    validateExpiryDates(payload.lines, effectiveDate);
     for (const line of payload.lines) {
       if (line.qty <= 0) {
         throw badRequest('Quantity must be positive');
@@ -195,7 +291,9 @@ export const updateReceipt = async (
         productId: new Types.ObjectId(line.productId),
         qty: line.qty,
         priceIn: line.priceIn,
-        locationId: locationId ? new Types.ObjectId(locationId) : undefined
+        locationId: locationId ? new Types.ObjectId(locationId) : undefined,
+        batch: line.batch?.trim() || undefined,
+        expDate: line.expDate
       };
     }));
   }
@@ -242,10 +340,16 @@ export const transitionReceipt = async (
     const { SerialModel } = await import('../models/serial.model.js');
 
     for (const line of receipt.lines) {
+      if (!line.locationId) {
+        throw badRequest('Location is required to complete receipt');
+      }
+    }
+
+    for (const line of receipt.lines) {
       const product = await ProductModel.findById(line.productId);
       if (!product) throw notFound(`Product ${line.productId} not found`);
 
-      const locationId = line.locationId?.toString() ?? (await resolveDefaultBin());
+      const locationId = line.locationId?.toString() as string;
 
       // If product managed by serial, validate and create serials
       if (product.manageBySerial) {

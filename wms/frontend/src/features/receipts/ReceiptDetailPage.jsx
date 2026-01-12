@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
@@ -51,6 +51,8 @@ export function ReceiptDetailPage() {
   }
 
   const supplierName = receipt.supplier?.name ?? receipt.supplierName ?? receipt.supplierId;
+  const hasBatch = (receipt.lines || []).some((line) => line.batch);
+  const hasExpiry = (receipt.lines || []).some((line) => line.expDate);
   const metadata = {
     'Trạng thái': receipt.status,
     'Ghi chú': receipt.notes,
@@ -132,7 +134,9 @@ export function ReceiptDetailPage() {
               <tr>
                 <th className="px-4 py-2">SKU</th>
                 <th className="px-4 py-2">{t('products.name')}</th>
-                <th className="px-4 py-2 text-right">Qty</th>
+                {hasBatch ? <th className="px-4 py-2">Lô</th> : null}
+                {hasExpiry ? <th className="px-4 py-2">Hạn sử dụng</th> : null}
+                <th className="px-4 py-2 text-right">Số lượng</th>
                 <th className="px-4 py-2 text-right">{t('products.priceIn')}</th>
                 <th className="px-4 py-2 text-right">{t('app.total')}</th>
               </tr>
@@ -142,6 +146,14 @@ export function ReceiptDetailPage() {
                 <tr key={line.id || idx}>
                   <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.sku || '-'}</td>
                   <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.name || line.productName || 'Product'}</td>
+                  {hasBatch ? (
+                    <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">{line.batch || '-'}</td>
+                  ) : null}
+                  {hasExpiry ? (
+                    <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300">
+                      {line.expDate ? formatDate(line.expDate) : '-'}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-2 text-right text-sm text-slate-600 dark:text-slate-300">
                     {line.quantity || line.qty}
                   </td>
@@ -169,3 +181,4 @@ export function ReceiptDetailPage() {
     </div>
   );
 }
+

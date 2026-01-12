@@ -18,6 +18,7 @@ export const DeliveryStatus = {
   PREPARED: 'prepared',
   DELIVERED: 'delivered',
   COMPLETED: 'completed',
+  REJECTED: 'rejected',
 };
 
 export const StocktakingStatus = {

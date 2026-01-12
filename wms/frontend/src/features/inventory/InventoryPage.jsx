@@ -14,9 +14,9 @@ export function InventoryPage() {
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState([]);
   const [products, setProducts] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [openProductId, setOpenProductId] = useState(null);
 
   // Replenishment State
   const [replenishModalOpen, setReplenishModalOpen] = useState(false);
@@ -26,15 +26,13 @@ export function InventoryPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [invRes, prodRes, locRes, catRes] = await Promise.all([
+        const [invRes, prodRes, catRes] = await Promise.all([
           apiClient('/inventory'),
           apiClient('/products'),
-          apiClient('/warehouse'),
           apiClient('/categories')
         ]);
         setInventory(invRes.data || []);
         setProducts(prodRes.data || []);
-        setLocations(locRes.data || []);
         setCategories(catRes.data || []);
       } catch (error) {
         console.error(error);
@@ -52,19 +50,38 @@ export function InventoryPage() {
     return map;
   }, [products]);
 
-  const locationMap = useMemo(() => {
+  const inventorySummary = useMemo(() => {
     const map = new Map();
-    locations.forEach((node) => map.set(node.id, node));
-    return map;
-  }, [locations]);
+    inventory.forEach((item) => {
+      if (item.quantity <= 0) return;
+      const entry = map.get(item.productId) || {
+        id: item.productId,
+        productId: item.productId,
+        totalQty: 0,
+        statuses: new Set(),
+        items: []
+      };
+      entry.totalQty += item.quantity;
+      entry.statuses.add((item.status || 'available').toLowerCase());
+      entry.items.push(item);
+      map.set(item.productId, entry);
+    });
+    return Array.from(map.values()).map((entry) => ({
+      id: entry.id,
+      productId: entry.productId,
+      totalQty: entry.totalQty,
+      status: entry.statuses.size === 1 ? Array.from(entry.statuses)[0] : 'mixed',
+      items: entry.items
+    }));
+  }, [inventory]);
 
   const filteredInventory = useMemo(() => {
-    return inventory.filter((item) => {
+    return inventorySummary.filter((item) => {
       if (!categoryFilter) return true;
       const product = productMap.get(item.productId);
       return product?.categoryId === categoryFilter;
     });
-  }, [inventory, categoryFilter, productMap]);
+  }, [inventorySummary, categoryFilter, productMap]);
 
   const handleExport = async () => {
     try {
@@ -154,7 +171,7 @@ export function InventoryPage() {
         columns={[
           {
             key: 'productId',
-            header: 'Product',
+            header: 'Sản phẩm',
             render: (value) => {
               const product = productMap.get(value);
               if (!product) return value;
@@ -167,33 +184,56 @@ export function InventoryPage() {
             },
           },
           {
-            key: 'quantity',
-            header: 'Quantity',
+            key: 'totalQty',
+            header: 'Số lượng tồn',
             headerAlign: 'right',
             render: (value) => <div className="text-right font-medium">{formatNumber(value)}</div>,
           },
           {
-            key: 'batch',
-            header: 'Batch',
-            render: (value) => value || '—',
-          },
-          {
-            key: 'expDate',
-            header: 'Expiry',
-            render: (value) => value ? new Date(value).toLocaleDateString() : '—',
-          },
-          {
             key: 'status',
-            header: 'Status',
+            header: 'Trạng thái',
             render: (value) => <StatusBadge status={value} />,
           },
           {
-            key: 'locationId',
-            header: 'Location',
-            render: (value) => {
-              const loc = locationMap.get(value);
-              return loc ? `${loc.name} (${loc.code})` : 'N/A';
-            },
+            key: 'actions',
+            header: 'Vị trí',
+            sortable: false,
+            render: (_, row) => (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenProductId((current) => (current === row.productId ? null : row.productId));
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Xem vị trí
+                </button>
+                {openProductId === row.productId ? (
+                  <div className="absolute right-0 z-20 mt-2 w-96 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Danh sách vị trí</div>
+                    <div className="max-h-64 space-y-2 overflow-auto">
+                      {row.items.map((item, idx) => {
+                        const loc = item.location || { name: item.locationId, code: '' };
+                        const exp = item.expDate ? new Date(item.expDate).toLocaleDateString() : '-';
+                        return (
+                          <div key={`${item.locationId}-${idx}`} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
+                            <div className="font-semibold">{loc.code ? `${loc.code} - ${loc.name}` : loc.name}</div>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              <span>Qty: {formatNumber(item.quantity)}</span>
+                              <span>Batch: {item.batch || '-'}</span>
+                              <span>Expiry: {exp}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {row.items.length === 0 ? <div>Không có tồn tại vị trí.</div> : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ),
           },
         ]}
       />
