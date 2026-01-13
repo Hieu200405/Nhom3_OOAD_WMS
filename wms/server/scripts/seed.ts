@@ -15,6 +15,21 @@ import { logger } from '../src/utils/logger.js';
 const ADMIN_EMAIL = 'admin@wms.local';
 const DEFAULT_PASSWORD = '123456';
 
+const SEED_LIMITS = {
+  categories: 5,
+  suppliers: 5,
+  customers: 5,
+  products: 5,
+  warehouses: 1,
+  zonesPerWarehouse: 1,
+  aislesPerZone: 1,
+  racksPerAisle: 1,
+  binsPerRack: 5,
+  inventoryPerProduct: 1,
+  notifications: 5,
+  financialTransactions: 5
+};
+
 // Vietnamese name generators
 const VIETNAMESE_FIRST_NAMES = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
 const VIETNAMESE_MIDDLE_NAMES = ['Văn', 'Thị', 'Minh', 'Hoàng', 'Quốc', 'Hữu', 'Đức', 'Anh', 'Thanh', 'Tuấn', 'Hải', 'Phương'];
@@ -184,7 +199,7 @@ const seedUsers = async () => {
 };
 
 const seedCategories = async () => {
-  const inserted = await CategoryModel.insertMany(CATEGORIES);
+  const inserted = await CategoryModel.insertMany(CATEGORIES.slice(0, SEED_LIMITS.categories));
   logger.info(`✓ Seeded ${inserted.length} categories`);
   return inserted.map((cat) => ({ _id: cat._id as Types.ObjectId, code: cat.code, name: cat.name, description: cat.description }));
 };
@@ -193,7 +208,7 @@ const seedPartners = async () => {
   const partners = [];
 
   const supplierIndustries = ['Điện Tử', 'Thực Phẩm', 'Dược Phẩm', 'Văn Phòng Phẩm', 'Nội Thất', 'Thời Trang', 'Mỹ Phẩm', 'Đồ Chơi', 'Thể Thao', 'Sách'];
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < SEED_LIMITS.suppliers; i++) {
     const industry = randomElement(supplierIndustries);
     partners.push({
       type: 'supplier' as const,
@@ -202,14 +217,14 @@ const seedPartners = async () => {
       taxCode: generateTaxCode(),
       contact: `${generateVietnameseName()} - ${generatePhone()}`,
       address: generateAddress(),
-      businessType: randomElement(['Manufacturer', 'Distributor', 'Retailer'] as const),
-      paymentTerm: randomElement(['Ngay', '7 ngày', '15 ngày', '30 ngày', '60 ngày']),
+      businessType: randomElement(['Nhà sản xuất', 'Nhà phân phối', 'Nhà bán lẻ'] as const),
+      paymentTerm: randomElement(['3 Ngày', '7 ngày', '15 ngày', '30 ngày', '60 ngày']),
       isActive: true
     });
   }
 
   const customerTypes = ['Siêu Thị', 'Cửa Hàng', 'Nhà Thuốc', 'Chuỗi Bán Lẻ', 'Đại Lý', 'Nhà Phân Phối'];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < SEED_LIMITS.customers; i++) {
     const type = randomElement(customerTypes);
     partners.push({
       type: 'customer' as const,
@@ -218,9 +233,9 @@ const seedPartners = async () => {
       taxCode: Math.random() > 0.3 ? generateTaxCode() : undefined,
       contact: `${generateVietnameseName()} - ${generatePhone()}`,
       address: generateAddress(),
-      customerType: randomElement(['Individual', 'Corporate'] as const),
+      customerType: randomElement(['Cá nhân', 'Công ty'] as const),
       creditLimit: randomInt(10000000, 500000000),
-      paymentTerm: randomElement(['Ngay', '7 ngày', '15 ngày', '30 ngày']),
+      paymentTerm: randomElement(['3 Ngày', '7 ngày', '15 ngày', '30 ngày']),
       isActive: true
     });
   }
@@ -235,7 +250,8 @@ const seedProducts = async (categories: { _id: Types.ObjectId; code: string; nam
   const products = [];
   const suppliers = partners.filter(p => p.type === 'supplier');
 
-  const productsPerCategory = Math.ceil(500 / categories.length);
+  const desiredProductCount = SEED_LIMITS.products;
+  const productsPerCategory = Math.max(1, Math.ceil(desiredProductCount / categories.length));
 
   for (const category of categories) {
     const productNames = PRODUCT_NAMES[category.code] || [`${category.name} Sản phẩm`];
@@ -243,7 +259,7 @@ const seedProducts = async (categories: { _id: Types.ObjectId; code: string; nam
     const colors = ['', 'Đen', 'Trắng', 'Xanh', 'Đỏ', 'Vàng', 'Xám', 'Hồng'];
     const sizes = ['', 'S', 'M', 'L', 'XL', '32GB', '64GB', '128GB', '256GB', '512GB'];
 
-    for (let i = 0; i < productsPerCategory && products.length < 500; i++) {
+    for (let i = 0; i < productsPerCategory && products.length < desiredProductCount; i++) {
       const baseName = randomElement(productNames);
       const variant = i < variants.length ? variants[i] : '';
       const color = randomElement(colors);
@@ -277,7 +293,7 @@ const seedProducts = async (categories: { _id: Types.ObjectId; code: string; nam
     }
   }
 
-  const inserted = await ProductModel.insertMany(products.slice(0, 500));
+  const inserted = await ProductModel.insertMany(products.slice(0, desiredProductCount));
   logger.info(`✓ Seeded ${inserted.length} products`);
   return inserted;
 };
@@ -287,7 +303,7 @@ const createWarehouseTree = async () => {
   const warehouseNames = ['Kho Trung Tâm Hà Nội', 'Kho Phân Phối TP.HCM', 'Kho Miền Trung Đà Nẵng'];
   const warehouseCodes = ['WH-HN', 'WH-HCM', 'WH-DN'];
 
-  for (let w = 0; w < 3; w++) {
+  for (let w = 0; w < SEED_LIMITS.warehouses; w++) {
     const warehouse = await WarehouseNodeModel.create({
       type: 'warehouse',
       name: warehouseNames[w],
@@ -296,7 +312,7 @@ const createWarehouseTree = async () => {
     });
 
     const zoneNames = ['Khu A', 'Khu B', 'Khu C', 'Khu D', 'Khu E'];
-    for (let z = 0; z < 5; z++) {
+    for (let z = 0; z < SEED_LIMITS.zonesPerWarehouse; z++) {
       const zone = await WarehouseNodeModel.create({
         type: 'zone',
         name: `${zoneNames[z]} - ${warehouse.name}`,
@@ -304,7 +320,7 @@ const createWarehouseTree = async () => {
         parentId: warehouse._id
       });
 
-      for (let a = 0; a < 4; a++) {
+      for (let a = 0; a < SEED_LIMITS.aislesPerZone; a++) {
         const aisle = await WarehouseNodeModel.create({
           type: 'aisle',
           name: `${zone.name} - Lối ${a + 1}`,
@@ -312,7 +328,7 @@ const createWarehouseTree = async () => {
           parentId: zone._id
         });
 
-        for (let r = 0; r < 5; r++) {
+        for (let r = 0; r < SEED_LIMITS.racksPerAisle; r++) {
           const rack = await WarehouseNodeModel.create({
             type: 'rack',
             name: `${aisle.name} - Kệ ${r + 1}`,
@@ -321,7 +337,7 @@ const createWarehouseTree = async () => {
           });
 
           const bins = await WarehouseNodeModel.insertMany(
-            Array.from({ length: 8 }).map((_, b) => ({
+            Array.from({ length: SEED_LIMITS.binsPerRack }).map((_, b) => ({
               type: 'bin',
               name: `${rack.name} - Ngăn ${b + 1}`,
               code: `${rack.code}-B${b + 1}`,
@@ -335,16 +351,16 @@ const createWarehouseTree = async () => {
     }
   }
 
-  logger.info(`✓ Created warehouse structure: 3 warehouses, 15 zones, ${allBins.length} bins`);
+  logger.info(`✓ Created warehouse structure: ${SEED_LIMITS.warehouses} warehouses, ${SEED_LIMITS.warehouses * SEED_LIMITS.zonesPerWarehouse} zones, ${allBins.length} bins`);
   return allBins;
 };
 
 const seedInventory = async (products: any[], bins: any[]) => {
   const items = [];
+  const desiredBinCount = Math.min(bins.length, SEED_LIMITS.inventoryPerProduct);
 
   for (const product of products) {
-    const binCount = randomInt(2, 5);
-    const selectedBins = bins.sort(() => 0.5 - Math.random()).slice(0, binCount);
+    const selectedBins = bins.sort(() => 0.5 - Math.random()).slice(0, desiredBinCount);
 
     for (const bin of selectedBins) {
       const baseQty = product.minStock || 50;
@@ -361,6 +377,7 @@ const seedInventory = async (products: any[], bins: any[]) => {
 
   await InventoryModel.insertMany(items);
   logger.info(`✓ Seeded ${items.length} inventory records`);
+  return items.length;
 };
 
 const seedNotifications = async (users: any[]) => {
@@ -368,8 +385,9 @@ const seedNotifications = async (users: any[]) => {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
 
-  for (const user of users) {
-    const count = user.role === 'Admin' ? 10 : user.role === 'Manager' ? 5 : 3;
+  const targetUsers = users.slice(0, SEED_LIMITS.notifications);
+  for (const user of targetUsers) {
+    const count = 1;
 
     for (let i = 0; i < count; i++) {
       notifications.push({
@@ -394,6 +412,7 @@ const seedNotifications = async (users: any[]) => {
   if (NotificationModel) {
     await NotificationModel.insertMany(notifications);
     logger.info(`✓ Seeded ${notifications.length} notifications`);
+    return notifications.length;
   }
 };
 
@@ -405,7 +424,14 @@ const seedFinancials = async (partners: any[]) => {
   const suppliers = partners.filter(p => p.type === 'supplier');
   const customers = partners.filter(p => p.type === 'customer');
 
-  for (let i = 0; i < 100; i++) {
+  const expenseCount = Math.min(SEED_LIMITS.financialTransactions, suppliers.length)
+    ? Math.ceil(SEED_LIMITS.financialTransactions / 2)
+    : 0;
+  const incomeCount = Math.min(SEED_LIMITS.financialTransactions, customers.length)
+    ? SEED_LIMITS.financialTransactions - expenseCount
+    : 0;
+
+  for (let i = 0; i < expenseCount; i++) {
     const supplier = randomElement(suppliers);
     transactions.push({
       partnerId: supplier._id,
@@ -418,7 +444,7 @@ const seedFinancials = async (partners: any[]) => {
     });
   }
 
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < incomeCount; i++) {
     const customer = randomElement(customers);
     transactions.push({
       partnerId: customer._id,
@@ -435,6 +461,7 @@ const seedFinancials = async (partners: any[]) => {
   if (FinancialTransactionModel) {
     await FinancialTransactionModel.insertMany(transactions);
     logger.info(`✓ Seeded ${transactions.length} financial transactions`);
+    return transactions.length;
   }
 };
 

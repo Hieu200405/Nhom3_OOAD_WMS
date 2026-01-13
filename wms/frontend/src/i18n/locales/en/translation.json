@@ -143,6 +143,13 @@
     "suppliername": "Supplier name",
     "contact": "Contact",
     "businessType": "Business type",
+    "businessTypes": {
+      "manufacturer": "Manufacturer",
+      "distributor": "Distributor",
+      "retailer": "Retailer",
+      "individual": "Individual",
+      "company": "Company"
+    },
     "subtitle": "Manage supplier list and contact information.",
     "customername": "Customer name",
     "customerType": "Customer type",
