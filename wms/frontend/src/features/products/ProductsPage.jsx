@@ -339,7 +339,7 @@ export function ProductsPage() {
             <Select
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
-              placeholder="Tất cả danh mục"
+              placeholder={t('products.allCategories')}
               options={[{ value: '', label: 'Tất cả' }, ...categoryOptions]}
             />
             <button
@@ -411,7 +411,7 @@ export function ProductsPage() {
                   title="In tem mã vạch"
                 >
                   <Printer className="h-3.5 w-3.5" />
-                  In tem
+                  {t('products.printLabel')}
                 </button>
                 <button
                   type="button"

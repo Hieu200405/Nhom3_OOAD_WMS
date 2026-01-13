@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+﻿import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Plus, FileSpreadsheet, Wand2 } from 'lucide-react';
@@ -29,7 +29,8 @@ const defaultForm = {
       productId: '',
       quantity: 1,
       price: 0,
-      locationId: ''
+      locationId: '',
+      batch: ''
     },
   ],
 };
@@ -129,12 +130,29 @@ export function DeliveriesPage() {
     });
   };
 
-  const getAvailableQty = (productId, locationId) => {
+  const getAvailableQty = (productId, locationId, batch) => {
     if (!productId || !locationId) return 0;
     const items = inventory.filter(
-      (item) => item.productId === productId && item.locationId === locationId && item.status === 'available'
+      (item) =>
+        item.productId === productId
+        && item.locationId === locationId
+        && item.status === 'available'
+        && (batch ? item.batch === batch : item.batch == null)
     );
     return items.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
+  const getBatchOptions = (productId, locationId) => {
+    if (!productId || !locationId) return [];
+    const items = inventory.filter(
+      (item) =>
+        item.productId === productId
+        && item.locationId === locationId
+        && item.status === 'available'
+        && item.batch
+    );
+    const unique = [...new Set(items.map((item) => item.batch))];
+    return unique.map((batch) => ({ value: batch, label: batch }));
   };
 
   const handleSubmit = async (event) => {
@@ -151,7 +169,8 @@ export function DeliveriesPage() {
         productId: line.productId,
         qty: Number(line.quantity),
         priceOut: Number(line.price),
-        locationId: line.locationId
+        locationId: line.locationId,
+        batch: line.batch || undefined
       }));
 
     if (lines.length === 0) {
@@ -161,7 +180,7 @@ export function DeliveriesPage() {
 
     // Client-side stock check
     for (const line of lines) {
-      const availableQty = getAvailableQty(line.productId, line.locationId);
+      const availableQty = getAvailableQty(line.productId, line.locationId, line.batch);
       if (availableQty < line.qty) {
         toast.error(`Không đủ tồn kho cho sản phẩm ${line.productId} tại vị trí đã chọn`);
         return;
@@ -213,7 +232,7 @@ export function DeliveriesPage() {
   const addLine = () => {
     setForm(prev => ({
       ...prev,
-      lines: [...prev.lines, { productId: '', quantity: 1, price: 0, locationId: '' }]
+      lines: [...prev.lines, { productId: '', quantity: 1, price: 0, locationId: '', batch: '' }]
     }));
   };
 
@@ -230,7 +249,7 @@ export function DeliveriesPage() {
       .map(l => ({ productId: l.productId, quantity: Number(l.quantity) }));
 
     if (itemsToAllocate.length === 0) {
-      toast.error('Vui lòng chọn sản phẩm và số lượng trước khi phân bổ');
+      toast.error('Vui lòng chọn sản phẩm và số lượng trước khi phân bổ tự động');
       return;
     }
 
@@ -255,6 +274,7 @@ export function DeliveriesPage() {
               quantity: pick.quantity,
               price: original ? original.price : 0,
               locationId: pick.locationId,
+              batch: pick.batch || '',
               note: pick.batch ? `Batch: ${pick.batch}` : ''
             });
           });
@@ -275,7 +295,7 @@ export function DeliveriesPage() {
 
 
   const columns = [
-    { key: 'code', header: 'Mã' },
+    { key: 'code', header: t('app.sku'), },
     {
       key: 'customerId',
       header: t('deliveries.customer'),
@@ -319,9 +339,9 @@ export function DeliveriesPage() {
             className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <ArrowRight className="h-3.5 w-3.5" />
-            Detail
+            {t('app.details')}
           </button>
-          {availableActions(row).map((action) => (
+          {availableActions(row, t).map((action) => (
             <RoleGuard key={action.status} roles={action.roles}>
               <button
                 type="button"
@@ -383,7 +403,7 @@ export function DeliveriesPage() {
     <div className="space-y-5">
       <PageHeader
         title={t('deliveries.title')}
-        description="Monitor delivery statuses and stock availability."
+        description={t('deliveries.subtitle')}
         actions={
           <div className="flex gap-2">
             <button
@@ -391,7 +411,7 @@ export function DeliveriesPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Export Excel
+              {t('app.exportExcel')}
             </button>
             <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
               <button
@@ -476,12 +496,12 @@ export function DeliveriesPage() {
               </button>
             </div>
             {form.lines.map((line, index) => (
-              <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-4 gap-3 relative">
+              <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-5 gap-3 relative">
                 <div className="md:col-span-2">
                   <Select
                     label="Sản phẩm"
                     value={line.productId}
-                    onChange={(e) => updateLine(index, { productId: e.target.value, locationId: '' })}
+                    onChange={(e) => updateLine(index, { productId: e.target.value, locationId: '', batch: '' })}
                     options={productOptions}
                     placeholder="Chọn sản phẩm"
                     required
@@ -492,11 +512,21 @@ export function DeliveriesPage() {
                   <Select
                     label="Vị trí / Lô (Tồn kho)"
                     value={line.locationId}
-                    onChange={(e) => updateLine(index, { locationId: e.target.value })}
+                    onChange={(e) => updateLine(index, { locationId: e.target.value, batch: '' })}
                     options={getProductInventory(line.productId)}
                     placeholder={line.productId ? "Chọn vị trí" : "Chọn sản phẩm trước"}
                     disabled={!line.productId}
                     required
+                  />
+                </div>
+                <div>
+                  <Select
+                    label="Lô"
+                    value={line.batch || ''}
+                    onChange={(e) => updateLine(index, { batch: e.target.value })}
+                    options={getBatchOptions(line.productId, line.locationId)}
+                    placeholder={line.locationId ? "Chọn lô" : "Chọn vị trí trước"}
+                    disabled={!line.locationId}
                   />
                 </div>
                 <NumberInput
@@ -549,7 +579,7 @@ export function DeliveriesPage() {
               onClick={processExport}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
             >
-              {t('app.export')}
+              {t('app.reject')}
             </button>
           </>
         }
@@ -584,25 +614,28 @@ export function DeliveriesPage() {
   );
 }
 
-function availableActions(delivery) {
+function availableActions(delivery, t) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
   const staffRoles = [Roles.ADMIN, Roles.MANAGER, Roles.STAFF];
 
   switch (delivery.status) {
     case DeliveryStatus.DRAFT:
       return [
-        { status: DeliveryStatus.APPROVED, label: 'Approve', roles: managerRoles },
-        { status: DeliveryStatus.REJECTED, label: 'Reject', roles: managerRoles, requiresNote: true, variant: 'danger' }
+        { status: DeliveryStatus.APPROVED, label: t('app.approve'), roles: managerRoles },
+        { status: DeliveryStatus.REJECTED, label: t('app.reject'), roles: managerRoles, requiresNote: true, variant: 'danger' }
       ];
     case DeliveryStatus.APPROVED:
       return [
-        { status: DeliveryStatus.PREPARED, label: 'Prepare', roles: staffRoles }
+        { status: DeliveryStatus.PREPARED, label: t('deliveries.prepare'), roles: staffRoles }
       ];
     case DeliveryStatus.PREPARED:
-      return [{ status: DeliveryStatus.DELIVERED, label: 'Deliver', roles: staffRoles }];
+      return [{ status: DeliveryStatus.DELIVERED, label: t('deliveries.deliver'), roles: staffRoles }];
     case DeliveryStatus.DELIVERED:
-      return [{ status: DeliveryStatus.COMPLETED, label: 'Complete', roles: managerRoles }];
+      return [{ status: DeliveryStatus.COMPLETED, label: t('app.complete'), roles: managerRoles }];
     default:
       return [];
   }
 }
+
+
+

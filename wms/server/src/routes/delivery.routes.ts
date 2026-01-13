@@ -12,7 +12,8 @@ const lineSchema = z.object({
   productId: objectIdSchema,
   qty: z.number().positive(),
   priceOut: z.number().nonnegative(),
-  locationId: objectIdSchema
+  locationId: objectIdSchema,
+  batch: z.string().optional()
 });
 
 const createSchema = z.object({

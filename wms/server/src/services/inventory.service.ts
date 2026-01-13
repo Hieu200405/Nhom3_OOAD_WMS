@@ -258,12 +258,14 @@ export const moveInventory = async (
 };
 
 export const ensureStock = async (
-  items: { productId: string; locationId: string; qty: number }[]
+  items: { productId: string; locationId: string; qty: number; batch?: string }[]
 ) => {
   for (const item of items) {
     const stock = await InventoryModel.findOne({
       productId: new Types.ObjectId(item.productId),
-      locationId: new Types.ObjectId(item.locationId)
+      locationId: new Types.ObjectId(item.locationId),
+      status: 'available',
+      batch: item.batch ?? null
     }).lean();
     if (!stock || stock.quantity < item.qty) {
       throw conflict('Insufficient stock', {

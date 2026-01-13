@@ -20,7 +20,16 @@
     "lineItems": "Lines",
     "exportPdf": "Export PDF",
     "reset": "Reset demo data",
-    "notes": "Note"
+    "notes": "Note",
+    "sku": "SKU",
+    "isActive": "Active",
+    "notActive": "Inactive",
+    "exportExcel": "Export Excel",
+    "close": "Close",
+    "details": "Details",
+    "approve": "Approve",
+    "reject": "Reject",
+    "complete": "Complete"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -100,7 +109,15 @@
     "barcode": "Location barcode",
     "type": "Level",
     "name": "Name",
-    "code": "Code"
+    "code": "Code",
+    "subtitle":"Scan barcode to jump to location instantly.",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "title2": "Hierarchical structure",
+    "subtitle2": "Expand branches to view child locations.",
+    "mapView": "Map view",
+    "addChild": "Add child"
+    
   },
   "products": {
     "title": "Products",
@@ -111,15 +128,36 @@
     "priceOut": "Selling price",
     "category": "Category",
     "create": "Add product",
-    "categoryFilter": "Filter by category"
+    "categoryFilter": "Filter by category",
+    "allCategories": "All categories",
+    "printLabel": "Print label"
   },
   "categories": {
     "title": "Categories",
-    "create": "Add category"
+    "create": "Add category",
+    "description": "Description"
   },
   "partners": {
     "suppliers": "Suppliers",
-    "customers": "Customers"
+    "customers": "Customers",
+    "suppliername": "Supplier name",
+    "contact": "Contact",
+    "businessType": "Business type",
+    "subtitle": "Manage supplier list and contact information.",
+    "customername": "Customer name",
+    "customerType": "Customer type",
+    "creditLimit": "Credit limit",
+    "paymentTerm": "Payment term",
+    "customerSubtitle": "Manage customer list and credit limits."
+  },
+  "inventory": {
+    "subtitle": "Track detailed stock levels and storage locations.",
+    "quantity": "Quantity in stock",
+    "product": "Product",
+    "location": "Location",
+    "viewLocation": "View location",
+    "allCategories": "All categories",
+    "checkSmart": "Smart check"
   },
   "receipts": {
     "title": "Inbound receipts",
@@ -168,7 +206,9 @@
       "reject": "Reject",
       "supplierConfirm": "Supplier Confirmed",
       "complete": "Complete"
-    }
+    },
+    "subtitle": "Manage inbound receipts and lifecycle transitions.",
+    "supplierConfirm": "Supplier confirmed"
   },
   "deliveries": {
     "title": "Outbound deliveries",
@@ -187,7 +227,8 @@
     "prepare": "Prepare",
     "deliver": "Deliver",
     "complete": "Complete",
-    "deliveryNote": "Delivery note"
+    "deliveryNote": "Delivery note",
+    "subtitle": "Monitor delivery statuses and stock availability."
   },
   "incidents": {
     "title": "Incident tickets",

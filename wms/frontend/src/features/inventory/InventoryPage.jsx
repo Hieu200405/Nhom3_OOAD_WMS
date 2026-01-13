@@ -132,7 +132,7 @@ export function InventoryPage() {
     <div className="space-y-8 animate-in">
       <PageHeader
         title={t('navigation.inventory')}
-        description="Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa."
+        description={t('inventory.subtitle')}
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <select
@@ -140,7 +140,7 @@ export function InventoryPage() {
               className="input !py-2 !h-11 !rounded-2xl !bg-slate-100/50 dark:!bg-slate-900/50 min-w-[150px]"
               onChange={(event) => setCategoryFilter(event.target.value)}
             >
-              <option value="">Tất cả danh mục</option>
+              <option value="">{t('inventory.allCategories')}</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -152,14 +152,14 @@ export function InventoryPage() {
               className="btn btn-primary shadow-indigo-200 !h-11 !rounded-2xl"
             >
               <RefreshCcw className="h-4 w-4" />
-              Kiểm tra thông minh
+              {t('inventory.checkSmart')}
             </button>
             <button
               onClick={handleExport}
               className="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 !h-11 !rounded-2xl"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Xuất Excel
+              {t('app.exportExcel')}
             </button>
           </div>
         }
@@ -171,7 +171,7 @@ export function InventoryPage() {
         columns={[
           {
             key: 'productId',
-            header: 'Sản phẩm',
+            header: t('inventory.product'),
             render: (value) => {
               const product = productMap.get(value);
               if (!product) return value;
@@ -185,18 +185,18 @@ export function InventoryPage() {
           },
           {
             key: 'totalQty',
-            header: 'Số lượng tồn',
+            header: t('inventory.quantity'),
             headerAlign: 'right',
             render: (value) => <div className="text-right font-medium">{formatNumber(value)}</div>,
           },
           {
             key: 'status',
-            header: 'Trạng thái',
+            header: t('app.status'),
             render: (value) => <StatusBadge status={value} />,
           },
           {
             key: 'actions',
-            header: 'Vị trí',
+            header: t('inventory.location'),
             sortable: false,
             render: (_, row) => (
               <div className="relative">
@@ -208,7 +208,7 @@ export function InventoryPage() {
                   }}
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
-                  Xem vị trí
+                  {t('inventory.viewLocation')}
                 </button>
                 {openProductId === row.productId ? (
                   <div className="absolute right-0 z-20 mt-2 w-96 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
