@@ -97,7 +97,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in">
+    <div className="space-y-8">
       <div className="relative overflow-hidden rounded-3xl bg-indigo-600 p-8 shadow-2xl shadow-indigo-500/20 dark:shadow-none">
         <div className="relative z-10">
           <h1 className="text-3xl font-black tracking-tight text-white transition-all">
@@ -171,45 +171,51 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <AreaChart data={metrics.revenueChart} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}M`} />
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
-                <Tooltip
-                  cursor={{ stroke: '#6366f1', strokeWidth: 2 }}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-                          <p className="mb-2 font-bold text-slate-900 dark:text-white">{label}</p>
-                          {payload.map((p, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm">
-                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-                              <span className="text-slate-500">{p.name}:</span>
-                              <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(p.value)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area type="monotone" dataKey="income" name={t('dashboard.revenue')} stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="expense" name={t('dashboard.expense')} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {metrics.revenueChart && metrics.revenueChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                <AreaChart data={metrics.revenueChart} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}M`} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <Tooltip
+                    cursor={{ stroke: '#6366f1', strokeWidth: 2 }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+                            <p className="mb-2 font-bold text-slate-900 dark:text-white">{label}</p>
+                            {payload.map((p, i) => (
+                              <div key={i} className="flex items-center gap-2 text-sm">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                                <span className="text-slate-500">{p.name}:</span>
+                                <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(p.value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area type="monotone" dataKey="income" name={t('dashboard.revenue')} stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                  <Area type="monotone" dataKey="expense" name={t('dashboard.expense')} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-400">
+                <p>{t('dashboard.noData', 'No revenue data')}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -220,26 +226,32 @@ export function DashboardPage() {
             <p className="text-sm text-slate-500">{t('dashboard.allocationRatio')}</p>
           </div>
           <div className="h-[350px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <PieChart>
-                <Pie
-                  data={metrics.inventoryStatus}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={80}
-                  outerRadius={105}
-                  paddingAngle={10}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {metrics.inventoryStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b', '#f43f5e'][index % 4]} cornerRadius={8} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
+            {metrics.inventoryStatus && metrics.inventoryStatus.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={metrics.inventoryStatus}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={80}
+                    outerRadius={105}
+                    paddingAngle={10}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {metrics.inventoryStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b', '#f43f5e'][index % 4]} cornerRadius={8} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-400">
+                <p>{t('dashboard.noData', 'No inventory data')}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

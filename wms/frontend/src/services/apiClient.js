@@ -64,7 +64,15 @@ export async function apiClient(path, options = {}) {
     try {
       const data = await response.json();
       message = data.error?.message || data.message || JSON.stringify(data);
+      if (data.error?.details) {
+        // Attach details to the message or error object for UI to use
+        const error = new Error(message);
+        error.details = data.error.details;
+        error.code = data.error.code;
+        throw error;
+      }
     } catch (e) {
+      if (e.message && e.details) throw e; // Re-throw if we just created it
       message = await response.text();
     }
     throw new Error(message || 'Request failed');
@@ -85,5 +93,6 @@ export async function apiClient(path, options = {}) {
 apiClient.get = (path, options = {}) => apiClient(path, { ...options, method: 'GET' });
 apiClient.post = (path, body, options = {}) => apiClient(path, { ...options, method: 'POST', body });
 apiClient.put = (path, body, options = {}) => apiClient(path, { ...options, method: 'PUT', body });
+apiClient.patch = (path, body, options = {}) => apiClient(path, { ...options, method: 'PATCH', body });
 apiClient.delete = (path, options = {}) => apiClient(path, { ...options, method: 'DELETE' });
 

@@ -43,6 +43,59 @@
     "audit": "Lịch sử hoạt động",
     "settings": "Cài đặt"
   },
+  "audit": {
+    "title": "Nhật ký hoạt động",
+    "description": "Theo dõi toàn bộ lịch sử thay đổi của hệ thống",
+    "time": "Thời gian",
+    "actor": "Người thực hiện",
+    "action": "Hành động",
+    "entity": "Đối tượng",
+    "details": "Chi tiết thay đổi",
+    "filter": {
+      "entity": "Loại đối tượng",
+      "timeRange": "Khoảng thời gian",
+      "startDate": "Từ ngày",
+      "endDate": "Đến ngày",
+      "searchPlaceholder": "Tìm kiếm theo người dùng hoặc nội dung..."
+    },
+    "actions": {
+      "create": "Tạo mới",
+      "created": "Tạo mới",
+      "update": "Cập nhật",
+      "updated": "Cập nhật",
+      "delete": "Xóa",
+      "deleted": "Xóa",
+      "login": "Đăng nhập",
+      "logout": "Đăng xuất",
+      "approve": "Phê duyệt",
+      "approved": "Đã duyệt",
+      "reject": "Từ chối",
+      "rejected": "Đã từ chối",
+      "confirms": "Xác nhận",
+      "confirmed": "Đã xác nhận",
+      "cancel": "Hủy bỏ",
+      "cancelled": "Đã hủy",
+      "complete": "Hoàn tất",
+      "completed": "Hoàn tất",
+      "import": "Nhập khẩu",
+      "export": "Xuất khẩu",
+      "setting.updated": "Cập nhật cấu hình"
+    },
+    "entities": {
+      "Product": "Sản phẩm",
+      "Category": "Danh mục",
+      "Partner": "Đối tác",
+      "Receipt": "Phiếu nhập",
+      "Delivery": "Phiếu xuất",
+      "Inventory": "Tồn kho",
+      "User": "Người dùng",
+      "Setting": "Cấu hình",
+      "Incident": "Sự cố",
+      "Stocktake": "Kiểm kê",
+      "Return": "Trả hàng",
+      "Disposal": "Hủy hàng"
+    }
+  },
   "login": {
     "title": "Đăng nhập hệ thống",
     "username": "Tên đăng nhập",
@@ -307,7 +360,43 @@
     "updateSuccess": "Cập nhật cài đặt thành công",
     "updateError": "Lỗi khi cập nhật cài đặt",
     "true": "Bật",
-    "false": "Tắt"
+    "false": "Tắt",
+    "groups": {
+      "general": "Chung",
+      "delivery": "Vận chuyển",
+      "inventory": "Tồn kho",
+      "disposal": "Hủy hàng"
+    },
+    "keys": {
+      "company.name": {
+        "label": "Tên công ty",
+        "desc": "Tên công ty hiển thị trên hệ thống và báo cáo"
+      },
+      "delivery.sla.corporate": {
+        "label": "SLA Khách hàng doanh nghiệp (Ngày)",
+        "desc": "Thời gian giao hàng cam kết cho khách hàng doanh nghiệp"
+      },
+      "delivery.sla.individual": {
+        "label": "SLA Khách hàng cá nhân (Ngày)",
+        "desc": "Thời gian giao hàng cam kết cho khách hàng cá nhân"
+      },
+      "delivery.limit.corporate": {
+        "label": "Giới hạn đặt hàng (Doanh nghiệp)",
+        "desc": "Số lượng tối đa mỗi đơn hàng cho khách doanh nghiệp"
+      },
+      "delivery.limit.individual": {
+        "label": "Giới hạn đặt hàng (Cá nhân)",
+        "desc": "Số lượng tối đa mỗi đơn hàng cho khách cá nhân"
+      },
+      "inventory.low_stock_threshold": {
+        "label": "Ngưỡng cảnh báo tồn kho thấp",
+        "desc": "Hệ thống sẽ cảnh báo khi số lượng tồn kho dưới mức này (nếu không có cấu hình riêng cho sản phẩm)"
+      },
+      "disposal.approval_threshold": {
+        "label": "Ngưỡng duyệt hủy hàng (VND)",
+        "desc": "Giá trị đơn hủy hàng cần phê duyệt cấp 2"
+      }
+    }
   },
   "notifications": {
     "saved": "Đã lưu thành công",

@@ -67,7 +67,9 @@ export const listAuditLogs = async (query: {
       (filter.createdAt as Record<string, unknown>).$gte = query.startDate;
     }
     if (query.endDate) {
-      (filter.createdAt as Record<string, unknown>).$lte = query.endDate;
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      (filter.createdAt as Record<string, unknown>).$lte = end;
     }
   }
 
@@ -94,4 +96,41 @@ export const listAuditLogs = async (query: {
     total,
     { page, limit, skip, sort: '-createdAt' }
   );
+};
+
+export const exportAuditLogs = async (query: {
+  entity?: string;
+  action?: string;
+  actorId?: string;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const filter: Record<string, unknown> = {};
+
+  if (query.entity) filter.entity = query.entity;
+  if (query.action) filter.action = new RegExp(query.action, 'i');
+  if (query.actorId) filter.actorId = new Types.ObjectId(query.actorId);
+
+  if (query.startDate || query.endDate) {
+    filter.createdAt = {};
+    if (query.startDate) (filter.createdAt as any).$gte = new Date(query.startDate);
+    if (query.endDate) {
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      (filter.createdAt as any).$lte = end;
+    }
+  }
+
+  const items = await AuditLogModel.find(filter)
+    .populate('actorId', 'name email')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return items.map((item: any) => ({
+    time: new Date(item.createdAt).toLocaleString('vi-VN'),
+    action: item.action,
+    entity: item.entity,
+    actor: item.actorId?.name || item.actorId?.email || 'System',
+    details: JSON.stringify(item.payload || {})
+  }));
 };

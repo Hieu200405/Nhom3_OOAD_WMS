@@ -26,7 +26,9 @@ export function SocketProvider({ children }) {
         const envBase = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
         let serverUrl = envBase;
 
-        if (serverUrl.startsWith('http')) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            serverUrl = 'http://localhost:4000';
+        } else if (serverUrl.startsWith('http')) {
             if (serverUrl.includes('/api/')) {
                 serverUrl = serverUrl.split('/api/')[0];
             }
