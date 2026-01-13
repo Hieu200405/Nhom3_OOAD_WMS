@@ -67,7 +67,7 @@ export function ReceiptsPage() {
       setSupplierProducts(supplierProductRes.data || []);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load receipts data');
+      toast.error(t('receipts.errors.loadError'));
     } finally {
       setLoading(false);
     }
@@ -179,7 +179,7 @@ export function ReceiptsPage() {
     event.preventDefault();
 
     if (!form.supplierId) {
-      toast.error('Vui lòng chọn nhà cung cấp');
+      toast.error(t('receipts.errors.selectSupplier'));
       return;
     }
 
@@ -192,7 +192,7 @@ export function ReceiptsPage() {
       }));
 
     if (lines.length === 0) {
-      toast.error('Vui lòng thêm ít nhất một sản phẩm');
+      toast.error(t('receipts.errors.addProduct'));
       return;
     }
 
@@ -212,7 +212,7 @@ export function ReceiptsPage() {
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Lỗi khi tạo phiếu nhập');
+      toast.error(error.message || t('receipts.errors.createError'));
     }
   };
 
@@ -226,7 +226,7 @@ export function ReceiptsPage() {
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Lỗi khi thay đổi trạng thái');
+      toast.error(error.message || t('receipts.errors.updateError'));
     }
   };
 
@@ -241,7 +241,7 @@ export function ReceiptsPage() {
       link.click();
       link.parentNode.removeChild(link);
     } catch (e) {
-      toast.error('Failed to export receipts');
+      toast.error(t('receipts.errors.exportError'));
     }
   };
 
@@ -295,21 +295,21 @@ export function ReceiptsPage() {
             className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <ArrowRight className="h-3.5 w-3.5" />
-            Detail
+            {t('receipts.detail')}
           </button>
           {availableActions(row, user?.role).map((action) => (
             <RoleGuard key={action.status} roles={action.roles}>
               <button
                 type="button"
-              onClick={() => {
-                if (action.requiresNote) {
-                  setRejectTarget(row);
-                  setRejectNote('');
-                  setRejectOpen(true);
-                  return;
-                }
-                transition(row, action.status);
-              }}
+                onClick={() => {
+                  if (action.requiresNote) {
+                    setRejectTarget(row);
+                    setRejectNote('');
+                    setRejectOpen(true);
+                    return;
+                  }
+                  transition(row, action.status);
+                }}
                 className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition
                   ${action.variant === 'danger'
                     ? 'bg-red-600 hover:bg-red-500'
@@ -317,11 +317,12 @@ export function ReceiptsPage() {
                   }
 `}
               >
-                {action.label}
+                {t(action.label)}
               </button>
             </RoleGuard>
-          ))}
-        </div>
+          ))
+          }
+        </div >
       ),
     },
   ];
@@ -330,7 +331,7 @@ export function ReceiptsPage() {
     <div className="space-y-5">
       <PageHeader
         title={t('receipts.title')}
-        description="Manage inbound receipts and lifecycle transitions."
+        description={t('receipts.description')}
         actions={
           <div className="flex gap-2">
             <button
@@ -338,7 +339,7 @@ export function ReceiptsPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Export Excel
+              {t('receipts.exportExcel')}
             </button>
             <RoleGuard roles={[Roles.ADMIN, Roles.MANAGER, Roles.STAFF]}>
               <button
@@ -383,7 +384,7 @@ export function ReceiptsPage() {
         <form id="receipt-form" className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Mã phiếu (Tự động)"
+              label={t('receipts.autoCode')}
               value={form.code}
               onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
               placeholder="PN-..."
@@ -400,7 +401,7 @@ export function ReceiptsPage() {
             value={form.supplierId}
             onChange={handleSupplierChange}
             options={supplierOptions}
-            placeholder="Chọn nhà cung cấp"
+            placeholder={t('receipts.selectSupplierPlaceholder')}
             required
           />
 
@@ -411,7 +412,7 @@ export function ReceiptsPage() {
             getPriceForProduct={(productId) => getPriceForSupplierProduct(form.supplierId, productId)}
           />
           <Input
-            label="Ghi chú"
+            label={t('receipts.note')}
             value={form.notes}
             onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
           />
@@ -428,7 +429,7 @@ export function ReceiptsPage() {
           setRejectNote('');
           setRejectTarget(null);
         }}
-        title="Từ chối phiếu nhập"
+        title={t('receipts.rejectTitle')}
         maxWidth="max-w-xl"
         actions={
           <>
@@ -454,24 +455,24 @@ export function ReceiptsPage() {
               }}
               className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500"
             >
-              Reject
+              {t('receipts.reject')}
             </button>
           </>
         }
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Bạn có thể ghi chú lý do từ chối để tiện theo dõi sau này.
+            {t('receipts.rejectDescription')}
           </p>
           <label className="flex flex-col gap-2 text-sm">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1 leading-none">
-              Ghi chú (tùy chọn)
+              {t('receipts.noteOptional')}
             </span>
             <textarea
               rows={4}
               value={rejectNote}
               onChange={(event) => setRejectNote(event.target.value)}
-              placeholder="VD: Sai nhà cung cấp, sai giá nhập..."
+              placeholder={t('receipts.rejectPlaceholder')}
               className="input min-h-[96px] resize-y"
             />
           </label>
@@ -488,13 +489,13 @@ function availableActions(receipt, role) {
   if (receipt.status === ReceiptStatus.DRAFT) {
     actions.push({
       status: ReceiptStatus.APPROVED,
-      label: 'Approve',
+      label: 'receipts.actions.approve',
       roles: managerRoles,
       variant: 'success',
     });
     actions.push({
       status: ReceiptStatus.REJECTED,
-      label: 'Reject',
+      label: 'receipts.actions.reject',
       roles: managerRoles,
       variant: 'danger',
       requiresNote: true,
@@ -503,12 +504,12 @@ function availableActions(receipt, role) {
   if (receipt.status === ReceiptStatus.APPROVED) {
     actions.push({
       status: ReceiptStatus.SUPPLIER_CONFIRMED,
-      label: 'Supplier confirmed',
+      label: 'receipts.actions.supplierConfirm',
       roles: managerRoles,
     });
     actions.push({
       status: ReceiptStatus.REJECTED,
-      label: 'Reject',
+      label: 'receipts.actions.reject',
       roles: managerRoles,
       variant: 'danger',
       requiresNote: true,
@@ -517,7 +518,7 @@ function availableActions(receipt, role) {
   if (receipt.status === ReceiptStatus.SUPPLIER_CONFIRMED) {
     actions.push({
       status: ReceiptStatus.COMPLETED,
-      label: 'Complete',
+      label: 'receipts.actions.complete',
       roles: managerRoles,
     });
   }

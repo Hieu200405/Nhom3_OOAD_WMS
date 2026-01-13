@@ -151,6 +151,11 @@ export function WarehouseStructurePage() {
     const payload = {
       ...form,
       parentId: form.parentId || undefined,
+      address: form.address || "",
+      city: form.city || "",
+      province: form.province || "",
+      ward: form.ward || "",
+      notes: form.notes || "",
       lat: form.lat ? Number(form.lat) : undefined,
       lng: form.lng ? Number(form.lng) : undefined,
       capacity: Number(form.capacity) || 0
@@ -460,11 +465,10 @@ function WarehouseNodeRow({
     <div>
       <div
         id={`node-${node.id}`}
-        className={`flex flex-wrap items-start gap-3 px-4 py-3 ${
-          highlightId === node.id
+        className={`flex flex-wrap items-start gap-3 px-4 py-3 ${highlightId === node.id
             ? "bg-indigo-50/70 ring-1 ring-indigo-200 dark:bg-indigo-500/10"
             : "bg-transparent"
-        }`}
+          }`}
       >
         <div className="flex items-start gap-2" style={{ paddingLeft: `${depth * 20}px` }}>
           {hasChildren ? (

@@ -38,7 +38,10 @@
     "reports": "Báo cáo",
     "financials": "Công nợ & Thanh toán",
     "pdfTest": "File PDF",
-    "users": "Người dùng"
+    "users": "Người dùng",
+    "scanner": "Quét mã",
+    "audit": "Lịch sử hoạt động",
+    "settings": "Cài đặt"
   },
   "login": {
     "title": "Đăng nhập hệ thống",
@@ -55,12 +58,38 @@
   },
   "dashboard": {
     "welcome": "Chào mừng, {{name}}!",
+    "todayPending": "Hôm nay kho hàng có <1>{{count}}</1> vận hành đang chờ xử lý.",
     "cards": {
       "inventoryValue": "Giá trị tồn kho",
       "pendingReceipts": "Phiếu nhập chờ",
       "pendingDeliveries": "Phiếu xuất chờ",
       "incidents": "Sự cố mở"
     },
+    "metrics": {
+      "inventoryValue": "Giá trị tồn kho",
+      "pendingReceipts": "Nhập kho chờ",
+      "pendingDeliveries": "Xuất kho chờ",
+      "openIncidents": "Sự cố mở",
+      "expiringSoon": "Sắp hết hạn"
+    },
+    "trends": {
+      "vsLastMonth": "+12% vs tháng trước",
+      "priority": "Cần ưu tiên",
+      "today": "Hôm nay",
+      "urgent": "Cần xử lý ngay",
+      "lessThan30Days": "< 30 ngày"
+    },
+    "performance": "Hiệu suất vận hành",
+    "revenueCostLast6Months": "Doanh thu & Chi phí 6 tháng gần nhất",
+    "revenue": "Doanh thu",
+    "expense": "Chi phí",
+    "inventoryStatus": "Trạng thái tồn kho",
+    "allocationRatio": "Tỷ lệ phân bổ hàng hóa",
+    "aiInsights": "Gợi ý từ AI: Dự báo hết hàng",
+    "aiDescription": "Dựa trên tốc độ bán hàng thực tế trong 30 ngày qua",
+    "stockoutChance": "Khả năng hết hàng:",
+    "inDays": "Trong {{days}} ngày",
+    "planRestock": "Lập kế hoạch nhập hàng",
     "recentActivities": "Hoạt động gần đây"
   },
   "warehouse": {
@@ -113,6 +142,31 @@
       "product": "Sản phẩm",
       "quantity": "Số lượng",
       "price": "Đơn giá"
+    },
+    "errors": {
+      "selectSupplier": "Vui lòng chọn nhà cung cấp",
+      "addProduct": "Vui lòng thêm ít nhất một sản phẩm",
+      "createError": "Lỗi khi tạo phiếu nhập",
+      "updateError": "Lỗi khi thay đổi trạng thái",
+      "loadError": "Không thể tải dữ liệu phiếu nhập",
+      "exportError": "Không thể xuất file"
+    },
+    "detail": "Chi tiết",
+    "description": "Quản lý phiếu nhập kho và trạng thái.",
+    "exportExcel": "Xuất Excel",
+    "autoCode": "Mã phiếu (Tự động)",
+    "selectSupplierPlaceholder": "Chọn nhà cung cấp",
+    "note": "Ghi chú",
+    "rejectTitle": "Từ chối phiếu nhập",
+    "reject": "Từ chối",
+    "rejectDescription": "Bạn có thể ghi chú lý do từ chối để tiện theo dõi sau này.",
+    "noteOptional": "Ghi chú (tùy chọn)",
+    "rejectPlaceholder": "VD: Sai nhà cung cấp, sai giá nhập...",
+    "actions": {
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "supplierConfirm": "NCC xác nhận",
+      "complete": "Hoàn tất"
     }
   },
   "deliveries": {
@@ -243,6 +297,17 @@
     "debtSummary": "Tóm tắt công nợ",
     "debtCount": "Số phiếu nợ",
     "overdueReceipts": "Phiếu quá hạn"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "description": "Quản lý cấu hình toàn hệ thống.",
+    "loading": "Đang tải cài đặt...",
+    "groupSuffix": "Cấu hình",
+    "loadError": "Không thể tải cài đặt",
+    "updateSuccess": "Cập nhật cài đặt thành công",
+    "updateError": "Lỗi khi cập nhật cài đặt",
+    "true": "Bật",
+    "false": "Tắt"
   },
   "notifications": {
     "saved": "Đã lưu thành công",
