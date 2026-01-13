@@ -18,6 +18,7 @@ export interface Delivery {
   status: DeliveryStatus;
   lines: DeliveryLine[];
   notes?: string;
+  rejectedNote?: string;
   // Logistics
   carrier?: string;
   trackingNumber?: string;
@@ -56,6 +57,7 @@ const deliverySchema = new Schema<DeliveryDocument>(
     status: { type: String, enum: DELIVERY_STATUS, default: 'draft', required: true },
     lines: { type: [deliveryLineSchema], default: [] },
     notes: { type: String, trim: true },
+    rejectedNote: { type: String, trim: true },
     // Logistics
     carrier: { type: String, trim: true },
     trackingNumber: { type: String, trim: true },

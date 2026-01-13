@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import {
   listDeliveries,
+  getDelivery,
   createDelivery,
   updateDelivery,
   deleteDelivery,
@@ -13,6 +14,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const result = await listDeliveries(req.query as any);
   res.json(result);
+});
+
+export const getById = asyncHandler(async (req: Request, res: Response) => {
+  const delivery = await getDelivery(req.params.id);
+  res.json({ data: delivery });
 });
 
 export const exportData = asyncHandler(async (req: Request, res: Response) => {
@@ -50,7 +56,7 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const transition = asyncHandler(async (req: Request, res: Response) => {
-  const delivery = await transitionDelivery(req.params.id, req.body.to, req.user!.id);
+  const delivery = await transitionDelivery(req.params.id, req.body.to, req.user!.id, req.body.note);
   res.json({ data: delivery });
 });
 

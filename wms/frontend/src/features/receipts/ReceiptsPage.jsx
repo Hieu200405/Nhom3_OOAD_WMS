@@ -27,6 +27,9 @@ const defaultForm = {
       productId: '',
       quantity: 1,
       price: 0,
+      locationId: '',
+      batch: '',
+      expDate: '',
     },
   ],
   hasShortage: false,
@@ -45,6 +48,7 @@ export function ReceiptsPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [supplierProducts, setSupplierProducts] = useState([]);
+  const [locations, setLocations] = useState([]);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
@@ -55,16 +59,18 @@ export function ReceiptsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [recRes, supRes, prodRes] = await Promise.all([
+      const [recRes, supRes, prodRes, locRes] = await Promise.all([
         apiClient('/receipts'),
         apiClient('/partners', { params: { type: 'supplier' } }),
         apiClient('/products'),
+        apiClient('/warehouse', { params: { type: 'bin', limit: 1000 } }),
       ]);
       const supplierProductRes = await apiClient('/supplier-products', { params: { limit: 1000 } });
       setReceipts(recRes.data || []);
       setSuppliers(supRes.data || []);
       setProducts(prodRes.data || []);
       setSupplierProducts(supplierProductRes.data || []);
+      setLocations(locRes.data || []);
     } catch (error) {
       console.error(error);
       toast.error(t('receipts.errors.loadError'));
@@ -152,6 +158,14 @@ export function ReceiptsPage() {
     return products.filter((product) => allowedIds.has(product.id));
   }, [form.supplierId, getAllowedProductIds, products]);
 
+  const locationOptions = useMemo(
+    () => locations.map((loc) => ({
+      value: loc.id,
+      label: `${loc.code} - ${loc.name}`
+    })),
+    [locations]
+  );
+
   const handleSupplierChange = (event) => {
     const supplierId = event.target.value;
     setForm((prev) => {
@@ -188,7 +202,10 @@ export function ReceiptsPage() {
       .map((line) => ({
         productId: line.productId,
         qty: Number(line.quantity),
-        priceIn: Number(line.price)
+        priceIn: Number(line.price),
+        locationId: line.locationId || '',
+        batch: line.batch?.trim() || undefined,
+        expDate: line.expDate || undefined
       }));
 
     if (lines.length === 0) {
@@ -425,6 +442,7 @@ export function ReceiptsPage() {
             value={form.lines}
             onChange={(lines) => setForm((prev) => ({ ...prev, lines }))}
             getPriceForProduct={(productId) => getPriceForSupplierProduct(form.supplierId, productId)}
+            locationOptions={locationOptions}
           />
           <Input
             label={t('receipts.note')}

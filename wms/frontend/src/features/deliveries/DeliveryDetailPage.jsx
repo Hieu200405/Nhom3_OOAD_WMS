@@ -113,7 +113,8 @@ export function DeliveryDetailPage() {
               'Trạng thái': delivery.status,
               'Ngày giao dự kiến': delivery.expectedDate ? formatDate(delivery.expectedDate) : '',
               'Ghi chú': delivery.notes || delivery.note,
-              total: formatCurrency(delivery.total)
+              'Lý do từ chối': delivery.rejectedNote || '',
+              'Tổng tiền': formatCurrency(delivery.total)
             }}
             showSignature={true}
           />
@@ -154,13 +155,6 @@ export function DeliveryDetailPage() {
             </div>
           </div>
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {t('deliveries.deliveryNote')}
-          </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{delivery.notes || delivery.note || '—'}</p>
-        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-4">
@@ -197,6 +191,16 @@ export function DeliveryDetailPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {delivery.notes || delivery.note ? (
+          <InfoCard title={t('Ghi chú')} value={delivery.notes || delivery.note} />
+        ) : null}
+        {delivery.rejectedNote ? (
+          <InfoCard title="Lý do từ chối" value={delivery.rejectedNote} />
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">

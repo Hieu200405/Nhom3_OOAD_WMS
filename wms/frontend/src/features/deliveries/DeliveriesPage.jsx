@@ -22,6 +22,7 @@ const defaultForm = {
   code: '',
   customerId: '',
   date: new Date().toISOString().slice(0, 10),
+  expectedDate: new Date().toISOString().slice(0, 10),
   note: '',
   lines: [
     {
@@ -47,6 +48,9 @@ export function DeliveriesPage() {
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -107,15 +111,30 @@ export function DeliveriesPage() {
 
   // Helper to get available locations for a product
   const getProductInventory = (productId) => {
-    return inventory.filter(i => i.productId === productId && i.quantity > 0)
-      .map(i => {
-        const loc = locationMap.get(i.locationId);
-        return {
-          value: i.locationId,
-          label: `${loc ? loc.code : 'Unknown'} (Qty: ${i.quantity})`,
-          quantity: i.quantity
-        };
-      });
+    const items = inventory.filter(
+      (item) => item.productId === productId && item.quantity > 0 && item.status === 'available'
+    );
+    const byLocation = new Map();
+    items.forEach((item) => {
+      const current = byLocation.get(item.locationId) || 0;
+      byLocation.set(item.locationId, current + item.quantity);
+    });
+    return Array.from(byLocation.entries()).map(([locationId, quantity]) => {
+      const loc = locationMap.get(locationId);
+      return {
+        value: locationId,
+        label: `${loc ? `${loc.code} - ${loc.name}` : 'Unknown'} (Qty: ${quantity})`,
+        quantity
+      };
+    });
+  };
+
+  const getAvailableQty = (productId, locationId) => {
+    if (!productId || !locationId) return 0;
+    const items = inventory.filter(
+      (item) => item.productId === productId && item.locationId === locationId && item.status === 'available'
+    );
+    return items.reduce((sum, item) => sum + item.quantity, 0);
   };
 
   const handleSubmit = async (event) => {
@@ -142,8 +161,8 @@ export function DeliveriesPage() {
 
     // Client-side stock check
     for (const line of lines) {
-      const invItem = inventory.find(i => i.productId === line.productId && i.locationId === line.locationId);
-      if (!invItem || invItem.quantity < line.qty) {
+      const availableQty = getAvailableQty(line.productId, line.locationId);
+      if (availableQty < line.qty) {
         toast.error(`Không đủ tồn kho cho sản phẩm ${line.productId} tại vị trí đã chọn`);
         return;
       }
@@ -153,6 +172,7 @@ export function DeliveriesPage() {
       code: form.code || `PX-${Date.now()}`,
       customerId: form.customerId,
       date: form.date,
+      expectedDate: form.expectedDate,
       lines,
       notes: form.note
     };
@@ -169,11 +189,11 @@ export function DeliveriesPage() {
     }
   };
 
-  const transition = async (delivery, status) => {
+  const transition = async (delivery, status, note) => {
     try {
       await apiClient(`/deliveries/${delivery.id}/transition`, {
         method: 'POST',
-        body: { to: status }
+        body: { to: status, note }
       });
       toast.success(t('notifications.statusChanged'));
       fetchData();
@@ -259,7 +279,11 @@ export function DeliveriesPage() {
     {
       key: 'customerId',
       header: t('deliveries.customer'),
-      render: (value) => customers.find((customer) => customer.id === value)?.name ?? value,
+      render: (value, row) =>
+        row?.customer?.name ??
+        row?.customerName ??
+        customers.find((customer) => customer.id === value)?.name ??
+        value,
     },
     {
       key: 'date',
@@ -274,7 +298,14 @@ export function DeliveriesPage() {
     {
       key: 'totalAmount',
       header: t('app.total'),
-      render: (value) => formatCurrency(value || 0),
+      render: (value, row) => {
+        if (typeof value === 'number') return formatCurrency(value);
+        const total = (row?.lines || []).reduce(
+          (sum, line) => sum + (Number(line.qty) || 0) * (Number(line.priceOut) || 0),
+          0
+        );
+        return formatCurrency(total);
+      },
     },
     {
       key: 'actions',
@@ -294,8 +325,20 @@ export function DeliveriesPage() {
             <RoleGuard key={action.status} roles={action.roles}>
               <button
                 type="button"
-                onClick={() => transition(row, action.status)}
-                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                onClick={() => {
+                  if (action.requiresNote) {
+                    setRejectTarget(row);
+                    setRejectNote('');
+                    setRejectOpen(true);
+                    return;
+                  }
+                  transition(row, action.status);
+                }}
+                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition ${
+                  action.variant === 'danger'
+                    ? 'bg-rose-600 hover:bg-rose-500'
+                    : 'bg-indigo-600 hover:bg-indigo-500'
+                }`}
               >
                 {action.label}
               </button>
@@ -402,6 +445,12 @@ export function DeliveriesPage() {
               label={t('deliveries.date')}
               value={form.date}
               onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+            <DatePicker
+              label="Ngày giao dự kiến"
+              value={form.expectedDate}
+              onChange={(event) => setForm((prev) => ({ ...prev, expectedDate: event.target.value }))}
               required
             />
           </div>
@@ -541,9 +590,14 @@ function availableActions(delivery) {
 
   switch (delivery.status) {
     case DeliveryStatus.DRAFT:
-      return [{ status: DeliveryStatus.APPROVED, label: 'Approve', roles: managerRoles }];
+      return [
+        { status: DeliveryStatus.APPROVED, label: 'Approve', roles: managerRoles },
+        { status: DeliveryStatus.REJECTED, label: 'Reject', roles: managerRoles, requiresNote: true, variant: 'danger' }
+      ];
     case DeliveryStatus.APPROVED:
-      return [{ status: DeliveryStatus.PREPARED, label: 'Prepare', roles: staffRoles }];
+      return [
+        { status: DeliveryStatus.PREPARED, label: 'Prepare', roles: staffRoles }
+      ];
     case DeliveryStatus.PREPARED:
       return [{ status: DeliveryStatus.DELIVERED, label: 'Deliver', roles: staffRoles }];
     case DeliveryStatus.DELIVERED:

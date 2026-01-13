@@ -12,23 +12,78 @@ export const getWarehouseVisualization = async (nodeId: string) => {
   const root = await WarehouseNodeModel.findById(new Types.ObjectId(nodeId)).lean();
   if (!root) throw notFound('Node not found');
 
-  const children = await WarehouseNodeModel.find({ parentId: new Types.ObjectId(nodeId) }).lean();
+  const branchId = (root as any).branchId || root._id;
+  const nodes = await WarehouseNodeModel.find({ branchId }).lean();
 
-  // Get inventory aggregates for children
+  const nodeMap = new Map<string, any>();
+  nodes.forEach((node) => {
+    nodeMap.set(node._id.toString(), node);
+  });
+  if (!nodeMap.has(root._id.toString())) {
+    nodeMap.set(root._id.toString(), root);
+  }
+
+  const childrenMap = new Map<string, string[]>();
+  nodeMap.forEach((node) => {
+    const parentId = node.parentId?.toString();
+    if (!parentId) return;
+    const existing = childrenMap.get(parentId);
+    if (existing) {
+      existing.push(node._id.toString());
+    } else {
+      childrenMap.set(parentId, [node._id.toString()]);
+    }
+  });
+
+  const binIds: Types.ObjectId[] = [];
+  nodeMap.forEach((node) => {
+    if (node.type === 'bin') binIds.push(node._id);
+  });
+
   const inventoryStats = await InventoryModel.aggregate([
-    { $match: { locationId: { $in: children.map(c => c._id) } } },
+    { $match: { locationId: { $in: binIds } } },
     { $group: { _id: '$locationId', totalQty: { $sum: '$quantity' }, itemsCount: { $sum: 1 } } }
   ]);
 
-  const statsMap = new Map();
+  const statsMap = new Map<string, { totalQty: number; itemsCount: number }>();
   inventoryStats.forEach(stat => {
-    statsMap.set(stat._id.toString(), stat);
+    statsMap.set(stat._id.toString(), { totalQty: stat.totalQty, itemsCount: stat.itemsCount });
   });
+
+  const totalsCache = new Map<string, { totalQty: number; itemsCount: number }>();
+  const calcTotals = (id: string): { totalQty: number; itemsCount: number } => {
+    const cached = totalsCache.get(id);
+    if (cached) return cached;
+    const node = nodeMap.get(id);
+    if (!node) return { totalQty: 0, itemsCount: 0 };
+    if (node.type === 'bin') {
+      const stats = statsMap.get(id) || { totalQty: 0, itemsCount: 0 };
+      totalsCache.set(id, stats);
+      return stats;
+    }
+    const childIds = childrenMap.get(id) || [];
+    const totals = childIds.reduce<{ totalQty: number; itemsCount: number }>(
+      (acc, childId) => {
+        const childTotals = calcTotals(childId);
+        return {
+          totalQty: acc.totalQty + childTotals.totalQty,
+          itemsCount: acc.itemsCount + childTotals.itemsCount
+        };
+      },
+      { totalQty: 0, itemsCount: 0 }
+    );
+    totalsCache.set(id, totals);
+    return totals;
+  };
+
+  const children = (childrenMap.get(root._id.toString()) || [])
+    .map((id) => nodeMap.get(id))
+    .filter(Boolean);
 
   return {
     ...root,
     children: children.map(child => {
-      const stats = statsMap.get(child._id.toString()) || { totalQty: 0, itemsCount: 0 };
+      const stats = calcTotals(child._id.toString());
       return {
         ...child,
         currentQty: stats.totalQty,
@@ -69,6 +124,34 @@ const validateParentChain = async (
   return parent;
 };
 
+const sumChildCapacities = async (parentId: Types.ObjectId, excludeId?: Types.ObjectId) => {
+  const children = await WarehouseNodeModel.find({
+    parentId,
+    ...(excludeId ? { _id: { $ne: excludeId } } : {})
+  }).select('capacity').lean();
+
+  return children.reduce((total, child: any) => {
+    if (child.capacity && child.capacity > 0) return total + child.capacity;
+    return total;
+  }, 0);
+};
+
+const ensureParentCapacityAllows = async (
+  parent: WarehouseNodeDocument,
+  childCapacity?: number,
+  excludeChildId?: Types.ObjectId
+) => {
+  if (!parent.capacity || parent.capacity <= 0) return;
+
+  const existingTotal = await sumChildCapacities(parent._id as Types.ObjectId, excludeChildId);
+  const nextTotal = existingTotal + (childCapacity && childCapacity > 0 ? childCapacity : 0);
+  if (nextTotal > parent.capacity) {
+    throw badRequest(
+      `Total child capacity (${nextTotal}) exceeds parent capacity (${parent.capacity})`
+    );
+  }
+};
+
 type ListQuery = {
   page?: string;
   limit?: string;
@@ -107,6 +190,7 @@ export const listWarehouseNodes = async (query: ListQuery) => {
       code: node.code,
       parentId: node.parentId?.toString() ?? null,
       barcode: node.barcode,
+      capacity: (node as any).capacity ?? 0,
       warehouseType: (node as any).warehouseType ?? null,
       address: (node as any).address ?? null,
       city: (node as any).city ?? null,
@@ -136,6 +220,7 @@ export const getWarehouseTree = async (branchIds?: string[]) => {
       barcode: node.barcode,
       warehouseType: (node as any).warehouseType ?? null,
       parentId: node.parentId?.toString() ?? null,
+      capacity: (node as any).capacity ?? 0,
       // Pass location info in tree
       address: (node as any).address,
       city: (node as any).city,
@@ -164,6 +249,7 @@ export const createWarehouseNode = async (
     code: string;
     parentId?: string;
     barcode?: string;
+    capacity?: number;
     warehouseType?: string | null;
     address?: string;
     city?: string;
@@ -206,6 +292,10 @@ export const createWarehouseNode = async (
     branchId = (parent as any).branchId || parent._id;
   }
 
+  if (parent) {
+    await ensureParentCapacityAllows(parent, payload.capacity);
+  }
+
   const node = await WarehouseNodeModel.create({
     ...payload,
     parentId: parent ? (parent._id as Types.ObjectId) : null,
@@ -233,6 +323,7 @@ export const updateWarehouseNode = async (
     barcode: string;
     parentId: string | null;
     warehouseType?: string | null;
+    capacity?: number;
     address?: string;
     city?: string;
     province?: string;
@@ -246,12 +337,14 @@ export const updateWarehouseNode = async (
   if (!node) {
     throw notFound('Warehouse node not found');
   }
+  let parent: WarehouseNodeDocument | null = null;
   if (payload.parentId !== undefined) {
-    const parent = await validateParentChain(node.type as WarehouseNodeType, payload.parentId);
+    parent = await validateParentChain(node.type as WarehouseNodeType, payload.parentId);
     node.parentId = parent ? (parent._id as Types.ObjectId) : null;
   }
   if (payload.name) node.name = payload.name;
   if (typeof payload.barcode !== 'undefined') node.barcode = payload.barcode;
+  if (typeof payload.capacity !== 'undefined') node.capacity = payload.capacity;
 
   if (typeof payload.address !== 'undefined') node.address = payload.address;
   if (typeof payload.city !== 'undefined') node.city = payload.city;
@@ -264,6 +357,30 @@ export const updateWarehouseNode = async (
     // only allow warehouseType on warehouse nodes
     if (node.type === 'warehouse') {
       node.warehouseType = payload.warehouseType as any;
+    }
+  }
+
+  const parentIdToCheck = payload.parentId !== undefined
+    ? payload.parentId
+    : node.parentId?.toString();
+  if (parentIdToCheck) {
+    if (!parent) {
+      parent = await WarehouseNodeModel.findById(new Types.ObjectId(parentIdToCheck));
+    }
+    if (parent) {
+      const effectiveCapacity = typeof payload.capacity === 'number'
+        ? payload.capacity
+        : (node.capacity || 0);
+      await ensureParentCapacityAllows(parent, effectiveCapacity, node._id as Types.ObjectId);
+    }
+  }
+
+  if (typeof payload.capacity === 'number' && payload.capacity > 0) {
+    const childTotal = await sumChildCapacities(node._id as Types.ObjectId);
+    if (childTotal > payload.capacity) {
+      throw badRequest(
+        `Total child capacity (${childTotal}) exceeds parent capacity (${payload.capacity})`
+      );
     }
   }
   await node.save();
