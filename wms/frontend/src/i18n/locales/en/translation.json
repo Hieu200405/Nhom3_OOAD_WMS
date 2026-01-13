@@ -39,7 +39,10 @@
     "reports": "Reports",
     "financials": "Financials",
     "pdfTest": "PDF Files",
-    "users": "Users"
+    "users": "Users",
+    "scanner": "Scanner",
+    "audit": "Audit Log",
+    "settings": "Settings"
   },
   "login": {
     "title": "Sign in",
@@ -56,12 +59,38 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}!",
+    "todayPending": "Today warehouse has <1>{{count}}</1> pending operations.",
     "cards": {
       "inventoryValue": "Inventory value",
       "pendingReceipts": "Pending receipts",
       "pendingDeliveries": "Pending deliveries",
       "incidents": "Open incidents"
     },
+    "metrics": {
+      "inventoryValue": "Inventory Value",
+      "pendingReceipts": "Pending Inbound",
+      "pendingDeliveries": "Pending Outbound",
+      "openIncidents": "Open Incidents",
+      "expiringSoon": "Expiring Soon"
+    },
+    "trends": {
+      "vsLastMonth": "+12% vs last month",
+      "priority": "Priority",
+      "today": "Today",
+      "urgent": "Urgent",
+      "lessThan30Days": "< 30 days"
+    },
+    "performance": "Operational Performance",
+    "revenueCostLast6Months": "Revenue & Cost (Last 6 months)",
+    "revenue": "Revenue",
+    "expense": "Expense",
+    "inventoryStatus": "Inventory Status",
+    "allocationRatio": "Product Allocation Ratio",
+    "aiInsights": "AI Insights: Stockout Forecast",
+    "aiDescription": "Based on actual sales velocity in last 30 days",
+    "stockoutChance": "Stockout risk:",
+    "inDays": "In {{days}} days",
+    "planRestock": "Plan Restock",
     "recentActivities": "Recent activities"
   },
   "warehouse": {
@@ -114,6 +143,31 @@
       "product": "Product",
       "quantity": "Quantity",
       "price": "Price"
+    },
+    "errors": {
+      "selectSupplier": "Please select a supplier",
+      "addProduct": "Please add at least one product",
+      "createError": "Error creating receipt",
+      "updateError": "Error updating status",
+      "loadError": "Failed to load receipts data",
+      "exportError": "Failed to export receipts"
+    },
+    "detail": "Detail",
+    "description": "Manage inbound receipts and lifecycle transitions.",
+    "exportExcel": "Export Excel",
+    "autoCode": "Code (Auto)",
+    "selectSupplierPlaceholder": "Select supplier",
+    "note": "Note",
+    "rejectTitle": "Reject Receipt",
+    "reject": "Reject",
+    "rejectDescription": "You can add a note for rejection reason.",
+    "noteOptional": "Note (optional)",
+    "rejectPlaceholder": "Ex: Wrong supplier, wrong price...",
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "supplierConfirm": "Supplier Confirmed",
+      "complete": "Complete"
     }
   },
   "deliveries": {
@@ -244,6 +298,17 @@
     "debtSummary": "Debt Summary",
     "debtCount": "Debt Count",
     "overdueReceipts": "Overdue Receipts"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage system-wide configurations.",
+    "loading": "Loading settings...",
+    "groupSuffix": "Configuration",
+    "loadError": "Failed to load settings",
+    "updateSuccess": "Setting updated",
+    "updateError": "Failed to update setting",
+    "true": "True",
+    "false": "False"
   },
   "notifications": {
     "saved": "Saved successfully",

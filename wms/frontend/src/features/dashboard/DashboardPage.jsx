@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { BarChart3, Boxes, ClipboardList, Truck, TrendingUp, TrendingDown, AlertTriangle, Clock, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { apiClient } from '../../services/apiClient.js';
@@ -104,7 +104,11 @@ export function DashboardPage() {
             {t('dashboard.welcome', { name: user?.fullName ?? 'User' })}
           </h1>
           <p className="mt-2 text-indigo-100 font-medium opacity-80">
-            Hôm nay kho hàng có <span className="underline decoration-wavy">{metrics.pendingReceipts + metrics.pendingDeliveries}</span> vận hành đang chờ xử lý.
+            <Trans
+              i18nKey="dashboard.todayPending"
+              values={{ count: metrics.pendingReceipts + metrics.pendingDeliveries }}
+              components={{ 1: <span className="underline decoration-wavy" /> }}
+            />
           </p>
         </div>
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
@@ -115,41 +119,41 @@ export function DashboardPage() {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           icon={Boxes}
-          label="Giá trị tồn kho"
+          label={t('dashboard.metrics.inventoryValue')}
           value={formatCurrency(metrics.totalInventoryValue)}
-          trend="+12% vs tháng trước"
+          trend={t('dashboard.trends.vsLastMonth')}
           trendUp={true}
           color="indigo"
         />
         <MetricCard
           icon={ClipboardList}
-          label="Nhập kho chờ"
+          label={t('dashboard.metrics.pendingReceipts')}
           value={metrics.pendingReceipts}
-          trend="Cần ưu tiên"
+          trend={t('dashboard.trends.priority')}
           trendUp={true}
           color="blue"
         />
         <MetricCard
           icon={Truck}
-          label="Xuất kho chờ"
+          label={t('dashboard.metrics.pendingDeliveries')}
           value={metrics.pendingDeliveries}
-          trend="Hôm nay"
+          trend={t('dashboard.trends.today')}
           trendUp={false}
           color="rose"
         />
         <MetricCard
           icon={AlertTriangle}
-          label="Sự cố mở"
+          label={t('dashboard.metrics.openIncidents')}
           value={metrics.openIncidents}
-          trend="Cần xử lý ngay"
+          trend={t('dashboard.trends.urgent')}
           trendUp={false}
           color="danger"
         />
         <MetricCard
           icon={Clock}
-          label="Sắp hết hạn"
+          label={t('dashboard.metrics.expiringSoon')}
           value={metrics.expiringSoon}
-          trend="< 30 ngày"
+          trend={t('dashboard.trends.lessThan30Days')}
           trendUp={false}
           color="warning"
         />
@@ -161,13 +165,13 @@ export function DashboardPage() {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Hiệu suất vận hành
+                {t('dashboard.performance')}
               </h2>
-              <p className="text-sm text-slate-500">Doanh thu & Chi phí 6 tháng gần nhất</p>
+              <p className="text-sm text-slate-500">{t('dashboard.revenueCostLast6Months')}</p>
             </div>
           </div>
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={metrics.revenueChart} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -202,8 +206,8 @@ export function DashboardPage() {
                     return null;
                   }}
                 />
-                <Area type="monotone" dataKey="income" name="Doanh thu" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="expense" name="Chi phí" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                <Area type="monotone" dataKey="income" name={t('dashboard.revenue')} stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                <Area type="monotone" dataKey="expense" name={t('dashboard.expense')} stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -212,11 +216,11 @@ export function DashboardPage() {
         {/* Inventory Status Pie Chart */}
         <div className="card p-8">
           <div className="mb-8">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Trạng thái tồn kho</h2>
-            <p className="text-sm text-slate-500">Tỷ lệ phân bổ hàng hóa</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('dashboard.inventoryStatus')}</h2>
+            <p className="text-sm text-slate-500">{t('dashboard.allocationRatio')}</p>
           </div>
           <div className="h-[350px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={metrics.inventoryStatus}
@@ -251,9 +255,9 @@ export function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900 dark:text-white capitalize tracking-tight">
-                  Gợi ý từ AI: Dự báo hết hàng
+                  {t('dashboard.aiInsights')}
                 </h2>
-                <p className="text-sm text-slate-500 italic">Dựa trên tốc độ bán hàng thực tế trong 30 ngày qua</p>
+                <p className="text-sm text-slate-500 italic">{t('dashboard.aiDescription')}</p>
               </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -267,15 +271,15 @@ export function DashboardPage() {
                   </div>
                   <div className="mb-6 space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Khả năng hết hàng:</span>
-                      <span className="font-bold text-rose-500">Trong {item.daysLeft} ngày</span>
+                      <span className="text-slate-500">{t('dashboard.stockoutChance')}</span>
+                      <span className="font-bold text-rose-500">{t('dashboard.inDays', { days: item.daysLeft })}</span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.max(100 - (item.daysLeft * 10), 10)}%` }} />
                     </div>
                   </div>
                   <button className="w-full rounded-2xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-700 hover:shadow-indigo-500/40">
-                    Lập kế hoạch nhập hàng
+                    {t('dashboard.planRestock')}
                   </button>
                 </div>
               ))}
