@@ -33,7 +33,7 @@ const partnerSchema = new Schema<PartnerDocument>(
     isActive: { type: Boolean, default: true },
     // Discrimination fields
     businessType: { type: String, enum: ['Manufacturer', 'Distributor', 'Retailer', 'Nhà sản xuất', 'Nhà phân phối', 'Nhà bán lẻ'] },
-    customerType: { type: String, enum: ['Individual', 'Corporate', 'Cá nhân', 'Công ty'] },
+    customerType: { type: String, enum: ['Individual', 'Corporate', 'Cá nhân', 'Doanh nghiệp'] },
     creditLimit: { type: Number, min: 0 },
     paymentTerm: { type: String }
   },

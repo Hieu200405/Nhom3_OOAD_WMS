@@ -14,7 +14,7 @@ const emptyCustomer = {
   type: 'customer',
   code: '',
   name: '',
-  customerType: 'Individual',
+  customerType: 'Cá nhân',
   policy: '',
   creditLimit: 0,
   paymentTerm: 'Net 30',
@@ -23,15 +23,15 @@ const emptyCustomer = {
 };
 
 const customerTypes = [
-  { value: 'Individual', label: 'Cá nhân' },
-  { value: 'Corporate', label: 'Doanh nghiệp' },
+  { value: 'Cá nhân', label: 'Cá nhân' },
+  { value: 'Doanh nghiệp', label: 'Doanh nghiệp' },
 ];
 
 const paymentTerms = [
   { value: 'COD', label: 'Thanh toán khi nhận hàng (COD)' },
-  { value: 'Net 15', label: 'Công nợ 15 ngày' },
-  { value: 'Net 30', label: 'Công nợ 30 ngày' },
-  { value: 'Prepaid', label: 'Trả trước' },
+  { value: '15 Ngày', label: 'Công nợ 15 ngày' },
+  { value: '30 Ngày', label: 'Công nợ 30 ngày' },
+  { value: 'Trả trước', label: 'Trả trước' },
 ];
 
 export function CustomersPage() {

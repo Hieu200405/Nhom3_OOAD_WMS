@@ -17,8 +17,8 @@ const baseSchema = z.object({
   address: z.string().optional(),
   notes: z.string().optional(),
   isActive: z.boolean().optional(),
-  businessType: z.enum(['Manufacturer', 'Distributor', 'Retailer']).optional(),
-  customerType: z.enum(['Individual', 'Corporate']).optional(),
+  businessType: z.enum(['Manufacturer', 'Distributor', 'Retailer', "Nhà sản xuất", "Nhà phân phối", "Nhà bán lẻ"]).optional(),
+  customerType: z.enum(['Individual', 'Corporate', "Cá nhân", "Doanh nghiệp"]).optional(),
   creditLimit: z.number().min(0).optional(),
   paymentTerm: z.string().optional()
 });

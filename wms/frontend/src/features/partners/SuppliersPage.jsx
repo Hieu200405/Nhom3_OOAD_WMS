@@ -17,15 +17,15 @@ const emptySupplier = {
   taxCode: '',
   contact: '',
   address: '',
-  businessType: 'Distributor',
+  businessType: 'Nhà phân phối',
   notes: '',
   isActive: true,
 };
 
 const businessTypes = [
-  { value: 'Manufacturer', label: t('partners.businessTypes.manufacturer') },
-  { value: 'Distributor', label: t('partners.businessTypes.distributor') },
-  { value: 'Retailer', label: t('partners.businessTypes.retailer') },
+  { value: 'Nhà sản xuất', label: "Nhà sản xuất" },
+  { value: 'Nhà phân phối', label: "Nhà phân phối" },
+  { value: 'Nhà bán lẻ', label: "Nhà bán lẻ" },
 ];
 
 export function SuppliersPage() {

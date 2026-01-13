@@ -194,13 +194,11 @@
     "suppliername": "Tên nhà cung cấp",
     "contact": "Liên hệ",
     "businessType": "Loại hình",
-    "businessTypes": {
-      "manufacturer": "Nhà sản xuất",
-      "wholesaler": "Nhà bán buôn",
-      "retailer": "Nhà bán lẻ",
-      "individual": "Cá nhân",
-      "company": "Công ty"
-    },
+    "manufacturer": "Nhà sản xuất",
+    "distributor": "Nhà phân phối",
+    "retailer": "Nhà bán lẻ",
+    "individual": "Cá nhân",
+    "company": "Doanh nghiệp",
     "subtitle": "Quản lý danh sách nhà cung cấp và thông tin liên hệ.",
     "customername": "Tên khách hàng",
     "customerType": "Loại khách",
