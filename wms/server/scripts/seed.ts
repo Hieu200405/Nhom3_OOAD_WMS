@@ -233,7 +233,7 @@ const seedPartners = async () => {
       taxCode: Math.random() > 0.3 ? generateTaxCode() : undefined,
       contact: `${generateVietnameseName()} - ${generatePhone()}`,
       address: generateAddress(),
-      customerType: randomElement(['Cá nhân', 'Công ty'] as const),
+      customerType: randomElement(['Cá nhân', 'Doanh nghiệp'] as const),
       creditLimit: randomInt(10000000, 500000000),
       paymentTerm: randomElement(['3 Ngày', '7 ngày', '15 ngày', '30 ngày']),
       isActive: true
