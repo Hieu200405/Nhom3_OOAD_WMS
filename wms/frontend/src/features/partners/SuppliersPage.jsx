@@ -8,6 +8,7 @@ import { Select } from '../../components/forms/Select.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../components/PageHeader.jsx';
+import { t } from 'i18next';
 
 const emptySupplier = {
   type: 'supplier',
@@ -22,9 +23,9 @@ const emptySupplier = {
 };
 
 const businessTypes = [
-  { value: 'Manufacturer', label: 'Nhà sản xuất' },
-  { value: 'Distributor', label: 'Nhà phân phối' },
-  { value: 'Retailer', label: 'Nhà bán lẻ' },
+  { value: 'Manufacturer', label: t('partners.businessTypes.manufacturer') },
+  { value: 'Distributor', label: t('partners.businessTypes.distributor') },
+  { value: 'Retailer', label: t('partners.businessTypes.retailer') },
 ];
 
 export function SuppliersPage() {
