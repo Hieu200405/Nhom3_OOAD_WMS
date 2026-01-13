@@ -148,7 +148,7 @@ export const createDelivery = async (
     customerId: string;
     date: Date;
     expectedDate: Date;
-    lines: { productId: string; qty: number; priceOut: number; locationId: string }[];
+    lines: { productId: string; qty: number; priceOut: number; locationId: string; batch?: string }[];
     notes?: string;
   },
   actorId: string
@@ -181,14 +181,16 @@ export const createDelivery = async (
       productId: new Types.ObjectId(line.productId),
       qty: line.qty,
       priceOut: line.priceOut,
-      locationId: new Types.ObjectId(line.locationId)
+      locationId: new Types.ObjectId(line.locationId),
+      batch: line.batch?.trim() || undefined
     });
   }
 
   await ensureStock(finalLines.map((line) => ({
     productId: line.productId.toString(),
     locationId: line.locationId.toString(),
-    qty: line.qty
+    qty: line.qty,
+    batch: line.batch
   })));
 
   // Validate additional constraints (Qty limit, SLA)
@@ -220,7 +222,7 @@ export const updateDelivery = async (
   id: string,
   payload: Partial<{
     date: Date;
-    lines: { productId: string; qty: number; priceOut: number; locationId: string }[];
+    lines: { productId: string; qty: number; priceOut: number; locationId: string; batch?: string }[];
     notes?: string;
   }>,
   actorId: string
@@ -252,13 +254,15 @@ export const updateDelivery = async (
         productId: new Types.ObjectId(line.productId),
         qty: line.qty,
         priceOut: line.priceOut,
-        locationId: new Types.ObjectId(line.locationId)
+        locationId: new Types.ObjectId(line.locationId),
+        batch: line.batch?.trim() || undefined
       });
     }
     await ensureStock(finalLines.map((line) => ({
       productId: line.productId.toString(),
       locationId: line.locationId.toString(),
-      qty: line.qty
+      qty: line.qty,
+      batch: line.batch
     })));
     delivery.lines = finalLines;
   }

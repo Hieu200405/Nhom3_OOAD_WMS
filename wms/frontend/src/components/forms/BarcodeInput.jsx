@@ -4,7 +4,7 @@ import clsx from 'clsx';
 export function BarcodeInput({
   label,
   onScan,
-  placeholder = 'Scan hoặc nhập mã rồi Enter',
+  placeholder = 'Scan',
   className,
   ...props
 }) {

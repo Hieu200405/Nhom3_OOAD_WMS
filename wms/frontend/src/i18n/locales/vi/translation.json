@@ -19,7 +19,16 @@
     "total": "Tổng cộng",
     "lineItems": "Dòng hàng",
     "exportPdf": "Xuất PDF",
-    "reset": "Khôi phục dữ liệu mẫu"
+    "reset": "Khôi phục dữ liệu mẫu",
+    "sku": "SKU",
+    "isActive": "Hoạt động",
+    "notActive": "Tạm ẩn",
+    "exportExcel": "Xuất Excel",
+    "close": "Đóng",
+    "details": "Chi tiết",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "complete": "Hoàn tất"
   },
   "navigation": {
     "dashboard": "Tổng quan",
@@ -152,7 +161,14 @@
     "barcode": "Barcode/QR vị trí",
     "type": "Cấp",
     "name": "Tên",
-    "code": "Mã vị trí"
+    "code": "Mã vị trí",
+    "subtitle":"Quét mã vạch để chuyển đến vị trí ngay lập tức.",
+    "expandAll": "Mở rộng tất cả",
+    "collapseAll": "Thu gọn tất cả",
+    "title2": "Cấu trúc phân cấp",
+    "subtitle2": "Mở rộng các nhánh để xem các vị trí con.",
+    "mapView": "Xem bản đồ",
+    "addChild": "Thêm nút con"
   },
   "products": {
     "title": "Danh sách sản phẩm",
@@ -163,15 +179,36 @@
     "priceOut": "Giá bán",
     "category": "Danh mục",
     "create": "Thêm sản phẩm",
-    "categoryFilter": "Lọc theo danh mục"
+    "categoryFilter": "Lọc theo danh mục",
+    "allCategories": "Tất cả danh mục",
+    "printLabel": "In tem"
   },
   "categories": {
     "title": "Danh mục sản phẩm",
-    "create": "Thêm danh mục"
+    "create": "Thêm danh mục",
+    "description": "Mô tả"
   },
   "partners": {
     "suppliers": "Nhà cung cấp",
-    "customers": "Khách hàng"
+    "customers": "Khách hàng",
+    "suppliername": "Tên nhà cung cấp",
+    "contact": "Liên hệ",
+    "businessType": "Loại hình",
+    "subtitle": "Quản lý danh sách nhà cung cấp và thông tin liên hệ.",
+    "customername": "Tên khách hàng",
+    "customerType": "Loại khách",
+    "creditLimit": "Hạn mức nợ",
+    "paymentTerm": "Điều khoản thanh toán",
+    "customerSubtitle": "Quản lý danh sách khách hàng và hạn mức công nợ."
+  },
+   "inventory": {
+    "subtitle": "Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa.",
+    "quantity": "Số lượng tồn",
+    "product": "Sản phẩm",
+    "location": "Vị trí",
+    "viewLocation": "Xem vị trí",
+    "allCategories": "Tất cả danh mục",
+    "checkSmart": "Kiểm tra thông minh"
   },
   "receipts": {
     "title": "Phiếu nhập kho",
@@ -220,7 +257,9 @@
       "reject": "Từ chối",
       "supplierConfirm": "NCC xác nhận",
       "complete": "Hoàn tất"
-    }
+    },
+    "subtitle": "Quản lý phiếu nhập kho và quá trình chuyển đổi trạng thái.",
+    "supplierConfirm": "Nhà cung cấp xác nhận"
   },
   "deliveries": {
     "title": "Phiếu xuất kho",
@@ -239,7 +278,8 @@
     "prepare": "Chuẩn bị",
     "deliver": "Đã giao",
     "complete": "Hoàn tất",
-    "deliveryNote": "Phiếu xuất"
+    "deliveryNote": "Phiếu xuất",
+    "subtitle": "Quản lý phiếu xuất kho và quá trình chuyển đổi trạng thái."
   },
   "incidents": {
     "title": "Phiếu sự cố",

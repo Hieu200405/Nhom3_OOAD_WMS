@@ -278,7 +278,7 @@ export function ReceiptsPage() {
   };
 
   const columns = [
-    { key: 'code', header: 'Mã' },
+    { key: 'code', header: t('app.sku') },
     {
       key: 'supplierId',
       header: t('receipts.supplier'),
@@ -329,7 +329,7 @@ export function ReceiptsPage() {
             <ArrowRight className="h-3.5 w-3.5" />
             {t('receipts.detail')}
           </button>
-          {availableActions(row, user?.role).map((action) => (
+          {availableActions(row, user?.role, t).map((action) => (
             <RoleGuard key={action.status} roles={action.roles}>
               <button
                 type="button"
@@ -563,7 +563,7 @@ export function ReceiptsPage() {
   );
 }
 
-function availableActions(receipt, role) {
+function availableActions(receipt, role, t) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
   const actions = [];
 

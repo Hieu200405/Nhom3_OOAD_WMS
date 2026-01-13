@@ -237,7 +237,7 @@ export function WarehouseStructurePage() {
             {t("warehouse.title")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Quét mã vạch để chuyển đến vị trí ngay lập tức.
+            {t("warehouse.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -259,8 +259,8 @@ export function WarehouseStructurePage() {
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Cấu trúc phân cấp</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Mở rộng các nhánh để xem các vị trí con.</p>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("warehouse.title2")}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t("warehouse.subtitle2")}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -268,14 +268,14 @@ export function WarehouseStructurePage() {
                 onClick={expandAll}
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                Mở tất cả
+                {t("warehouse.expandAll")}
               </button>
               <button
                 type="button"
                 onClick={collapseAll}
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                Thu gọn tất cả
+                {t("warehouse.collapseAll")}
               </button>
             </div>
           </div>
@@ -309,7 +309,7 @@ export function WarehouseStructurePage() {
             onClick={() => setMapNode(null)}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
           >
-            Đóng
+            {t("app.close")}
           </button>
         }
       >
@@ -456,6 +456,7 @@ function WarehouseNodeRow({
   onViewMap,
   highlightId
 }) {
+  const { t } = useTranslation();
   const displayAddressParts = [node.address, node.ward, node.city, node.province].filter(Boolean);
   const fullAddress = displayAddressParts.join(', ');
   const hasChildren = Boolean(node.children && node.children.length > 0);
@@ -521,7 +522,7 @@ function WarehouseNodeRow({
             className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <Pencil className="h-3.5 w-3.5" />
-            Edit
+            {t("app.edit")}
           </button>
           <button
             type="button"
@@ -529,7 +530,7 @@ function WarehouseNodeRow({
             className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-100 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Delete
+            {t("app.delete")}
           </button>
           {node.type !== "bin" ? (
             <>
@@ -540,7 +541,7 @@ function WarehouseNodeRow({
                 title="Visual map"
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                Map view
+                {t("warehouse.mapView")}
               </button>
               <button
                 type="button"
@@ -548,7 +549,7 @@ function WarehouseNodeRow({
                 className="inline-flex items-center gap-1 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-200 dark:hover:bg-indigo-500/10"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add child
+                {t("warehouse.addChild")}
               </button>
             </>
           ) : null}

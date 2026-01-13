@@ -106,7 +106,7 @@ export function SuppliersPage() {
     <div className="space-y-5">
       <PageHeader
         title={t('partners.suppliers')}
-        description="Quản lý danh sách nhà cung cấp và thông tin liên hệ."
+        description={t('partners.subtitle')}
         actions={
           <button
             type="button"
@@ -122,14 +122,14 @@ export function SuppliersPage() {
       <DataTable
         data={suppliers}
         columns={[
-          { key: 'code', header: 'Mã NCC' },
-          { key: 'name', header: 'Tên nhà cung cấp' },
-          { key: 'contact', header: 'Liên hệ' },
-          { key: 'businessType', header: 'Loại hình' },
+          { key: 'code', header: t('app.sku') },
+          { key: 'name', header: t('partners.suppliername') },
+          { key: 'contact', header: t('partners.contact') },
+          { key: 'businessType', header: t('partners.businessType') },
           {
             key: 'isActive',
-            header: 'Trạng thái',
-            render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
+            header: t('app.status'),
+            render: (val) => val ? <span className="text-green-600 text-xs font-medium">{t('app.isActive')}</span> : <span className="text-slate-400 text-xs">{t('app.notActive')}</span>
           },
           {
             key: 'actions',

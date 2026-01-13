@@ -113,7 +113,7 @@ export function CustomersPage() {
     <div className="space-y-5">
       <PageHeader
         title={t('partners.customers')}
-        description="Quản lý danh sách khách hàng và hạn mức công nợ."
+        description={t('partners.customerSubtitle')}
         actions={
           <button
             type="button"
@@ -129,15 +129,15 @@ export function CustomersPage() {
       <DataTable
         data={customers}
         columns={[
-          { key: 'code', header: 'Mã KH' },
-          { key: 'name', header: 'Tên Khách Hàng' },
-          { key: 'customerType', header: 'Loại khách' },
-          { key: 'creditLimit', header: 'Hạn mức nợ', render: (val) => val?.toLocaleString() ?? 0 },
-          { key: 'paymentTerm', header: 'Điều khoản TT' },
+          { key: 'code', header: t('app.sku') },
+          { key: 'name', header: t('partners.customername') },
+          { key: 'customerType', header: t('partners.customerType') },
+          { key: 'creditLimit', header: t('partners.creditLimit'), render: (val) => val?.toLocaleString() ?? 0 },
+          { key: 'paymentTerm', header: t('partners.paymentTerm') },
           {
             key: 'isActive',
-            header: 'Trạng thái',
-            render: (val) => val ? <span className="text-green-600 text-xs font-medium">Hoạt động</span> : <span className="text-slate-400 text-xs">Ngừng GD</span>
+            header: t('app.status'),
+            render: (val) => val ? <span className="text-green-600 text-xs font-medium">{t('app.isActive')}</span> : <span className="text-slate-400 text-xs">{t('app.notActive')}</span>
           },
           {
             key: 'actions',

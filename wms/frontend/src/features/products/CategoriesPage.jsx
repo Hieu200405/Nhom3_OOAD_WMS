@@ -108,16 +108,16 @@ export function CategoriesPage() {
       <DataTable
         data={categories}
         columns={[
-          { key: 'code', header: 'Mã' },
+          { key: 'code', header: t('app.sku') },
           { key: 'name', header: t('products.category') },
-          { key: 'description', header: 'Mô tả' },
+          { key: 'description', header: t('categories.description') },
           {
             key: 'isActive',
-            header: 'Trạng thái',
+            header: t('app.status'),
             render: (val) => (
               <span className={`inline-flex items-center gap-1 text-xs font-medium ${val ? 'text-green-600' : 'text-slate-400'}`}>
                 {val ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                {val ? 'Hoạt động' : 'Tạm ẩn'}
+                {val ? t('app.isActive') : t('app.notActive')}
               </span>
             )
           },
