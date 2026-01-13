@@ -61,7 +61,8 @@ const createSchema = z.object({
   items: itemsSchema,
   totalValue: z.coerce.number().nonnegative().optional(),
   boardMembers: parseStringArray.optional(),
-  boardRequired: z.coerce.boolean().optional()
+  boardRequired: z.coerce.boolean().optional(),
+  minutesFileUrl: z.string().optional()
 });
 
 const updateSchema = z.object({

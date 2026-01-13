@@ -23,7 +23,7 @@ export interface Disposal {
   approvalNotes?: string;
   attachments?: string[]; // URLs to disposal documents
   photos?: string[]; // URLs to photos (before/after)
-  createdBy: Types.ObjectId;
+  createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,7 +56,7 @@ const disposalSchema = new Schema<DisposalDocument>(
     approvalNotes: { type: String },
     attachments: [{ type: String }],
     photos: [{ type: String }],
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' }
   },
   { timestamps: true }
 );

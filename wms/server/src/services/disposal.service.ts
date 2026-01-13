@@ -36,6 +36,7 @@ export const listDisposals = async (query: ListQuery) => {
       code: item.code,
       status: item.status,
       reason: item.reason,
+      createdAt: item.createdAt,
       totalValue: item.totalValue,
       boardRequired: item.boardRequired,
       boardMembers: item.boardMembers,

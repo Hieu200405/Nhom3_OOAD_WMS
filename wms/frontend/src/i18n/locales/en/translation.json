@@ -299,7 +299,14 @@
     "title": "Disposals",
     "create": "Create disposal",
     "council": "Disposal council",
-    "attachment": "Disposal report"
+    "attachment": "Disposal report",
+    "reason": "Disposal reason",
+    "reasons": {
+      "expired": "Expired",
+      "damaged": "Damaged",
+      "lost": "Lost"
+    },
+    "subtitle": "Dispose expired, damaged, or lost stock after manager approval."
   },
   "reports": {
     "title": "Reports",
@@ -363,3 +370,5 @@
     "statusChanged": "Status updated"
   }
 }
+
+
