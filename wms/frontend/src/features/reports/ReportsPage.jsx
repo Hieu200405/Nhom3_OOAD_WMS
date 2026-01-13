@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { DataTable } from '../../components/DataTable.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
+import { Skeleton } from '../../components/Skeleton.jsx';
 
 export function ReportsPage() {
     const { t } = useTranslation();
@@ -62,11 +63,42 @@ export function ReportsPage() {
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
     const renderOverview = () => {
-        if (!data) return null;
+        if (loading || Array.isArray(data)) {
+            return (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                <Skeleton className="h-4 w-24 mb-2" />
+                                <Skeleton className="h-8 w-16" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div className="h-80 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                            <Skeleton className="h-6 w-48 mb-6" />
+                            <Skeleton className="h-full w-full rounded-lg" />
+                        </div>
+                        <div className="h-80 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                            <Skeleton className="h-6 w-32 mb-6" />
+                            <Skeleton className="h-full w-full rounded-full" />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (!data) return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <FileDown className="h-12 w-12 mb-4 opacity-50" />
+                <p>No report data available</p>
+            </div>
+        );
+
         const { counts, totalInventoryValue, revenueChart, inventoryStatus } = data;
 
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard title="Total Inventory Value" value={formatCurrency(totalInventoryValue)} color="bg-blue-50 text-blue-700" />
                     <StatCard title="Products" value={counts?.products} color="bg-indigo-50 text-indigo-700" />
@@ -76,24 +108,33 @@ export function ReportsPage() {
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                        <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Revenue vs Expenses (6 Months)</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <span className="w-1 h-6 bg-indigo-500 rounded-full"></span>
+                            Revenue vs Expenses (6 Months)
+                        </h3>
                         <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={revenueChart}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.5} />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} dx={-10} />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
                                     <Legend />
-                                    <Bar dataKey="income" fill="#10b981" name="Revenue" />
-                                    <Bar dataKey="expense" fill="#ef4444" name="Expenses" />
+                                    <Bar dataKey="income" fill="#10b981" name="Revenue" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="expense" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                        <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Inventory Status</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
+                            Inventory Status
+                        </h3>
                         <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -101,17 +142,17 @@ export function ReportsPage() {
                                         data={inventoryStatus}
                                         cx="50%"
                                         cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={80}
-                                        fill="#8884d8"
+                                        innerRadius={60}
+                                        outerRadius={100}
+                                        paddingAngle={5}
                                         dataKey="value"
                                     >
                                         {inventoryStatus?.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                    <Legend iconType="circle" />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -121,98 +162,250 @@ export function ReportsPage() {
         );
     };
 
-    const renderInventory = () => (
-        <DataTable
-            data={data || []}
-            isLoading={loading}
-            columns={[
-                { key: 'sku', header: 'SKU' },
-                { key: 'name', header: 'Product Name' },
-                { key: 'totalQty', header: 'Total Quantity' },
-                { key: 'minStock', header: 'Min Stock' },
-                {
-                    key: 'status',
-                    header: 'Status',
-                    render: (val) => val === 'belowMin' ? <span className="text-red-600 font-bold">Low Stock</span> : <span className="text-green-600">OK</span>
-                }
-            ]}
-        />
-    );
-
-    const renderInbound = () => (
-        <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Daily Inbound Volume</h3>
-                <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data || []}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis yAxisId="left" />
-                            <YAxis yAxisId="right" orientation="right" />
-                            <Tooltip />
-                            <Legend />
-                            <Line yAxisId="left" type="monotone" dataKey="totalQty" stroke="#8884d8" activeDot={{ r: 8 }} name="Quantity" />
-                            <Line yAxisId="right" type="monotone" dataKey="documents" stroke="#82ca9d" name="Receipts" />
-                        </LineChart>
-                    </ResponsiveContainer>
+    const renderInventory = () => {
+        if (loading || !Array.isArray(data)) return (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-96 w-full" />
                 </div>
             </div>
-            <DataTable
-                data={data || []}
-                isLoading={loading}
-                columns={[
-                    { key: 'date', header: 'Date', render: (val) => formatDate(val) },
-                    { key: 'totalQty', header: 'Total Quantity' },
-                    { key: 'documents', header: 'Receipt Count' }
-                ]}
-            />
-        </div>
-    );
+        );
 
-    const renderOutbound = () => (
-        <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Daily Outbound Volume</h3>
-                <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data || []}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis yAxisId="left" />
-                            <YAxis yAxisId="right" orientation="right" />
-                            <Tooltip />
-                            <Legend />
-                            <Bar yAxisId="left" dataKey="totalQty" fill="#8884d8" name="Quantity" />
-                            <Bar yAxisId="right" dataKey="documents" fill="#82ca9d" name="Deliveries" />
-                        </BarChart>
-                    </ResponsiveContainer>
+        if (!data || data.length === 0) return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <FileDown className="h-12 w-12 mb-4 opacity-50" />
+                <p>No inventory data available</p>
+            </div>
+        );
+
+        // Calculate summaries
+        const totalItems = data.length;
+        const lowStock = data.filter(i => i.status === 'belowMin').length;
+        const outOfStock = data.filter(i => i.totalQty === 0).length;
+        const totalValue = data.reduce((acc, curr) => acc + (curr.totalQty * (curr.price || 0)), 0);
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard title="Total SKUs" value={totalItems} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title="Low Stock Items" value={lowStock} color="bg-orange-50 text-orange-700" />
+                    <StatCard title="Out of Stock" value={outOfStock} color="bg-red-50 text-red-700" />
+                    <StatCard title="Stock Value (Est)" value={formatCurrency(totalValue)} color="bg-emerald-50 text-emerald-700" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
+                    <DataTable
+                        data={data}
+                        isLoading={loading}
+                        columns={[
+                            { key: 'sku', header: 'SKU' },
+                            { key: 'name', header: 'Product Name' },
+                            { key: 'totalQty', header: 'Total Quantity' },
+                            { key: 'minStock', header: 'Min Stock' },
+                            {
+                                key: 'status',
+                                header: 'Status',
+                                render: (val) => val === 'belowMin' ?
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Low Stock</span> :
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">OK</span>
+                            }
+                        ]}
+                    />
                 </div>
             </div>
-            <DataTable
-                data={data || []}
-                isLoading={loading}
-                columns={[
-                    { key: 'date', header: 'Date', render: (val) => formatDate(val) },
-                    { key: 'totalQty', header: 'Total Quantity' },
-                    { key: 'documents', header: 'Delivery Count' }
-                ]}
-            />
-        </div>
-    );
+        );
+    };
 
-    const renderStocktake = () => (
-        <DataTable
-            data={data || []}
-            isLoading={loading}
-            columns={[
-                { key: 'code', header: 'Code' },
-                { key: 'date', header: 'Date', render: (val) => formatDate(val) },
-                { key: 'status', header: 'Status' },
-                { key: 'discrepancies', header: 'Total Discrepancies' }
-            ]}
-        />
-    );
+    const renderInbound = () => {
+        if (loading || !Array.isArray(data)) return (
+            <div className="space-y-6">
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-80 w-full" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </div>
+        );
+
+        if (!data || data.length === 0) return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <FileDown className="h-12 w-12 mb-4 opacity-50" />
+                <p>No inbound data available</p>
+            </div>
+        );
+
+        const totalVolume = data.reduce((acc, curr) => acc + (curr.totalQty || 0), 0);
+        const totalReceipts = data.reduce((acc, curr) => acc + (curr.documents || 0), 0);
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <StatCard title="Total Inbound Volume" value={totalVolume} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title="Total Receipts Processed" value={totalReceipts} color="bg-emerald-50 text-emerald-700" />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <h3 className="mb-6 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span className="w-1 h-6 bg-indigo-500 rounded-full"></span>
+                        Daily Inbound Volume
+                    </h3>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.5} />
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} dy={10} minTickGap={30} tickFormatter={(val) => formatDate(val)} />
+                                <YAxis yAxisId="left" axisLine={false} tickLine={false} dx={-10} />
+                                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} dx={10} />
+                                <Tooltip
+                                    cursor={{ stroke: '#6366f1', strokeWidth: 1 }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Legend />
+                                <Line yAxisId="left" type="monotone" dataKey="totalQty" stroke="#4f46e5" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} name="Quantity" dot={false} />
+                                <Line yAxisId="right" type="monotone" dataKey="documents" stroke="#10b981" strokeWidth={3} name="Receipts" dot={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
+                    <DataTable
+                        data={data}
+                        isLoading={loading}
+                        columns={[
+                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
+                            { key: 'totalQty', header: 'Total Quantity' },
+                            { key: 'documents', header: 'Receipt Count' }
+                        ]}
+                    />
+                </div>
+            </div>
+        );
+    };
+
+    const renderOutbound = () => {
+        if (loading || !Array.isArray(data)) return (
+            <div className="space-y-6">
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-80 w-full" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </div>
+        );
+
+        if (!data || data.length === 0) return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <FileDown className="h-12 w-12 mb-4 opacity-50" />
+                <p>No outbound data available</p>
+            </div>
+        );
+
+        const totalVolume = data.reduce((acc, curr) => acc + (curr.totalQty || 0), 0);
+        const totalDeliveries = data.reduce((acc, curr) => acc + (curr.documents || 0), 0);
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <StatCard title="Total Outbound Volume" value={totalVolume} color="bg-purple-50 text-purple-700" />
+                    <StatCard title="Total Deliveries" value={totalDeliveries} color="bg-blue-50 text-blue-700" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <h3 className="mb-6 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
+                        Daily Outbound Volume
+                    </h3>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.5} />
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} dy={10} minTickGap={30} tickFormatter={(val) => formatDate(val)} />
+                                <YAxis yAxisId="left" axisLine={false} tickLine={false} dx={-10} />
+                                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} dx={10} />
+                                <Tooltip
+                                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="totalQty" fill="#8884d8" name="Quantity" radius={[4, 4, 0, 0]} />
+                                <Bar yAxisId="right" dataKey="documents" fill="#82ca9d" name="Deliveries" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
+                    <DataTable
+                        data={data}
+                        isLoading={loading}
+                        columns={[
+                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
+                            { key: 'totalQty', header: 'Total Quantity' },
+                            { key: 'documents', header: 'Delivery Count' }
+                        ]}
+                    />
+                </div>
+            </div>
+        );
+    };
+
+    const renderStocktake = () => {
+        if (loading || !Array.isArray(data)) return (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <Skeleton className="h-96 w-full" />
+                </div>
+            </div>
+        );
+
+        if (!data || data.length === 0) return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <FileDown className="h-12 w-12 mb-4 opacity-50" />
+                <p>No stocktake data available</p>
+            </div>
+        );
+
+        const totalDiscrepancies = data.reduce((acc, curr) => acc + (curr.discrepancies || 0), 0);
+        const completedChecks = data.filter(i => i.status === 'Completed').length;
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <StatCard title="Total Discrepancies" value={totalDiscrepancies} color="bg-rose-50 text-rose-700" />
+                    <StatCard title="Completed Checks" value={completedChecks} color="bg-indigo-50 text-indigo-700" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
+                    <DataTable
+                        data={data}
+                        isLoading={loading}
+                        columns={[
+                            { key: 'code', header: 'Code' },
+                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
+                            {
+                                key: 'status',
+                                header: 'Status',
+                                render: (val) => (
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${val === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {val}
+                                    </span>
+                                )
+                            },
+                            { key: 'discrepancies', header: 'Total Discrepancies' }
+                        ]}
+                    />
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">

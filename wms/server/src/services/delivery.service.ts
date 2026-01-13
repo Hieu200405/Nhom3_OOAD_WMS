@@ -458,10 +458,20 @@ export const deleteDelivery = async (id: string, actorId: string) => {
   return true;
 };
 
-export const exportDeliveriesExcel = async (query: ListQuery) => {
+export const exportDeliveriesExcel = async (query: ListQuery & { startDate?: string; endDate?: string }) => {
   const filter: Record<string, unknown> = {};
   if (query.status) filter.status = query.status;
   if (query.customerId) filter.customerId = new Types.ObjectId(query.customerId);
+
+  if (query.startDate || query.endDate) {
+    filter.date = {};
+    if (query.startDate) (filter.date as any).$gte = new Date(query.startDate);
+    if (query.endDate) {
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      (filter.date as any).$lte = end;
+    }
+  }
 
   const items = await DeliveryModel.find(filter)
     .populate('customerId', 'name')

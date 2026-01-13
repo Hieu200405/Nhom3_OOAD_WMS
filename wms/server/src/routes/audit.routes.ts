@@ -9,5 +9,6 @@ router.use(auth);
 router.use(requireRole('Admin')); // Only admins can see audit logs
 
 router.get('/', controller.list);
+router.get('/export', controller.exportData);
 
 export default router;

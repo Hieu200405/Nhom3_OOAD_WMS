@@ -272,20 +272,7 @@ export function DeliveriesPage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const blob = await apiClient('/deliveries/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Deliveries-List-${Date.now()}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (e) {
-      toast.error('Failed to export deliveries');
-    }
-  };
+
 
   const columns = [
     { key: 'code', header: 'Mã' },
@@ -362,6 +349,36 @@ export function DeliveriesPage() {
     },
   ];
 
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportRange, setExportRange] = useState({ startDate: '', endDate: '' });
+
+  const handleExport = () => {
+    setExportOpen(true);
+  };
+
+  const processExport = async () => {
+    try {
+      const params = {};
+      if (exportRange.startDate) params.startDate = exportRange.startDate;
+      if (exportRange.endDate) params.endDate = exportRange.endDate;
+
+      const blob = await apiClient('/deliveries/export', {
+        responseType: 'blob',
+        params
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Deliveries-List-${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      setExportOpen(false);
+    } catch (e) {
+      toast.error('Failed to export deliveries');
+    }
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -416,6 +433,7 @@ export function DeliveriesPage() {
         }
       >
         <form id="delivery-form" className="space-y-4" onSubmit={handleSubmit}>
+          {/* ... existing form content ... */}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Mã phiếu (Tự động)"
@@ -515,59 +533,51 @@ export function DeliveriesPage() {
       </Modal>
 
       <Modal
-        open={rejectOpen}
-        onClose={() => {
-          setRejectOpen(false);
-          setRejectNote('');
-          setRejectTarget(null);
-        }}
-        title="Từ chối phiếu xuất"
-        maxWidth="max-w-xl"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        title="Export options"
+        maxWidth="max-w-md"
         actions={
           <>
             <button
-              type="button"
-              onClick={() => {
-                setRejectOpen(false);
-                setRejectNote('');
-                setRejectTarget(null);
-              }}
+              onClick={() => setExportOpen(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               {t('app.cancel')}
             </button>
             <button
-              type="button"
-              onClick={() => {
-                if (!rejectTarget) return;
-                transition(rejectTarget, DeliveryStatus.REJECTED, rejectNote.trim());
-                setRejectOpen(false);
-                setRejectNote('');
-                setRejectTarget(null);
-              }}
-              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500"
+              onClick={processExport}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500"
             >
-              Reject
+              {t('app.export')}
             </button>
           </>
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Bạn có thể ghi chú lý do từ chối để tiện theo dõi sau này.
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Chọn khoảng thời gian để xuất dữ liệu (để trống để xuất toàn bộ).
           </p>
-          <label className="flex flex-col gap-2 text-sm">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1 leading-none">
-              Ghi chú (tùy chọn)
-            </span>
-            <textarea
-              rows={4}
-              value={rejectNote}
-              onChange={(event) => setRejectNote(event.target.value)}
-              placeholder="VD: Sai khách hàng, sai số lượng..."
-              className="input min-h-[96px] resize-y"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Từ ngày</label>
+              <input
+                type="date"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700"
+                value={exportRange.startDate}
+                onChange={(e) => setExportRange(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Đến ngày</label>
+              <input
+                type="date"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700"
+                value={exportRange.endDate}
+                onChange={(e) => setExportRange(prev => ({ ...prev, endDate: e.target.value }))}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

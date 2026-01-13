@@ -84,9 +84,11 @@ export function UsersPage() {
           toast.error('Vui lòng nhập mật khẩu');
           return;
         }
+        // Remove isActive from create payload since creation schema doesn't accept it
+        const { isActive, ...createPayload } = form;
         await apiClient('/users', {
           method: 'POST',
-          body: form
+          body: createPayload
         });
         toast.success('Tạo tài khoản thành công');
       }
@@ -94,7 +96,15 @@ export function UsersPage() {
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Có lỗi xảy ra');
+      if (error.details && Array.isArray(error.details)) {
+        // Show specific validation errors
+        error.details.forEach(issue => {
+          const field = issue.path.join('.');
+          toast.error(`${field}: ${issue.message}`);
+        });
+      } else {
+        toast.error(error.message || 'Có lỗi xảy ra');
+      }
     }
   };
 
@@ -260,7 +270,8 @@ export function UsersPage() {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
-              placeholder="********"
+              minLength={8}
+              placeholder="Min 8 chars"
             />
           )}
 
