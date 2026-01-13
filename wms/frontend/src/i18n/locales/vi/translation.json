@@ -350,7 +350,14 @@
     "title": "Phiếu hủy hàng",
     "create": "Tạo phiếu hủy",
     "council": "Hội đồng hủy",
-    "attachment": "Biên bản hủy"
+    "attachment": "Biên bản hủy",
+    "reason": "Lý do hủy",
+    "reasons": {
+      "expired": "Hết hạn",
+      "damaged": "Hỏng hóc",
+      "lost": "Mất mát"
+    },
+    "subtitle": "Xử lý hủy hàng hết hạn, hỏng hóc hoặc mất mát sau khi được quản lý phê duyệt."
   },
   "reports": {
     "title": "Báo cáo kho",
@@ -450,3 +457,7 @@
     "statusChanged": "Đã cập nhật trạng thái"
   }
 }
+
+
+
+

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+﻿import { useMemo, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
@@ -80,8 +80,12 @@ export function DisposalsPage() {
   }, [fetchData]);
 
   const reasons = useMemo(
-    () => DisposalReasons.map((reason) => ({ value: reason, label: reason })),
-    [],
+    () =>
+      DisposalReasons.map((reason) => ({
+        value: reason,
+        label: t(`disposals.reasons.${reason}`, reason)
+      })),
+    [t]
   );
 
   const locationMap = useMemo(() => {
@@ -90,17 +94,30 @@ export function DisposalsPage() {
     return map;
   }, [locations]);
 
+  const productOptions = useMemo(
+    () =>
+      products
+        .filter(Boolean)
+        .map((p) => ({
+          value: String(p.id ?? p._id ?? ''),
+          label: `${p.sku ?? ''} - ${p.name ?? ''}`.trim()
+        }))
+        .filter((option) => option.value),
+    [products]
+  );
+
   // Helper to get available locations for a product
   const getProductInventory = (productId) => {
-    return inventory.filter(i => i.productId === productId && i.quantity > 0)
-      .map(i => {
+    return inventory.filter(i => String(i.productId) === String(productId) && i.quantity > 0)
+      .map((i) => {
         const loc = locationMap.get(i.locationId);
         return {
-          value: i.locationId,
+          value: String(i.locationId ?? ''),
           label: `${loc ? loc.code : 'Unknown'} (Qty: ${i.quantity})`,
           quantity: i.quantity
         };
-      });
+      })
+      .filter((option) => option.value);
   };
 
   const totalValue = useMemo(() => {
@@ -134,11 +151,13 @@ export function DisposalsPage() {
       return;
     }
 
-    // Check stock client side
-    for (const line of items) {
-      const inv = inventory.find(i => i.productId === line.productId && i.locationId === line.locationId);
-      if (!inv || inv.quantity < line.qty) {
-        toast.error('Insufficient stock for some items');
+    if (totalValue > HIGH_VALUE_THRESHOLD) {
+      if (!form.council.trim()) {
+        toast.error('Vui lòng nhập hội đồng hủy');
+        return;
+      }
+      if (!form.attachment.trim()) {
+        toast.error('Vui lòng nhập biên bản hủy');
         return;
       }
     }
@@ -149,6 +168,7 @@ export function DisposalsPage() {
       items: items,
       totalValue: totalValue,
       boardMembers: form.council ? form.council.split(',').map(s => s.trim()) : undefined,
+      minutesFileUrl: form.attachment?.trim() || undefined,
       // boardRequired? Logic based on threshold.
       boardRequired: totalValue > HIGH_VALUE_THRESHOLD
     };
@@ -231,12 +251,15 @@ export function DisposalsPage() {
             {t('disposals.title')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Dispose expired, damaged, or lost stock after manager approval.
+            {t('disposals.subtitle')}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
+          <button
+            type="button"
+            onClick={() => {
+              setForm(defaultForm);
+              setOpen(true);
+            }}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
         >
           <Plus className="h-4 w-4" />
@@ -248,8 +271,12 @@ export function DisposalsPage() {
         data={disposals}
         isLoading={loading}
         columns={[
-          { key: 'code', header: 'Mã' },
-          { key: 'reason', header: t('disposals.reason') },
+          { key: 'code', header: t('app.sku') },
+          {
+            key: 'reason',
+            header: t('disposals.reason'),
+            render: (value) => t(`disposals.reasons.${value}`, value)
+          },
           { key: 'createdAt', header: t('deliveries.date'), render: (value) => formatDate(value) },
           { key: 'status', header: t('app.status'), render: (value) => <StatusBadge status={value} /> },
           { key: 'totalValue', header: t('app.total'), render: (value) => formatCurrency(value ?? 0) },
@@ -259,7 +286,7 @@ export function DisposalsPage() {
             sortable: false,
             render: (_, row) => (
               <div className="flex items-center gap-2">
-                {disposalActions(row).map((action) => (
+                {disposalActions(row, t).map((action) => (
                   <RoleGuard key={action.status} roles={action.roles}>
                     <button
                       type="button"
@@ -328,38 +355,48 @@ export function DisposalsPage() {
                 label={t('disposals.attachment')}
                 value={form.attachment}
                 onChange={(event) => setForm((prev) => ({ ...prev, attachment: event.target.value }))}
-                placeholder="Disposal report link (optional)"
+                placeholder="Link (optional)"
               />
             </div>
           ) : null}
 
           <div className="space-y-3">
-            <div className="font-medium text-sm">Products</div>
+            <div className="font-medium text-sm">Các sản phẩm</div>
             {form.items.map((item, index) => (
               <div key={index} className="p-3 border rounded-xl grid md:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/50">
                 <div className="md:col-span-2">
                   <Select
-                    label="Product"
+                    label="Sản phẩm"
                     value={item.productId}
-                    onChange={(e) => updateItem(index, { productId: e.target.value, locationId: '' })}
-                    options={products.map(p => ({ value: p.id, label: `${p.sku} - ${p.name}` }))}
+                    onChange={(e) => {
+                      const productId = String(e.target.value);
+                      const product = products.find((p) => String(p.id ?? p._id ?? '') === productId);
+                      updateItem(index, {
+                        productId,
+                        locationId: '',
+                        value: product?.priceIn || 0
+                      });
+                    }}
+                    options={productOptions}
+                    placeholder="Chọn sản phẩm"
                   />
                 </div>
                 <div className="md:col-span-2">
                   <Select
-                    label="Location/Batch"
+                    label="Lô"
                     value={item.locationId}
-                    onChange={(e) => updateItem(index, { locationId: e.target.value })}
+                    onChange={(e) => updateItem(index, { locationId: String(e.target.value) })}
                     options={getProductInventory(item.productId)}
+                    placeholder="Chọn lô"
                     disabled={!item.productId}
                   />
                 </div>
-                <NumberInput label="Qty" value={item.quantity} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} min={1} />
-                <NumberInput label="Est. Value" value={item.value} onChange={(e) => updateItem(index, { value: Number(e.target.value) })} />
-                <button type="button" onClick={() => removeItem(index)} className="text-red-500">Remove</button>
+                <NumberInput label="Số lượng" value={item.quantity} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} min={1} />
+                <NumberInput label="Đơn giá" value={item.value} onChange={(e) => updateItem(index, { value: Number(e.target.value) })} />
+                <button type="button" onClick={() => removeItem(index)} className="text-red-500">Xóa</button>
               </div>
             ))}
-            <button type="button" onClick={addItem} className="text-indigo-600">+ Add Item</button>
+            <button type="button" onClick={addItem} className="text-indigo-600">+ Thêm sản phẩm</button>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
@@ -371,7 +408,7 @@ export function DisposalsPage() {
   );
 }
 
-function disposalActions(record) {
+function disposalActions(record, t) {
   const managerRoles = [Roles.ADMIN, Roles.MANAGER];
 
   // Backend statuses? 
@@ -391,9 +428,9 @@ function disposalActions(record) {
       // Route doesn't have 'submit'. It has 'transition' to 'approved'.
       // Creating creates in Draft? Or Pending?
       // Controller likely defaults to Draft.
-      return [{ status: 'approved', label: 'Approve', roles: managerRoles }];
+      return [{ status: 'approved', label: t('app.approve'), roles: managerRoles }];
     case 'approved':
-      return [{ status: 'completed', label: 'Complete', roles: managerRoles }];
+      return [{ status: 'completed', label: t('app.complete'), roles: managerRoles }];
     default:
       return [];
   }
