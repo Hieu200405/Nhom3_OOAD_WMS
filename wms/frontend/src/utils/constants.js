@@ -22,9 +22,8 @@ export const DeliveryStatus = {
 };
 
 export const StocktakingStatus = {
-  DRAFT: 'draft',
-  APPROVED: 'approved',
-  APPLIED: 'applied',
+  PASS: 'pass',
+  DIFF: 'diff',
 };
 
 export const IncidentStatus = {
