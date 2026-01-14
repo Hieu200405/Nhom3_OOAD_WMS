@@ -27,13 +27,14 @@ export const authService = {
         body: { email: username, password },
       });
 
+      const data = res.data || res;
       const payload = {
-        token: res.data.accessToken,
+        token: data.accessToken,
         user: {
-          id: res.data.user.id,
-          username: res.data.user.email ? res.data.user.email.split('@')[0] : 'user',
-          role: res.data.user.role,
-          fullName: res.data.user.fullName,
+          id: data.user.id,
+          username: data.user.email ? data.user.email.split('@')[0] : 'user',
+          role: data.user.role,
+          fullName: data.user.fullName,
         }
       };
       persistAuth(payload);
