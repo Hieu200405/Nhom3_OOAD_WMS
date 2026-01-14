@@ -68,9 +68,43 @@ npm run dev
 *   **Swagger Docs:** http://localhost:4000/api-docs
 
 ## 🐳 Chạy với Docker
+
+Hệ thống được tối ưu hóa để chạy bằng Docker Compose.
+
+### 1. Khởi động các dịch vụ
 ```bash
-npm run docker:up
+cd wms
+docker compose up -d --build
 ```
+
+### 2. Thiết lập dữ liệu ban đầu
+Sau khi các container đã chạy (đặc biệt là MongoDB), bạn cần chạy lệnh seed để có dữ liệu test:
+```bash
+npm run seed
+```
+
+### 3. Lưu ý về Cổng (Ports)
+*   **Frontend:** http://localhost:5173
+*   **Backend API:** http://localhost:4000
+*   **MongoDB (Docker):** Chạy trên cổng **27018** (để tránh xung đột nếu máy bạn đã cài MongoDB ở cổng 27017).
+    *   *Lưu ý:* Nếu bạn chạy ứng dụng ở chế độ `dev` (không docker) và muốn kết nối tới MongoDB của Docker, hãy sửa `MONGODB_URI` trong `server/.env` thành `mongodb://127.0.0.1:27018/wms`.
+
+## 🛡️ Các quy tắc nghiệp vụ mới (Business Rules)
+
+Hệ thống đã được cập nhật các quy tắc bảo mật và toàn vẹn dữ liệu:
+
+### 1. Quản lý Sản phẩm & Giá
+*   **Ràng buộc giá:** Giá bán (`priceOut`) buộc phải **lớn hơn** giá nhập (`priceIn`). Hệ thống sẽ báo lỗi nếu vi phạm.
+*   **Tự động điền giá:** Khi tạo Phiếu xuất, hệ thống tự động điền `Giá xuất` theo `Giá bán` đã quy định của sản phẩm.
+
+### 2. Toàn vẹn dữ liệu (Referential Integrity)
+Để đảm bảo lịch sử kho và báo cáo tài chính, hệ thống chặn xóa các đối tượng sau nếu có dữ liệu liên quan:
+*   **Sản phẩm:** Không thể xóa nếu còn tồn kho (qty > 0) hoặc có trong các phiếu nhập/xuất chưa hoàn tất.
+*   **Đối tác (NCC/Khách hàng):** Không thể xóa nếu đang có phiếu nhập/xuất dở dang hoặc còn công nợ chưa thanh toán.
+*   **Danh mục:** Không thể xóa nếu còn sản phẩm thuộc danh mục đó.
+
+### 3. Quy trình Trả hàng (RMA)
+*   Chỉ được phép tạo Phiếu trả hàng cho các Phiếu xuất hoặc Phiếu nhập đã ở trạng thái **Hoàn tất (Completed)**.
 
 ## 🧪 Testing & Quality Assurance
 
