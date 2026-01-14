@@ -288,38 +288,42 @@
   },
   "incidents": {
     "title": "Phiếu sự cố",
+    "subtitle": "Ghi nhận giao thiếu, hỏng hóc, giao chậm hoặc từ chối của khách hàng và lưu lại hướng xử lý tiếp theo.",
     "type": "Loại sự cố",
+    "selectType": "Chọn loại sự cố",
     "note": "Nội dung",
     "action": "Hướng xử lý",
     "create": "Ghi nhận sự cố",
-    "refType": "Reference type",
-    "refId": "Reference id",
-    "product": "Product",
-    "quantity": "Quantity",
-    "typePlaceholder": "Select incident type",
-    "actionPlaceholder": "Select follow-up action",
-    "refPlaceholder": "Receipt or delivery code",
-    "addLine": "Add product line",
-    "removeLine": "Remove line",
+    "refType": "Loại hình",
+    "refId": "ID tham chiếu",
+    "date": "Ngày tạo",
+    "product": "Sản phẩm",
+    "productPlaceholder": "Chọn sản phẩm",
+    "quantity": "Số lượng",
+    "typePlaceholder": "Chọn loại sự cố",
+    "actionPlaceholder": "Chọn hướng xử lý",
+    "refPlaceholder": "Mã phiếu nhập hoặc xuất",
+    "addLine": "Thêm sản phẩm",
+    "removeLine": "Xóa",
     "refTypes": {
-      "receipt": "Receipt",
-      "delivery": "Delivery"
+      "receipt": "Nhập kho",
+      "delivery": "Xuất kho"
     },
     "types": {
-      "shortage": "Shortage",
-      "late": "Late delivery",
-      "damaged": "Damaged",
-      "rejected": "Rejected"
+      "shortage": "Giao thiếu",
+      "late": "Giao chậm",
+      "damaged": "Hỏng hóc",
+      "rejected": "Từ chối"
     },
     "actions": {
-      "replenish": "Replenish",
-      "return": "Return",
-      "refund": "Refund"
+      "replenish": "Điều chỉnh tồn kho",
+      "return": "Trả hàng",
+      "refund": "Hoàn tiền"
     },
     "statusValues": {
-      "open": "Open",
-      "inProgress": "In progress",
-      "resolved": "Resolved"
+      "open": "Mở",
+      "inProgress": "Đang xử lý",
+      "resolved": "Đã xử lý"
     }
   },
   "stocktaking": {
@@ -328,13 +332,13 @@
     "adjustments": "Phiếu điều chỉnh",
     "difference": "Chênh lệch",
     "apply": "Áp tồn",
-    "approve": "Approve stocktake",
-    "approvedBy": "Approved by",
-    "approvedAt": "Approved at",
-    "minutes": "Minutes",
-    "attachments": "Attachments",
-    "minutesPlaceholder": "Approval minutes or notes",
-    "attachmentsPlaceholder": "Attachment URLs, comma-separated"
+    "approve": "Duyệt kiểm kê",
+    "approvedBy": "Duyệt bởi",
+    "approvedAt": "Duyệt lúc",
+    "minutes": "Ghi chú",
+    "attachments": "Tệp đính kèm",
+    "minutesPlaceholder": "Ghi chú hoặc ghi chú duyệt",
+    "attachmentsPlaceholder": "Tải lên biên bản kiểm kê hoặc hình ảnh"
   },
   "returns": {
     "title": "Phiếu trả hàng",
