@@ -174,10 +174,6 @@ export function ReceiptDetailPage() {
         {receipt.notes ? <InfoCard title={t('Ghi chú')} value={receipt.notes} /> : null}
         {receipt.rejectedNote ? <InfoCard title="Lý do từ chối" value={receipt.rejectedNote} /> : null}
       </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <AuditLogViewer resource="receipts" resourceId={id} />
-      </div>
     </div>
   );
 }

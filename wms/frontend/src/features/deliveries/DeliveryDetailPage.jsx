@@ -202,10 +202,6 @@ export function DeliveryDetailPage() {
           <InfoCard title="Lý do từ chối" value={delivery.rejectedNote} />
         ) : null}
       </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <AuditLogViewer resource="deliveries" resourceId={id} />
-      </div>
     </div>
   );
 }
