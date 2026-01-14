@@ -293,7 +293,10 @@
       "Awaiting Inspection": "Awaiting inspection",
       "Restocked": "Restocked",
       "Disposed": "Moved to disposal"
-    }
+    },
+    "subtitle": "Capture customer returns and decide whether to restock or dispose.",
+    "from": "Customer",
+    "items": "Items"
   },
   "disposals": {
     "title": "Disposals",

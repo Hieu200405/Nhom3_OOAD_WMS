@@ -344,7 +344,10 @@
       "Awaiting Inspection": "Chờ kiểm tra",
       "Restocked": "Đã nhập lại",
       "Disposed": "Đã chuyển hủy"
-    }
+    },
+    "subtitle": "Ghi nhận hàng trả từ khách hàng và quyết định nhập lại hay hủy bỏ.",
+    "from": "Khách hàng",
+    "items": "Sản phẩm"
   },
   "disposals": {
     "title": "Phiếu hủy hàng",

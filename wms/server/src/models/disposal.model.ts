@@ -4,6 +4,7 @@ import { DISPOSAL_STATUS, DISPOSAL_REASONS, type DisposalStatus, type DisposalRe
 export interface DisposalItem {
   productId: Types.ObjectId;
   locationId: Types.ObjectId;
+  batch?: string | null;
   qty: number;
   value?: number;
 }
@@ -34,6 +35,7 @@ const disposalItemSchema = new Schema<DisposalItem>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', required: true },
+    batch: { type: String, trim: true, default: null },
     qty: { type: Number, required: true, min: 0 },
     value: { type: Number, min: 0 }
   },

@@ -10,6 +10,8 @@ const router = Router();
 
 const itemSchema = z.object({
   productId: objectIdSchema,
+  locationId: objectIdSchema,
+  batch: z.string().nullable().optional(),
   qty: z.number().positive(),
   reason: z.string().min(1),
   expDate: z.coerce.date().optional()
