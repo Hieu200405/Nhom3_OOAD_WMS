@@ -19,9 +19,9 @@ RUN npm run build --workspace @wms/shared
 # Compile the API to JavaScript output
 RUN npm run build --workspace @wms/server
 # Copy non-TypeScript assets that the API needs at runtime
-RUN mkdir -p server/dist/docs && cp server/src/docs/openapi.yaml server/dist/docs/openapi.yaml
+RUN mkdir -p server/dist/src/docs && cp server/src/docs/openapi.yaml server/dist/src/docs/openapi.yaml
 # Copy server static assets (e.g., fonts for PDFKIT)
-RUN mkdir -p server/dist/assets && cp -r server/src/assets/* server/dist/assets/
+RUN mkdir -p server/dist/src/assets && cp -r server/src/assets/* server/dist/src/assets/
 # Strip dev dependencies for the runtime image
 RUN npm prune --omit=dev
 
@@ -37,5 +37,5 @@ COPY --from=base /app/server/package.json ./server/package.json
 COPY --from=base /app/server/dist ./server/dist
 
 EXPOSE 4000
-CMD ["node", "server/dist/index.js"]
+CMD ["node", "server/dist/src/index.js"]
 

@@ -37,6 +37,15 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true }
 );
 
+// Business rule: Selling price must be greater than buying price
+productSchema.pre('validate', function (next) {
+  if (this.priceOut <= this.priceIn) {
+    next(new Error('Giá bán (priceOut) phải lớn hơn giá nhập (priceIn)'));
+  } else {
+    next();
+  }
+});
+
 
 // Optimized indexes for common queries
 productSchema.index({ name: 'text', sku: 'text' }); // Text search

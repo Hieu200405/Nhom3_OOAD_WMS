@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { ProductModel } from '../models/product.model.js';
 import { CategoryModel } from '../models/category.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
-import { conflict, notFound } from '../utils/errors.js';
+import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import { createSupplierProduct } from './supplier-product.service.js';
 
@@ -65,19 +65,19 @@ export const listProducts = async (query: ListQuery) => {
       return null;
     })();
     return {
-    id: product._id.toString(),
-    sku: product.sku,
-    name: product.name,
-    unit: product.unit,
-    priceIn: product.priceIn,
-    priceOut: product.priceOut,
-    minStock: product.minStock,
-    image: product.image,
-    categoryId: category?.id ?? null,
-    category,
-    description: product.description,
-    supplierIds: (product.supplierIds || []).map((id: any) => id.toString()),
-    createdAt: product.createdAt
+      id: product._id.toString(),
+      sku: product.sku,
+      name: product.name,
+      unit: product.unit,
+      priceIn: product.priceIn,
+      priceOut: product.priceOut,
+      minStock: product.minStock,
+      image: product.image,
+      categoryId: category?.id ?? null,
+      category,
+      description: product.description,
+      supplierIds: (product.supplierIds || []).map((id: any) => id.toString()),
+      createdAt: product.createdAt
     };
   });
 
@@ -107,6 +107,11 @@ export const createProduct = async (
   const existing = await ProductModel.findOne({ sku: payload.sku }).lean();
   if (existing) {
     throw conflict('SKU already exists');
+  }
+
+  // Validate price: priceOut must be greater than priceIn
+  if (payload.priceOut <= payload.priceIn) {
+    throw badRequest('Giá bán (priceOut) phải lớn hơn giá nhập (priceIn)');
   }
 
   // Validate suppliers if provided
@@ -180,6 +185,13 @@ export const updateProduct = async (
   if (payload.description !== undefined) product.description = payload.description;
   if (payload.supplierIds) {
     product.supplierIds = payload.supplierIds.map(sid => new Types.ObjectId(sid));
+  }
+
+  // Validate price: priceOut must be greater than priceIn
+  const finalPriceIn = typeof payload.priceIn === 'number' ? payload.priceIn : product.priceIn;
+  const finalPriceOut = typeof payload.priceOut === 'number' ? payload.priceOut : product.priceOut;
+  if (finalPriceOut <= finalPriceIn) {
+    throw badRequest('Giá bán (priceOut) phải lớn hơn giá nhập (priceIn)');
   }
 
   if (payload.categoryId) {
