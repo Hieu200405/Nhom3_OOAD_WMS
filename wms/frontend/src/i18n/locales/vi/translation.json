@@ -112,7 +112,7 @@
     "password": "Mật khẩu",
     "submit": "Đăng nhập",
     "remember": "Ghi nhớ",
-    "hint": "Tài khoản mẫu: admin/admin123, manager/manager123, staff/staff123"
+    "hint": ""
   },
   "roles": {
     "Admin": "Quản trị viên",
@@ -163,7 +163,7 @@
     "type": "Cấp",
     "name": "Tên",
     "code": "Mã vị trí",
-    "subtitle":"Quản lý mã vị trí để chuyển động trong vị trí ngay lập tức.",
+    "subtitle": "Quản lý mã vị trí để chuyển động trong vị trí ngay lập tức.",
     "expandAll": "Mở rộng tất cả",
     "collapseAll": "Thu gọn tất cả",
     "title2": "Cấu trúc phân cấp",
@@ -222,7 +222,7 @@
     },
     "customerSubtitle": "Quản lý danh sách khách hàng và hạn mức tín dụng."
   },
-   "inventory": {
+  "inventory": {
     "subtitle": "Theo dõi chi tiết mức tồn kho và vị trí lưu trữ hàng hóa.",
     "quantity": "Số lượng tồn",
     "product": "Sản phẩm",
@@ -359,7 +359,7 @@
     "attachmentsPlaceholder": "Tải lên biên bản kiểm kê hoặc hình ảnh",
     "items": "Sản phẩm"
   },
-    "adjustments": {
+  "adjustments": {
     "title": "Điều chỉnh tồn kho",
     "subtitle": "Ghi nhận điều chỉnh tồn kho theo vị trí.",
     "create": "Tạo phiếu điều chỉnh",
@@ -507,22 +507,3 @@
     "statusChanged": "Đã cập nhật trạng thái"
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
