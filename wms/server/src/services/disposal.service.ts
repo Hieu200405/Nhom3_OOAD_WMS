@@ -49,7 +49,7 @@ export const listDisposals = async (query: ListQuery) => {
 };
 
 const computeTotalValue = (
-  items: { productId: string; locationId: string; qty: number; value?: number }[],
+  items: { productId: string; locationId: string; batch?: string | null; qty: number; value?: number }[],
   fallbackPrice = 0
 ) =>
   items.reduce((sum, item) => sum + item.qty * (item.value ?? fallbackPrice), 0);
@@ -60,7 +60,7 @@ export const createDisposal = async (
     reason: string;
     boardMembers?: string[];
     minutesFileUrl?: string;
-    items: { productId: string; locationId: string; qty: number; value?: number }[];
+    items: { productId: string; locationId: string; batch?: string | null; qty: number; value?: number }[];
     totalValue?: number;
     boardRequired?: boolean;
   },
@@ -86,6 +86,7 @@ export const createDisposal = async (
       const entry = {
         productId: new Types.ObjectId(item.productId),
         locationId: new Types.ObjectId(item.locationId),
+        batch: item.batch ?? null,
         qty: item.qty
       };
       return item.value != null ? { ...entry, value: item.value } : entry;
@@ -106,7 +107,7 @@ export const updateDisposal = async (
   payload: Partial<{
     boardMembers: string[];
     minutesFileUrl: string;
-    items: { productId: string; locationId: string; qty: number; value?: number }[];
+    items: { productId: string; locationId: string; batch?: string | null; qty: number; value?: number }[];
     totalValue: number;
     boardRequired: boolean;
   }>,
@@ -126,6 +127,7 @@ export const updateDisposal = async (
       const entry = {
         productId: new Types.ObjectId(item.productId),
         locationId: new Types.ObjectId(item.locationId),
+        batch: item.batch ?? null,
         qty: item.qty
       };
       return item.value != null ? { ...entry, value: item.value } : entry;
@@ -173,7 +175,9 @@ export const transitionDisposal = async (
 
   if (target === 'completed') {
     for (const item of disposal.items) {
-      await adjustInventory(item.productId.toString(), item.locationId.toString(), -item.qty);
+      await adjustInventory(item.productId.toString(), item.locationId.toString(), -item.qty, {
+        batch: item.batch ?? null
+      });
     }
 
     // Auto-create Expense Transaction (Loss)

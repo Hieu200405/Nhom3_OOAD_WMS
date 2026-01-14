@@ -16,10 +16,12 @@ import { PageHeader } from '../../components/PageHeader.jsx';
 
 const defaultForm = {
   code: '',
-  customerId: '',
+  deliveryId: '',
   items: [
     {
       productId: '',
+      locationId: '',
+      batch: '',
       quantity: 1,
       reason: '',
     },
@@ -31,8 +33,10 @@ export function ReturnsPage() {
 
   const [loading, setLoading] = useState(false);
   const [returns, setReturns] = useState([]);
-  const [customers, setCustomers] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [products, setProducts] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [locations, setLocations] = useState([]);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(defaultForm);
@@ -40,14 +44,18 @@ export function ReturnsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [retRes, custRes, prodRes] = await Promise.all([
+      const [retRes, delRes, prodRes, invRes, locRes] = await Promise.all([
         apiClient('/returns'),
-        apiClient('/partners', { params: { type: 'customer' } }),
-        apiClient('/products')
+        apiClient('/deliveries'),
+        apiClient('/products'),
+        apiClient('/inventory'),
+        apiClient('/warehouse', { params: { type: 'bin' } })
       ]);
       setReturns(retRes.data || []);
-      setCustomers(custRes.data || []);
+      setDeliveries(delRes.data || []);
       setProducts(prodRes.data || []);
+      setInventory(invRes.data || []);
+      setLocations(locRes.data || []);
     } catch (error) {
       console.error(error);
       toast.error('Failed to load returns data');
@@ -60,32 +68,147 @@ export function ReturnsPage() {
     fetchData();
   }, [fetchData]);
 
-  const customerOptions = useMemo(
-    () => customers.map((customer) => ({ value: customer.id, label: customer.name })),
-    [customers],
+  const deliveryOptions = useMemo(
+    () => deliveries.map((delivery) => ({
+      value: delivery.id,
+      label: `${delivery.code} - ${delivery.customerName || 'Customer'}`
+    })),
+    [deliveries]
+  );
+
+  const selectedDelivery = useMemo(
+    () => deliveries.find((delivery) => delivery.id === form.deliveryId),
+    [deliveries, form.deliveryId]
   );
 
   const productOptions = useMemo(
-    () => products.map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` })),
+    () =>
+      products
+        .map((p) => ({
+          value: String(p.id ?? p._id ?? ''),
+          label: `${p.sku ?? ''} - ${p.name ?? ''}`.trim()
+        }))
+        .filter((option) => option.value),
     [products]
   );
+
+  const productMap = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => {
+      const id = String(p.id ?? p._id ?? '');
+      if (id) {
+        map.set(id, {
+          sku: p.sku ?? '',
+          name: p.name ?? ''
+        });
+      }
+    });
+    return map;
+  }, [products]);
+
+  const deliveryProductOptions = useMemo(() => {
+    if (!selectedDelivery?.lines?.length) return [];
+    const ids = new Set(selectedDelivery.lines.map((line) => String(line.productId)));
+    return productOptions.filter((option) => ids.has(option.value));
+  }, [productOptions, selectedDelivery]);
+
+  const locationMap = useMemo(() => {
+    const map = new Map();
+    locations.forEach((loc) => map.set(String(loc.id), loc));
+    return map;
+  }, [locations]);
+
+  const getProductInventory = (productId) => {
+    return inventory.filter(
+      (item) =>
+        String(item.productId) === String(productId) &&
+        item.status === 'available' &&
+        Number(item.quantity) > 0
+    );
+  };
+
+  const getLocationOptions = (productId) => {
+    const rows = getProductInventory(productId);
+    if (!rows.length) {
+      return locations.map((loc) => ({
+        value: String(loc.id),
+        label: `${loc.code || loc.name} (Qty: 0)`
+      }));
+    }
+    const byLocation = new Map();
+    rows.forEach((row) => {
+      const key = String(row.locationId ?? '');
+      if (!key) return;
+      const prev = byLocation.get(key) || { qty: 0 };
+      byLocation.set(key, { qty: prev.qty + Number(row.quantity || 0) });
+    });
+    return Array.from(byLocation.entries()).map(([locationId, meta]) => {
+      const loc = locationMap.get(locationId) || rows.find((r) => String(r.locationId) === locationId)?.location;
+      const code = loc?.code || loc?.name || locationId;
+      return {
+        value: locationId,
+        label: `${code} (Qty: ${meta.qty})`
+      };
+    });
+  };
+
+  const getBatchOptions = (productId, locationId) => {
+    if (!productId || !locationId) {
+      return [{ value: '', label: 'No batch' }];
+    }
+    const rows = getProductInventory(productId).filter(
+      (item) => String(item.locationId) === String(locationId)
+    );
+    const byBatch = new Map();
+    rows.forEach((row) => {
+      const key = row.batch ?? '';
+      const prev = byBatch.get(key) || 0;
+      byBatch.set(key, prev + Number(row.quantity || 0));
+    });
+    const noBatchQty = byBatch.get('') || 0;
+    byBatch.delete('');
+    const options = Array.from(byBatch.entries()).map(([batch, qty]) => ({
+      value: batch,
+      label: `${batch} (Qty: ${qty})`
+    }));
+    const noBatchLabel = noBatchQty > 0 ? `No batch (Qty: ${noBatchQty})` : 'No batch';
+    return [{ value: '', label: noBatchLabel }, ...options];
+  };
+
+  const getAvailableQty = (productId, locationId, batch) => {
+    if (!productId || !locationId || !batch) return null;
+    const row = inventory.find(
+      (item) =>
+        String(item.productId) === String(productId) &&
+        String(item.locationId) === String(locationId) &&
+        String(item.batch ?? '') === String(batch) &&
+        item.status === 'available'
+    );
+    return row ? Number(row.quantity || 0) : 0;
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const items = form.items
-      .filter((item) => item.productId)
+      .filter((item) => item.productId && item.locationId)
       .map(item => ({
         productId: item.productId,
+        locationId: item.locationId,
+        batch: item.batch || null,
         qty: Number(item.quantity),
         reason: item.reason || 'Return',
       }));
 
     if (items.length === 0) return;
+    if (!form.deliveryId) {
+      toast.error('Select delivery');
+      return;
+    }
 
     const payload = {
       code: form.code || `RT-${Date.now()}`,
       from: 'customer',
-      refId: form.customerId || undefined,
+      refId: form.deliveryId || undefined,
       items: items
     };
 
@@ -132,7 +255,7 @@ export function ReturnsPage() {
   const addItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { productId: '', quantity: 1, reason: '' }]
+      items: [...prev.items, { productId: '', locationId: '', batch: '', quantity: 1, reason: '' }]
     }));
   };
 
@@ -140,7 +263,7 @@ export function ReturnsPage() {
     <div className="space-y-5">
       <PageHeader
         title={t('returns.title')}
-        description="Capture customer returns and decide whether to restock or dispose."
+        description= {t('returns.subtitle')}
         actions={
           <button
             type="button"
@@ -157,13 +280,17 @@ export function ReturnsPage() {
         data={returns}
         isLoading={loading}
         columns={[
-          { key: 'code', header: 'Return' },
+          { key: 'code', header: t('app.sku') },
           {
             key: 'refId',
             header: t('returns.from'),
-            render: (value) => customers.find(c => c.id === value)?.name || value || 'Customer'
+            render: (_, row) => row.refCustomerName || row.refCode || 'Customer'
           },
-          { key: 'createdAt', header: t('deliveries.date'), render: (value) => formatDate(value) },
+          {
+            key: 'refDate',
+            header: t('deliveries.date'),
+            render: (_, row) => formatDate(row.refDate ?? row.createdAt)
+          },
           {
             key: 'status',
             header: t('app.status'),
@@ -171,8 +298,16 @@ export function ReturnsPage() {
           },
           {
             key: 'items',
-            header: 'Items',
-            render: (items) => items?.length || 0
+            header: t('returns.items'),
+            render: (items) => {
+              if (!items?.length) return 0;
+              const names = items.map((item) => {
+                const product = productMap.get(String(item.productId));
+                const label = product ? `${product.sku} - ${product.name}`.trim() : 'Unknown';
+                return `${label} x${item.qty}`;
+              });
+              return names.join(', ');
+            }
           },
           {
             key: 'actions',
@@ -187,7 +322,7 @@ export function ReturnsPage() {
                       onClick={() => handleTransition(row, 'approved')}
                       className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
                     >
-                      Approve
+                      {t('app.approve')}
                     </button>
                   </RoleGuard>
                 )}
@@ -198,7 +333,7 @@ export function ReturnsPage() {
                       onClick={() => handleTransition(row, 'completed')}
                       className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500"
                     >
-                      Complete
+                      {t('app.complete')}
                     </button>
                   </RoleGuard>
                 )}
@@ -240,48 +375,82 @@ export function ReturnsPage() {
               placeholder="RT-..."
             />
             <Select
-              label={t('deliveries.customer')}
-              value={form.customerId}
-              onChange={(event) => setForm((prev) => ({ ...prev, customerId: event.target.value }))}
-              options={customerOptions}
-              placeholder="Select customer"
+              label="Nguồn trả hàng"
+              value={form.deliveryId}
+              onChange={(event) => setForm((prev) => ({ ...prev, deliveryId: event.target.value, items: [{ productId: '', locationId: '', batch: '', quantity: 1, reason: '' }] }))}
+              options={deliveryOptions}
+              placeholder="Chọn nguồn trả hàng"
+              required
             />
           </div>
 
           <div className="space-y-3">
-            <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Items</div>
-            {form.items.map((item, index) => (
-              <div key={index} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-2 gap-3">
-                <Select
-                  label="Sản phẩm"
-                  value={item.productId}
-                  onChange={(e) => updateItem(index, { productId: e.target.value })}
-                  options={productOptions}
-                  required
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <NumberInput
-                    label="Số lượng"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
-                    min={1}
-                    required
-                  />
-                  <Input
-                    label="Lý do"
-                    value={item.reason}
-                    onChange={(e) => updateItem(index, { reason: e.target.value })}
-                    placeholder="Reason"
-                    required
-                  />
+            <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Sản phẩm</div>
+                        {form.items.map((item, index) => {
+              const availableQty = getAvailableQty(item.productId, item.locationId, item.batch);
+              return (
+                <div key={index} className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 space-y-3">
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <Select
+                      label="Sản phẩm"
+                      value={item.productId}
+                      onChange={(e) => updateItem(index, { productId: e.target.value, locationId: '', batch: '' })}
+                      options={form.deliveryId ? deliveryProductOptions : []}
+                      disabled={!form.deliveryId}
+                      placeholder="Chọn sản phẩm"
+                      required
+                    />
+                    <Select
+                      label="Vị trí"
+                      value={item.locationId}
+                      onChange={(e) => updateItem(index, { locationId: e.target.value, batch: '' })}
+                      options={getLocationOptions(item.productId)}
+                      placeholder="Chọn vị trí"
+                      disabled={!item.productId}
+                      required
+                    />
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <Select
+                      label="Lô"
+                      value={item.batch}
+                      onChange={(e) => updateItem(index, { batch: e.target.value })}
+                      options={getBatchOptions(item.productId, item.locationId)}
+                      placeholder="Chọn lô"
+                      disabled={!item.locationId}
+                    />
+                    <NumberInput
+                      label="Số lượng"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
+                      min={1}
+                      required
+                    />
+                    <Input
+                      label="Lý do"
+                      value={item.reason}
+                      onChange={(e) => updateItem(index, { reason: e.target.value })}
+                      placeholder="Lý do"
+                      required
+                    />
+                  </div>
+                  {availableQty !== null ? (
+                    <div className="text-xs text-slate-500">Available: {availableQty}</div>
+                  ) : null}
+                  <button type="button" onClick={() => removeItem(index)} className="text-red-500 text-xs">Xóa</button>
                 </div>
-                <button type="button" onClick={() => removeItem(index)} className="text-red-500 text-xs">Remove</button>
-              </div>
-            ))}
-            <button type="button" onClick={addItem} className="text-sm text-indigo-600 font-medium">+ Add Item</button>
+              );
+            })}
+            <button type="button" onClick={addItem} className="text-sm text-indigo-600 font-medium">+ Thêm sản phẩm</button>
           </div>
         </form>
       </Modal>
     </div>
   );
 }
+
+
+
+
+
+

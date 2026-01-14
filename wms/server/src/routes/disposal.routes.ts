@@ -49,6 +49,7 @@ const parseStringArray = z.preprocess((value) => {
 const itemSchema = z.object({
   productId: objectIdSchema,
   locationId: objectIdSchema,
+  batch: z.string().nullable().optional(),
   qty: z.coerce.number().nonnegative(),
   value: z.coerce.number().nonnegative().optional()
 });

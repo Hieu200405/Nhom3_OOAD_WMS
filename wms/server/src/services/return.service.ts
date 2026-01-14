@@ -11,12 +11,24 @@ import { env } from '../config/env.js';
 import type { ReturnStatus } from '@wms/shared';
 import { DeliveryModel } from '../models/delivery.model.js';
 import { ReceiptModel } from '../models/receipt.model.js';
+import { WarehouseNodeModel } from '../models/warehouseNode.model.js';
 
 const allowedTransitions: Record<ReturnStatus, ReturnStatus[]> = {
   draft: ['approved'],
   approved: ['inspected', 'completed'],
   inspected: ['completed'],
   completed: []
+};
+
+const ensureBinLocation = async (locationId: string) => {
+  const location = await WarehouseNodeModel.findOne({
+    _id: new Types.ObjectId(locationId),
+    type: 'bin'
+  }).lean();
+  if (!location) {
+    throw badRequest('Location not found');
+  }
+  return location;
 };
 
 type ListQuery = {
@@ -38,8 +50,48 @@ export const listReturns = async (query: ListQuery) => {
     ReturnModel.countDocuments(filter),
     ReturnModel.find(filter).sort(sort).skip(skip).limit(limit).lean()
   ]);
+  const customerRefIds = items
+    .filter((item) => item.from === 'customer' && item.refId)
+    .map((item) => item.refId as Types.ObjectId);
+  const supplierRefIds = items
+    .filter((item) => item.from === 'supplier' && item.refId)
+    .map((item) => item.refId as Types.ObjectId);
+  const [deliveryRefs, receiptRefs] = await Promise.all([
+    customerRefIds.length
+      ? DeliveryModel.find({ _id: { $in: customerRefIds } })
+        .select('code customerId date')
+        .populate('customerId', 'name')
+        .lean()
+      : Promise.resolve([]),
+    supplierRefIds.length
+      ? ReceiptModel.find({ _id: { $in: supplierRefIds } })
+        .select('code supplierId date')
+        .populate('supplierId', 'name')
+        .lean()
+      : Promise.resolve([])
+  ]);
+  const deliveryMap = new Map(
+    deliveryRefs.map((ref: any) => [ref._id.toString(), ref])
+  );
+  const receiptMap = new Map(
+    receiptRefs.map((ref: any) => [ref._id.toString(), ref])
+  );
   return buildPagedResponse(
     items.map((item) => ({
+      refId: item.refId?.toString() ?? null,
+      refCode:
+        item.from === 'customer'
+          ? deliveryMap.get(item.refId?.toString() ?? '')?.code ?? null
+          : receiptMap.get(item.refId?.toString() ?? '')?.code ?? null,
+      refDate:
+        item.from === 'customer'
+          ? deliveryMap.get(item.refId?.toString() ?? '')?.date ?? null
+          : receiptMap.get(item.refId?.toString() ?? '')?.date ?? null,
+      refCustomerName:
+        item.from === 'customer'
+          ? deliveryMap.get(item.refId?.toString() ?? '')?.customerId?.name ?? null
+          : receiptMap.get(item.refId?.toString() ?? '')?.supplierId?.name ?? null,
+      createdAt: item.createdAt,
       id: item._id.toString(),
       code: item.code,
       from: item.from,
@@ -112,7 +164,7 @@ export const createReturn = async (
     code: string;
     from: 'customer' | 'supplier';
     refId?: string;
-    items: { productId: string; qty: number; reason: string; expDate?: Date }[];
+    items: { productId: string; locationId: string; batch?: string | null; qty: number; reason: string; expDate?: Date }[];
   },
   actorId: string
 ) => {
@@ -129,10 +181,13 @@ export const createReturn = async (
     if (item.qty <= 0) {
       throw badRequest('Quantity must be positive');
     }
+    const batch = item.batch?.trim();
+    item.batch = batch || null;
     const product = await ProductModel.findById(new Types.ObjectId(item.productId)).lean();
     if (!product) {
       throw notFound('Product not found');
     }
+    await ensureBinLocation(item.locationId);
   }
   const returnDoc = await ReturnModel.create({
     ...payload,
@@ -151,7 +206,7 @@ export const createReturn = async (
 export const updateReturn = async (
   id: string,
   payload: Partial<{
-    items: { productId: string; qty: number; reason: string; expDate?: Date }[];
+    items: { productId: string; locationId: string; batch?: string | null; qty: number; reason: string; expDate?: Date }[];
   }>,
   actorId: string
 ) => {
@@ -171,9 +226,12 @@ export const updateReturn = async (
       if (!product) {
         throw notFound('Product not found');
       }
+      await ensureBinLocation(item.locationId);
     }
     returnDoc.items = payload.items.map((item) => ({
       productId: new Types.ObjectId(item.productId),
+      locationId: new Types.ObjectId(item.locationId),
+      batch: item.batch?.trim() || null,
       qty: item.qty,
       reason: item.reason,
       expDate: item.expDate
@@ -199,9 +257,8 @@ const ensureTransition = (current: ReturnStatus, target: ReturnStatus) => {
 
 const createDisposalForExpired = async (
   returnDoc: ReturnDocument,
-  items: { productId: string; qty: number; reason: string; price: number }[],
-  actorId: string,
-  locationId: string
+  items: { productId: string; locationId: string; batch: string | null; qty: number; reason: string; price: number }[],
+  actorId: string
 ) => {
   if (!items.length) {
     return null;
@@ -217,7 +274,7 @@ const createDisposalForExpired = async (
     status: boardRequired ? 'draft' : 'approved',
     items: items.map((item) => ({
       productId: new Types.ObjectId(item.productId),
-      locationId: new Types.ObjectId(locationId),
+      locationId: new Types.ObjectId(item.locationId),
       qty: item.qty,
       value: item.price * item.qty
     }))
@@ -245,12 +302,17 @@ export const transitionReturn = async (
 
   if (target === 'completed') {
     const defaultBin = await resolveDefaultBin();
-    const itemsToDispose: { productId: string; qty: number; reason: string; price: number }[] = [];
+    const itemsToDispose: { productId: string; locationId: string; batch: string | null; qty: number; reason: string; price: number }[] = [];
 
     for (const item of returnDoc.items) {
       const product = await ProductModel.findById(item.productId);
       if (!product) throw notFound('Product not found');
 
+      if (!item.locationId) {
+        item.locationId = new Types.ObjectId(defaultBin);
+      }
+      const locationId = item.locationId?.toString?.() ?? defaultBin;
+      const batch = item.batch ?? null;
       const isExpired = item.expDate ? item.expDate < new Date() : false;
       const restockableQty = item.restockQty ?? (isExpired ? 0 : item.qty);
       const disposalQty = item.disposeQty ?? (isExpired ? item.qty : 0);
@@ -258,13 +320,15 @@ export const transitionReturn = async (
       if (returnDoc.from === 'customer') {
         // 1. Phục hồi tồn kho khả dụng
         if (restockableQty > 0) {
-          await adjustInventory(item.productId.toString(), defaultBin, restockableQty, { status: 'available' });
+          await adjustInventory(item.productId.toString(), locationId, restockableQty, { status: 'available', batch });
         }
         // 2. Tạm nhập hàng lỗi/hết hạn để chờ hủy
         if (disposalQty > 0) {
-          await adjustInventory(item.productId.toString(), defaultBin, disposalQty, { status: 'quarantined' });
+          await adjustInventory(item.productId.toString(), locationId, disposalQty, { status: 'quarantined', batch });
           itemsToDispose.push({
             productId: item.productId.toString(),
+            locationId,
+            batch,
             qty: disposalQty,
             reason: item.reason || 'damaged/expired',
             price: product.priceIn
@@ -272,12 +336,12 @@ export const transitionReturn = async (
         }
       } else {
         // Trả hàng về NCC (Supplier Return) - Xuất kho
-        await adjustInventory(item.productId.toString(), defaultBin, -item.qty);
+        await adjustInventory(item.productId.toString(), locationId, -item.qty, { batch });
       }
     }
 
     if (itemsToDispose.length) {
-      const disposal = await createDisposalForExpired(returnDoc, itemsToDispose, actorId, defaultBin);
+      const disposal = await createDisposalForExpired(returnDoc, itemsToDispose, actorId);
       returnDoc.disposalId = disposal ? (disposal._id as Types.ObjectId) : null;
     }
   }

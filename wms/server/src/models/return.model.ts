@@ -3,6 +3,8 @@ import { RETURN_STATUS, RETURN_FROM, type ReturnStatus, type ReturnFrom } from '
 
 export interface ReturnItem {
   productId: Types.ObjectId;
+  locationId: Types.ObjectId;
+  batch?: string | null;
   qty: number;
   reason: string;
   expDate?: Date | null;
@@ -35,6 +37,8 @@ export interface ReturnDocument extends Return, Document { }
 const returnItemSchema = new Schema<ReturnItem>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    locationId: { type: Schema.Types.ObjectId, ref: 'WarehouseNode', required: true },
+    batch: { type: String, trim: true, default: null },
     qty: { type: Number, required: true, min: 0 },
     reason: { type: String, required: true, trim: true },
     expDate: { type: Date },

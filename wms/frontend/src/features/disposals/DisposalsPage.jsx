@@ -33,6 +33,7 @@ const defaultForm = {
     {
       productId: '',
       locationId: '',
+      batch: '',
       quantity: 1,
       value: 0
     },
@@ -106,18 +107,49 @@ export function DisposalsPage() {
     [products]
   );
 
-  // Helper to get available locations for a product
+  // Helper to get available inventory rows for a product
   const getProductInventory = (productId) => {
-    return inventory.filter(i => String(i.productId) === String(productId) && i.quantity > 0)
-      .map((i) => {
-        const loc = locationMap.get(i.locationId);
-        return {
-          value: String(i.locationId ?? ''),
-          label: `${loc ? loc.code : 'Unknown'} (Qty: ${i.quantity})`,
-          quantity: i.quantity
-        };
-      })
-      .filter((option) => option.value);
+    return inventory.filter(i => String(i.productId) === String(productId) && i.quantity > 0);
+  };
+
+  const getLocationOptions = (productId) => {
+    const rows = getProductInventory(productId);
+    const byLocation = new Map();
+    rows.forEach((row) => {
+      const key = String(row.locationId ?? '');
+      if (!key) return;
+      const prev = byLocation.get(key) || 0;
+      byLocation.set(key, prev + Number(row.quantity || 0));
+    });
+    return Array.from(byLocation.entries()).map(([locationId, qty]) => {
+      const loc = locationMap.get(locationId);
+      const code = loc ? loc.code : 'Unknown';
+      return {
+        value: locationId,
+        label: `${code} (Qty: ${qty})`
+      };
+    });
+  };
+
+  const getBatchOptions = (productId, locationId) => {
+    if (!productId || !locationId) return [{ value: '', label: 'No batch' }];
+    const rows = getProductInventory(productId).filter(
+      (row) => String(row.locationId) === String(locationId)
+    );
+    const byBatch = new Map();
+    rows.forEach((row) => {
+      const key = row.batch ?? '';
+      const prev = byBatch.get(key) || 0;
+      byBatch.set(key, prev + Number(row.quantity || 0));
+    });
+    const noBatchQty = byBatch.get('') || 0;
+    byBatch.delete('');
+    const options = Array.from(byBatch.entries()).map(([batch, qty]) => ({
+      value: batch,
+      label: `${batch} (Qty: ${qty})`
+    }));
+    const noBatchLabel = noBatchQty > 0 ? `No batch (Qty: ${noBatchQty})` : 'No batch';
+    return [{ value: '', label: noBatchLabel }, ...options];
   };
 
   const totalValue = useMemo(() => {
@@ -141,6 +173,7 @@ export function DisposalsPage() {
       .map(i => ({
         productId: i.productId,
         locationId: i.locationId,
+        batch: i.batch || null,
         qty: Number(i.quantity),
         value: Number(i.value) || 0 // Should we send 0 or calculated?
         // If 0, backend might just store 0.
@@ -153,11 +186,11 @@ export function DisposalsPage() {
 
     if (totalValue > HIGH_VALUE_THRESHOLD) {
       if (!form.council.trim()) {
-        toast.error('Vui lòng nhập hội đồng hủy');
+        toast.error('Vui l�ng nh?p h?i d?ng h?y');
         return;
       }
       if (!form.attachment.trim()) {
-        toast.error('Vui lòng nhập biên bản hủy');
+        toast.error('Vui l�ng nh?p bi�n b?n h?y');
         return;
       }
     }
@@ -239,7 +272,7 @@ export function DisposalsPage() {
   const addItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { productId: '', locationId: '', quantity: 1, value: 0 }]
+      items: [...prev.items, { productId: '', locationId: '', batch: '', quantity: 1, value: 0 }]
     }));
   };
 
@@ -330,7 +363,7 @@ export function DisposalsPage() {
         <form id="disposal-form" className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Mã phiếu (Tự động)"
+              label="M� phi?u (T? d?ng)"
               value={form.code}
               onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
               placeholder="HUY-..."
@@ -374,6 +407,7 @@ export function DisposalsPage() {
                       updateItem(index, {
                         productId,
                         locationId: '',
+                        batch: '',
                         value: product?.priceIn || 0
                       });
                     }}
@@ -383,12 +417,22 @@ export function DisposalsPage() {
                 </div>
                 <div className="md:col-span-2">
                   <Select
-                    label="Lô"
+                    label="Vị trí"
                     value={item.locationId}
-                    onChange={(e) => updateItem(index, { locationId: String(e.target.value) })}
-                    options={getProductInventory(item.productId)}
-                    placeholder="Chọn lô"
+                    onChange={(e) => updateItem(index, { locationId: String(e.target.value), batch: '' })}
+                    options={getLocationOptions(item.productId)}
+                    placeholder="Chọn vị trí"
                     disabled={!item.productId}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Select
+                    label="Lô"
+                    value={item.batch}
+                    onChange={(e) => updateItem(index, { batch: String(e.target.value) })}
+                    options={getBatchOptions(item.productId, item.locationId)}
+                    placeholder="Chọn lô"
+                    disabled={!item.locationId}
                   />
                 </div>
                 <NumberInput label="Số lượng" value={item.quantity} onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })} min={1} />
@@ -435,3 +479,7 @@ function disposalActions(record, t) {
       return [];
   }
 }
+
+
+
+
