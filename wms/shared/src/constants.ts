@@ -31,7 +31,7 @@ export type IncidentAction = (typeof INCIDENT_ACTIONS)[number];
 export const INCIDENT_STATUS = ['open', 'inProgress', 'resolved'] as const;
 export type IncidentStatus = (typeof INCIDENT_STATUS)[number];
 
-export const ADJUSTMENT_REASONS = ['loss', 'found', 'correction'] as const;
+export const ADJUSTMENT_REASONS = ['loss', 'mismatch', 'damaged', 'stocktakeError'] as const;
 export type AdjustmentReason = (typeof ADJUSTMENT_REASONS)[number];
 
 export const RETURN_FROM = ['customer', 'supplier'] as const;
@@ -45,3 +45,4 @@ export type FinancialTransactionType = (typeof FINANCIAL_TRANSACTION_TYPES)[numb
 
 export const FINANCIAL_TRANSACTION_STATUS = ['pending', 'completed', 'cancelled'] as const;
 export type FinancialTransactionStatus = (typeof FINANCIAL_TRANSACTION_STATUS)[number];
+

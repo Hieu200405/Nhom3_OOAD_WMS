@@ -5,7 +5,7 @@ import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import { formatNumber } from '../../utils/formatters.js';
 import toast from 'react-hot-toast';
-import { FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 import { ReplenishmentModal } from './ReplenishmentModal.jsx';
 import { PageHeader } from '../../components/PageHeader.jsx';
 
@@ -148,13 +148,6 @@ export function InventoryPage() {
               ))}
             </select>
             <button
-              onClick={handleCheckReplenishment}
-              className="btn btn-primary shadow-indigo-200 !h-11 !rounded-2xl"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {t('inventory.checkSmart')}
-            </button>
-            <button
               onClick={handleExport}
               className="btn border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 !h-11 !rounded-2xl"
             >
@@ -224,6 +217,7 @@ export function InventoryPage() {
                               <span>Qty: {formatNumber(item.quantity)}</span>
                               <span>Batch: {item.batch || '-'}</span>
                               <span>Expiry: {exp}</span>
+                              <StatusBadge status={item.status} />
                             </div>
                           </div>
                         );

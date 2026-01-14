@@ -38,7 +38,7 @@ export const createAdjustment = async (
   payload: {
     code: string;
     reason: string;
-    lines: { productId: string; locationId: string; delta: number }[];
+    lines: { productId: string; locationId: string; batch?: string | null; delta: number }[];
   },
   actorId: string
 ) => {
@@ -50,6 +50,7 @@ export const createAdjustment = async (
     lines: payload.lines.map((line) => ({
       productId: new Types.ObjectId(line.productId),
       locationId: new Types.ObjectId(line.locationId),
+      batch: line.batch?.trim() || null,
       delta: line.delta
     }))
   });
@@ -75,7 +76,10 @@ export const approveAdjustment = async (id: string, actorId: string, options?: {
   const { ProductModel } = await import('../models/product.model.js');
 
   for (const line of adjustment.lines) {
-    await adjustInventory(line.productId.toString(), line.locationId.toString(), line.delta, { ignoreLock: options?.ignoreLock });
+    await adjustInventory(line.productId.toString(), line.locationId.toString(), line.delta, {
+      ignoreLock: options?.ignoreLock,
+      batch: line.batch ?? null
+    });
 
     // Calculate Value
     const product = await ProductModel.findById(line.productId);

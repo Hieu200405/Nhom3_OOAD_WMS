@@ -481,7 +481,7 @@ export const restockReturn = async (id: string, actorId: string) => {
 
   const adjustment = await AdjustmentModel.create({
     code: `ADJ-RET-${returnDoc.code}`,
-    reason: `Restock from return ${returnDoc.code}`,
+    reason: 'mismatch',
     lines: approvedItems.map((item) => ({
       productId: item.productId,
       locationId: new Types.ObjectId(defaultBin),
@@ -606,3 +606,5 @@ export const deleteReturn = async (id: string, actorId: string) => {
   });
   return true;
 };
+
+

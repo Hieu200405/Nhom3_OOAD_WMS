@@ -12,6 +12,7 @@ const router = Router();
 const lineSchema = z.object({
   productId: objectIdSchema,
   locationId: objectIdSchema,
+  batch: z.string().trim().optional().nullable(),
   delta: z.number().int().refine((value) => value !== 0, {
     message: 'Delta cannot be zero'
   })
@@ -23,11 +24,12 @@ const createSchema = z.object({
   lines: z.array(lineSchema).min(1)
 });
 
-router.use(auth, requireRole('Manager', 'Admin'));
+router.use(auth);
 
 router.get('/', controller.list);
-router.post('/', validate({ body: createSchema }), controller.create);
-router.post('/:id/approve', controller.approve);
-router.delete('/:id', controller.remove);
+router.post('/', requireRole('Staff', 'Manager', 'Admin'), validate({ body: createSchema }), controller.create);
+router.post('/:id/approve', requireRole('Manager', 'Admin'), controller.approve);
+router.delete('/:id', requireRole('Manager', 'Admin'), controller.remove);
 
 export default router;
+

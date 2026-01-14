@@ -8,7 +8,6 @@ import { Select } from '../../components/forms/Select.jsx';
 import { apiClient } from '../../services/apiClient.js';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../components/PageHeader.jsx';
-import { t } from 'i18next';
 
 const emptySupplier = {
   type: 'supplier',
@@ -17,16 +16,11 @@ const emptySupplier = {
   taxCode: '',
   contact: '',
   address: '',
-  businessType: 'Nhà phân phối',
+  businessType: 'Distributor',
   notes: '',
   isActive: true,
 };
 
-const businessTypes = [
-  { value: 'Nhà sản xuất', label: "Nhà sản xuất" },
-  { value: 'Nhà phân phối', label: "Nhà phân phối" },
-  { value: 'Nhà bán lẻ', label: "Nhà bán lẻ" },
-];
 
 export function SuppliersPage() {
   const { t } = useTranslation();
@@ -35,6 +29,13 @@ export function SuppliersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptySupplier);
+
+  const businessTypes = [
+    { value: 'Manufacturer', label: t('partners.businessTypes.manufacturer') },
+    { value: 'Distributor', label: t('partners.businessTypes.distributor') },
+    { value: 'Retailer', label: t('partners.businessTypes.retailer') },
+  ];
+
 
   const fetchSuppliers = useCallback(async () => {
     setLoading(true);
@@ -126,7 +127,7 @@ export function SuppliersPage() {
           { key: 'code', header: t('app.sku') },
           { key: 'name', header: t('partners.suppliername') },
           { key: 'contact', header: t('partners.contact') },
-          { key: 'businessType', header: t('partners.businessType') },
+          { key: 'businessType', header: t('partners.businessType'), render: (value) => businessTypes.find((item) => item.value === value)?.label ?? value },
           {
             key: 'isActive',
             header: t('app.status'),
@@ -244,3 +245,8 @@ export function SuppliersPage() {
     </div>
   );
 }
+
+
+
+
+
