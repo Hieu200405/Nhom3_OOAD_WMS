@@ -448,7 +448,9 @@
       "totalStocktakes": "Số lần kiểm kê",
       "accuracyRate": "Tỷ lệ chính xác",
       "netAdjustments": "Giá trị điều chỉnh ròng",
-      "discrepancyRate": "Tỷ lệ sai lệch"
+      "discrepancyRate": "Tỷ lệ sai lệch",
+      "totalReceipts": "Tổng phiếu nhập",
+      "totalDeliveries": "Tổng phiếu xuất"
     },
     "charts": {
       "revenueVsExpenses": "Doanh thu vs Chi phí (6 tháng)",

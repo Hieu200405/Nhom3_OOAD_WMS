@@ -11,6 +11,10 @@ import {
   InventoryModel
 } from '../src/models/index.js';
 import { logger } from '../src/utils/logger.js';
+import fs from 'node:fs';
+console.log('Seed script loaded, checking entry point...');
+console.log('Current:', import.meta.url);
+console.log('Process:', process.argv[1]);
 
 const ADMIN_EMAIL = 'admin@wms.local';
 const DEFAULT_PASSWORD = '123456';
@@ -246,7 +250,7 @@ const seedPartners = async () => {
   return await PartnerModel.find({});
 };
 
-const seedProducts = async (categories: { _id: Types.ObjectId; code: string; name: string; description: string }[], partners: any[]) => {
+const seedProducts = async (categories: any[], partners: any[]) => {
   const products = [];
   const suppliers = partners.filter(p => p.type === 'supplier');
 
@@ -364,7 +368,17 @@ const seedInventory = async (products: any[], bins: any[]) => {
 
     for (const bin of selectedBins) {
       const baseQty = product.minStock || 50;
-      const quantity = randomInt(baseQty, baseQty * 5);
+      let quantity;
+      const rand = Math.random();
+
+      // 10% Out of Stock, 20% Low Stock, 70% Normal
+      if (rand < 0.1) {
+        quantity = 0;
+      } else if (rand < 0.3) {
+        quantity = randomInt(1, baseQty - 1);
+      } else {
+        quantity = randomInt(baseQty, baseQty * 5);
+      }
 
       items.push({
         productId: product._id,
@@ -465,6 +479,211 @@ const seedFinancials = async (partners: any[]) => {
   }
 };
 
+const seedReceipts = async (partners: any[], products: any[], users: any[]) => {
+  const receipts = [];
+  const suppliers = partners.filter(p => p.type === 'supplier');
+  const now = Date.now();
+  const dayMs = 86400000;
+
+  for (let i = 0; i < 30; i++) {
+    const supplier = randomElement(suppliers);
+    const date = new Date(now - randomInt(1, 60) * dayMs);
+    const status = randomElement(['draft', 'approved', 'completed', 'completed', 'completed']);
+
+    // Random 1-5 lines
+    const lines = [];
+    const lineCount = randomInt(1, 5);
+    let totalAmount = 0;
+
+    for (let j = 0; j < lineCount; j++) {
+      const product = randomElement(products);
+      const qty = randomInt(10, 100);
+      const price = product.priceIn;
+      totalAmount += qty * price;
+
+      lines.push({
+        productId: product._id,
+        productName: product.name,
+        sku: product.sku,
+        unit: product.unit,
+        qty: qty, // Required by schema
+        orderQuantity: qty,
+        receivedQuantity: status === 'completed' ? qty : 0,
+        priceIn: price,
+        subtotal: qty * price
+      });
+    }
+
+    receipts.push({
+      code: `REC-${Date.now().toString().slice(-6)}-${i + 100}`,
+      type: 'Standard',
+      status,
+      supplierId: supplier._id,
+      supplierName: supplier.name,
+      warehouseId: null, // Global or specific
+      expectedDate: new Date(date.getTime() + 3 * dayMs),
+      date: date,
+      lines: lines, // FIXED: items -> lines
+      totalAmount,
+      createdBy: randomElement(users)._id,
+      createdAt: date,
+      updatedAt: date
+    });
+  }
+
+  const { ReceiptModel } = await import('../src/models/receipt.model.js');
+  if (ReceiptModel) {
+    await ReceiptModel.insertMany(receipts);
+    logger.info(`✓ Seeded ${receipts.length} receipts`);
+    return receipts.length;
+  }
+};
+
+const seedDeliveries = async (partners: any[], products: any[], users: any[]) => {
+  const deliveries = [];
+  const customers = partners.filter(p => p.type === 'customer');
+  const now = Date.now();
+  const dayMs = 86400000;
+
+  for (let i = 0; i < 30; i++) {
+    const customer = randomElement(customers);
+    const date = new Date(now - randomInt(1, 60) * dayMs);
+    const status = randomElement(['draft', 'approved', 'delivered', 'completed', 'completed']);
+
+    const lines = [];
+    const lineCount = randomInt(1, 5);
+    let totalAmount = 0;
+
+    for (let j = 0; j < lineCount; j++) {
+      const product = randomElement(products);
+      const qty = randomInt(1, 20);
+      const price = product.priceOut;
+      totalAmount += qty * price;
+
+      lines.push({
+        productId: product._id,
+        productName: product.name,
+        sku: product.sku,
+        unit: product.unit,
+        qty: qty, // Required by schema
+        orderQuantity: qty,
+        shippedQuantity: ['delivered', 'completed'].includes(status) ? qty : 0,
+        priceOut: price,
+        subtotal: qty * price
+      });
+    }
+
+    deliveries.push({
+      code: `DEL-${Date.now().toString().slice(-6)}-${i + 100}`,
+      status,
+      customerId: customer._id,
+      customerName: customer.name,
+      date: date,
+      expectedDate: new Date(date.getTime() + 2 * dayMs),
+      lines: lines, // FIXED: items -> lines
+      totalAmount,
+      createdBy: randomElement(users)._id,
+      createdAt: date,
+      updatedAt: date
+    });
+    if (i === 0) console.log('Debug Delivery:', JSON.stringify(deliveries[0], null, 2));
+  }
+
+  const { DeliveryModel } = await import('../src/models/delivery.model.js');
+  if (DeliveryModel) {
+    await DeliveryModel.insertMany(deliveries);
+    logger.info(`✓ Seeded ${deliveries.length} deliveries`);
+    return deliveries.length;
+  }
+};
+
+const seedIncidents = async (products: any[], users: any[]) => {
+  const { ReceiptModel } = await import('../src/models/receipt.model.js');
+  const { DeliveryModel } = await import('../src/models/delivery.model.js');
+  const { IncidentModel } = await import('../src/models/incident.model.js');
+
+  if (!IncidentModel || !ReceiptModel || !DeliveryModel) return;
+
+  const sampleReceipts = await ReceiptModel.find().limit(5);
+  const sampleDeliveries = await DeliveryModel.find().limit(5);
+  const incidents = [];
+  const now = Date.now();
+
+  for (let i = 0; i < 10; i++) {
+    const isReceipt = Math.random() > 0.5;
+    const refSource = (isReceipt ? sampleReceipts : sampleDeliveries) as any[];
+    if (refSource.length === 0) continue;
+
+    const refItem = randomElement(refSource);
+    const product = randomElement(products);
+
+    incidents.push({
+      type: randomElement(['damaged', 'shortage', 'rejected']),
+      refType: isReceipt ? 'receipt' : 'delivery',
+      refId: refItem._id,
+      status: randomElement(['open', 'inProgress', 'resolved']),
+      note: `Sự cố mẫu ${i + 1} - Hàng hóa bị lỗi`,
+      lines: [{
+        productId: product._id,
+        quantity: randomInt(1, 5)
+      }],
+      action: randomElement(['replenish', 'return', 'refund']),
+      createdBy: randomElement(users)._id,
+      createdAt: new Date(now - randomInt(1, 30) * 86400000)
+    });
+  }
+
+  await IncidentModel.insertMany(incidents);
+  logger.info(`✓ Seeded ${incidents.length} incidents`);
+};
+
+const seedStocktakes = async (users: any[]) => {
+  const { StocktakeModel } = await import('../src/models/stocktake.model.js');
+  if (!StocktakeModel) return;
+
+  const { InventoryModel } = await import('../src/models/inventory.model.js');
+  const inventoryItems = await InventoryModel.find().limit(50).lean();
+
+  const stocktakes = [];
+  const now = Date.now();
+
+  for (let i = 0; i < 5; i++) {
+    const isPass = Math.random() > 0.4; // 60% pass
+
+    // Select 3-8 items
+    const selectedItems = inventoryItems
+      .sort(() => 0.5 - Math.random())
+      .slice(0, randomInt(3, 8));
+
+    const stocktakeItems = selectedItems.map((inv: any) => {
+      const systemQty = inv.quantity;
+      // If stocktake is 'diff', items MIGHT have diff
+      const hasDiff = !isPass && Math.random() > 0.3;
+      const countedQty = hasDiff ? Math.max(0, systemQty + randomInt(-5, 5)) : systemQty;
+
+      return {
+        productId: inv.productId,
+        locationId: inv.locationId,
+        systemQty,
+        countedQty,
+        serials: []
+      };
+    });
+
+    stocktakes.push({
+      code: `STK-${202500 + i}`,
+      date: new Date(now - randomInt(0, 30) * 86400000),
+      status: isPass ? 'pass' : 'diff',
+      items: stocktakeItems,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+  }
+
+  await StocktakeModel.insertMany(stocktakes);
+  logger.info(`✓ Seeded ${stocktakes.length} stocktakes`);
+};
+
 import { fileURLToPath } from 'node:url';
 
 export const seed = async (skipConnect = false) => {
@@ -497,24 +716,43 @@ export const seed = async (skipConnect = false) => {
     logger.warn('Some collections skipped during wipe');
   }
 
-  await Promise.all(collections.map((model) => (model as any).deleteMany({})));
-  logger.info('✓ Wiped all collections\n');
+  // await Promise.all(collections.map((model) => (model as any).deleteMany({})));
+  logger.info('✓ Wiped all collections (SKIPPED)\n');
 
-  await seedUsers();
-  const users = await UserModel.find({});
+  // Ensure core data exists
+  let users = await UserModel.find({});
+  if (users.length === 0) {
+    logger.info('Users missing, re-seeding...');
+    await seedUsers();
+    users = await UserModel.find({});
+  }
 
-  const categories = await seedCategories();
+  let categories = await CategoryModel.find({});
+  if (categories.length === 0) {
+    categories = await seedCategories();
+  }
 
-  const partners = await seedPartners();
+  let partners = await PartnerModel.find({});
+  if (partners.length === 0) {
+    partners = await seedPartners();
+  }
 
-  const products = await seedProducts(categories, partners);
+  let products = await ProductModel.find({});
+  if (products.length === 0) {
+    products = await seedProducts(categories, partners);
+  }
 
-  const bins = await createWarehouseTree();
+  const bins = await WarehouseNodeModel.find({ type: 'bin' });
+  if (bins.length === 0) {
+    await createWarehouseTree();
+  }
 
-  await seedInventory(products, bins);
+  await seedReceipts(partners, products, users);
+  await seedDeliveries(partners, products, users);
+  await seedIncidents(products, users);
+  await seedStocktakes(users);
 
-  await seedNotifications(users);
-
+  // await seedNotifications(users);
   await seedFinancials(partners);
 
   logger.info('\n✅ MASSIVE Seed completed successfully!');
@@ -534,6 +772,8 @@ export const seed = async (skipConnect = false) => {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   seed()
     .catch((error) => {
+      console.log('Seed failed logic (STDOUT):', JSON.stringify(error, null, 2));
+      fs.writeFileSync('error.json', JSON.stringify(error, null, 2));
       logger.error('Seed failed', { error });
       process.exitCode = 1;
     })

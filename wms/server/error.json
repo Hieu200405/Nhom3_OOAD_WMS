@@ -1,0 +1,40 @@
+{
+  "errors": {
+    "lines.0.priceIn": {
+      "name": "ValidatorError",
+      "message": "Path `priceIn` is required.",
+      "properties": {
+        "message": "Path `priceIn` is required.",
+        "type": "required",
+        "path": "priceIn"
+      },
+      "kind": "required",
+      "path": "priceIn"
+    },
+    "lines.1.priceIn": {
+      "name": "ValidatorError",
+      "message": "Path `priceIn` is required.",
+      "properties": {
+        "message": "Path `priceIn` is required.",
+        "type": "required",
+        "path": "priceIn"
+      },
+      "kind": "required",
+      "path": "priceIn"
+    },
+    "lines.2.priceIn": {
+      "name": "ValidatorError",
+      "message": "Path `priceIn` is required.",
+      "properties": {
+        "message": "Path `priceIn` is required.",
+        "type": "required",
+        "path": "priceIn"
+      },
+      "kind": "required",
+      "path": "priceIn"
+    }
+  },
+  "_message": "Receipt validation failed",
+  "name": "ValidationError",
+  "message": "Receipt validation failed: lines.0.priceIn: Path `priceIn` is required., lines.1.priceIn: Path `priceIn` is required., lines.2.priceIn: Path `priceIn` is required."
+}

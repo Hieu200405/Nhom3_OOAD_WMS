@@ -449,7 +449,9 @@
       "totalStocktakes": "Total Stocktakes",
       "accuracyRate": "Accuracy Rate",
       "netAdjustments": "Net Adjustments",
-      "discrepancyRate": "Discrepancy Rate"
+      "discrepancyRate": "Discrepancy Rate",
+      "totalReceipts": "Total Receipts",
+      "totalDeliveries": "Total Deliveries"
     },
     "charts": {
       "revenueVsExpenses": "Revenue vs Expenses (6 Months)",
