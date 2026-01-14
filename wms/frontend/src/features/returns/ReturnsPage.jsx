@@ -76,6 +76,17 @@ export function ReturnsPage() {
     [deliveries]
   );
 
+  const deliveryMap = useMemo(() => {
+    const map = new Map();
+    deliveries.forEach((delivery) => {
+      const id = String(delivery.id ?? delivery._id ?? '');
+      if (id) {
+        map.set(id, delivery);
+      }
+    });
+    return map;
+  }, [deliveries]);
+
   const selectedDelivery = useMemo(
     () => deliveries.find((delivery) => delivery.id === form.deliveryId),
     [deliveries, form.deliveryId]
@@ -284,12 +295,26 @@ export function ReturnsPage() {
           {
             key: 'refId',
             header: t('returns.from'),
-            render: (_, row) => row.refCustomerName || row.refCode || 'Customer'
+            render: (_, row) => {
+              const delivery = deliveryMap.get(String(row.refId ?? ''));
+              const customerName =
+                row.refCustomerName ||
+                delivery?.customerName ||
+                delivery?.customer?.name ||
+                delivery?.customerId?.name ||
+                null;
+              const code = row.refCode || delivery?.code || null;
+              return customerName || code || 'Customer';
+            }
           },
           {
             key: 'refDate',
             header: t('deliveries.date'),
-            render: (_, row) => formatDate(row.refDate ?? row.createdAt)
+            render: (_, row) => {
+              const delivery = deliveryMap.get(String(row.refId ?? ''));
+              const date = row.refDate || delivery?.date || row.createdAt;
+              return formatDate(date);
+            }
           },
           {
             key: 'status',

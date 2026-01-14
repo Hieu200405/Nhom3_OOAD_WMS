@@ -484,7 +484,8 @@ export const restockReturn = async (id: string, actorId: string) => {
     reason: 'mismatch',
     lines: approvedItems.map((item) => ({
       productId: item.productId,
-      locationId: new Types.ObjectId(defaultBin),
+      locationId: new Types.ObjectId(item.locationId || defaultBin),
+      batch: item.batch ?? null,
       delta: item.restockQty || 0
     })),
     status: 'draft',
@@ -496,7 +497,8 @@ export const restockReturn = async (id: string, actorId: string) => {
     await adjustInventory(
       line.productId.toString(),
       line.locationId.toString(),
-      line.delta
+      line.delta,
+      { batch: line.batch ?? null }
     );
   }
 

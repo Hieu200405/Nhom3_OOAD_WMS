@@ -363,7 +363,7 @@ export function DisposalsPage() {
         <form id="disposal-form" className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="M� phi?u (T? d?ng)"
+              label="Mã phiếu (Tự động)"
               value={form.code}
               onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
               placeholder="HUY-..."
