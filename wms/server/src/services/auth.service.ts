@@ -63,12 +63,17 @@ export const registerUser = async ({ email, password, fullName, role, actorId }:
 
 export const login = async ({ email, password }: LoginInput) => {
   const user = (await UserModel.findOne({ email })) as UserDocument | null;
-  if (!user || !user.isActive) {
+  if (!user) {
     throw unauthorized('Invalid credentials');
   }
+
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
     throw unauthorized('Invalid credentials');
+  }
+
+  if (!user.isActive) {
+    throw unauthorized('Account locked');
   }
   const id = (user._id as Types.ObjectId).toString();
   const base = {

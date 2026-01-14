@@ -25,7 +25,13 @@ export function LoginPage() {
         replace: true,
       });
     } catch (err) {
-      setError(err.message);
+      let msg = err.message;
+      if (msg === 'Account locked') {
+        msg = t('auth.locked');
+      } else if (msg === 'Invalid credentials') {
+        msg = t('auth.invalid');
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

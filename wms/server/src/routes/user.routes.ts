@@ -16,6 +16,7 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
+  email: z.string().email().optional(),
   fullName: z.string().min(1).optional(),
   role: z.enum(USER_ROLES).optional(),
   isActive: z.boolean().optional(),

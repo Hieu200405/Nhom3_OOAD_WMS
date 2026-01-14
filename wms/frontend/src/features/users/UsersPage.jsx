@@ -33,7 +33,8 @@ export function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient('/users');
+      // Add timestamp to prevent caching
+      const res = await apiClient('/users', { params: { t: Date.now() } });
       setUsers(res.data || []);
     } catch (err) {
       console.error(err);
@@ -69,8 +70,14 @@ export function UsersPage() {
 
     try {
       if (editing) {
-        const payload = { ...form };
-        if (!payload.password) delete payload.password;
+        // Only send allowed fields
+        const payload = {
+          email: form.email,
+          fullName: form.fullName,
+          role: form.role,
+          isActive: form.isActive,
+        };
+        if (form.password) payload.password = form.password;
 
         await apiClient(`/users/${editing.id}`, {
           method: 'PUT',

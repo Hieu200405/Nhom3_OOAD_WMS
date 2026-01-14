@@ -30,6 +30,10 @@
     "reject": "Reject",
     "complete": "Complete"
   },
+  "auth": {
+    "invalid": "Invalid email or password",
+    "locked": "Your account has been locked. Please contact administrator."
+  },
   "navigation": {
     "dashboard": "Dashboard",
     "products": "Products",

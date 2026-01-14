@@ -19,11 +19,11 @@ export const listUsers = async (query: ListQuery) => {
   const { page, limit, sort, skip } = parsePagination(query);
   const filter = query.query
     ? {
-        $or: [
-          { email: new RegExp(query.query, 'i') },
-          { fullName: new RegExp(query.query, 'i') }
-        ]
-      }
+      $or: [
+        { email: new RegExp(query.query, 'i') },
+        { fullName: new RegExp(query.query, 'i') }
+      ]
+    }
     : {};
   const [total, data] = await Promise.all([
     UserModel.countDocuments(filter),
@@ -62,6 +62,7 @@ export const getUserById = async (id: string) => {
 };
 
 interface UpdateUserInput {
+  email?: string;
   fullName?: string;
   role?: UserRole;
   isActive?: boolean;
@@ -74,6 +75,22 @@ export const updateUser = async (id: string, input: UpdateUserInput) => {
   if (!user) {
     throw notFound('User not found');
   }
+
+  console.log(`[UserService] Updating user ${id}`, { inputEmail: input.email, currentEmail: user.email });
+
+  if (input.email) {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    if (normalizedEmail !== user.email.toLowerCase()) {
+      console.log(`[UserService] Changing email from ${user.email} to ${normalizedEmail}`);
+      const exists = await UserModel.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+      if (exists) {
+        throw badRequest('Email already in use');
+      }
+      user.email = normalizedEmail;
+      user.markModified('email');
+    }
+  }
+
   if (input.fullName) user.fullName = input.fullName;
   if (input.role) user.role = input.role;
   if (typeof input.isActive === 'boolean') user.isActive = input.isActive;
@@ -90,6 +107,7 @@ export const updateUser = async (id: string, input: UpdateUserInput) => {
     entityId: user._id as Types.ObjectId,
     actorId: input.actorId,
     payload: {
+      email: input.email,
       fullName: input.fullName,
       role: input.role,
       isActive: input.isActive

@@ -22,6 +22,7 @@ export const getById = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
+  console.log('[UserController] Update Payload:', JSON.stringify(req.body));
   const user = await updateUser(req.params.id, { ...req.body, actorId: req.user!.id });
   res.json({ data: user });
 });

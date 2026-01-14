@@ -30,6 +30,10 @@
     "reject": "Từ chối",
     "complete": "Hoàn tất"
   },
+  "auth": {
+    "invalid": "Tài khoản hoặc mật khẩu không chính xác",
+    "locked": "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
+  },
   "navigation": {
     "dashboard": "Tổng quan",
     "products": "Sản phẩm",
