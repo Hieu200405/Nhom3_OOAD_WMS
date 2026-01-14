@@ -328,6 +328,7 @@
   },
   "stocktaking": {
     "title": "Kiểm kê kho",
+    "subtitle": "Thực hiện kiểm kê định kỳ hoặc đột xuất để đảm bảo độ chính xác của số liệu tồn kho.",
     "create": "Tạo phiếu kiểm kê",
     "adjustments": "Phiếu điều chỉnh",
     "difference": "Chênh lệch",
@@ -338,7 +339,8 @@
     "minutes": "Ghi chú",
     "attachments": "Tệp đính kèm",
     "minutesPlaceholder": "Ghi chú hoặc ghi chú duyệt",
-    "attachmentsPlaceholder": "Tải lên biên bản kiểm kê hoặc hình ảnh"
+    "attachmentsPlaceholder": "Tải lên biên bản kiểm kê hoặc hình ảnh",
+    "items": "Sản phẩm"
   },
   "returns": {
     "title": "Phiếu trả hàng",

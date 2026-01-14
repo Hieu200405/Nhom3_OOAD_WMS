@@ -13,7 +13,7 @@ export type ReceiptStatus = (typeof RECEIPT_STATUS)[number];
 export const DELIVERY_STATUS = ['draft', 'approved', 'prepared', 'delivered', 'completed', 'cancelled', 'rejected'] as const;
 export type DeliveryStatus = (typeof DELIVERY_STATUS)[number];
 
-export const STOCKTAKE_STATUS = ['draft', 'approved', 'applied'] as const;
+export const STOCKTAKE_STATUS = ['pass', 'diff'] as const;
 export type StocktakeStatus = (typeof STOCKTAKE_STATUS)[number];
 
 export const RETURN_STATUS = ['draft', 'approved', 'inspected', 'completed'] as const;

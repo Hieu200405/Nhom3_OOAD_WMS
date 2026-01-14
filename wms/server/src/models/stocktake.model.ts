@@ -14,11 +14,6 @@ export interface Stocktake {
   date: Date;
   status: StocktakeStatus;
   items: StocktakeItem[];
-  adjustmentId?: Types.ObjectId | null;
-  approvedBy?: Types.ObjectId | null;
-  approvedAt?: Date | null;
-  minutes?: string | null;
-  attachments?: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,13 +35,8 @@ const stocktakeSchema = new Schema<StocktakeDocument>(
   {
     code: { type: String, required: true, unique: true, trim: true },
     date: { type: Date, required: true },
-    status: { type: String, enum: STOCKTAKE_STATUS, required: true, default: 'draft' },
+    status: { type: String, enum: STOCKTAKE_STATUS, required: true, default: 'pass' },
     items: { type: [stocktakeItemSchema], default: [] },
-    adjustmentId: { type: Schema.Types.ObjectId, ref: 'Adjustment' },
-    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    approvedAt: { type: Date },
-    minutes: { type: String, trim: true },
-    attachments: { type: [String], default: [] }
   },
   { timestamps: true }
 );

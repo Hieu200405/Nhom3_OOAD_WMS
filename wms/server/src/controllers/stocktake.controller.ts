@@ -3,8 +3,7 @@ import {
   listStocktakes,
   createStocktake,
   updateStocktake,
-  approveStocktake,
-  applyStocktake
+  deleteStocktake
 } from '../services/stocktake.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -23,12 +22,7 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   res.json({ data: stocktake });
 });
 
-export const approve = asyncHandler(async (req: Request, res: Response) => {
-  const stocktake = await approveStocktake(req.params.id, req.user!.id, req.body);
-  res.json({ data: stocktake });
-});
-
-export const apply = asyncHandler(async (req: Request, res: Response) => {
-  const stocktake = await applyStocktake(req.params.id, req.user!.id);
-  res.json({ data: stocktake });
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  await deleteStocktake(req.params.id, req.user!.id);
+  res.status(204).send();
 });
