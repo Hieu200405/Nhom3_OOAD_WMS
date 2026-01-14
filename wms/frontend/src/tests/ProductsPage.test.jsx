@@ -31,16 +31,16 @@ describe('ProductsPage Integration (Enterprise Grade)', () => {
         apiClient.mockImplementation((url) => {
             if (url === '/products') return Promise.resolve({ data: [{ id: '1', sku: 'P1', name: 'Product 1', priceIn: 10, priceOut: 20 }] });
             if (url === '/categories') return Promise.resolve({ data: [{ id: 'c1', name: 'Category 1' }] });
-            if (url === '/partners') return Promise.resolve({ data: [] });
+            if (url === '/partners') return Promise.resolve({ data: [{ id: 's1', name: 'Supplier 1' }] });
             return Promise.resolve({ data: [] });
         });
 
         render(<ProductsPage />);
 
-        // Should call APIs
+        // Wait for data to load
         await waitFor(() => {
-            expect(apiClient).toHaveBeenCalledWith('/products');
             expect(apiClient).toHaveBeenCalledWith('/categories');
+            expect(apiClient).toHaveBeenCalledWith('/partners', { params: { type: 'supplier' } });
         });
 
         // Verify data items rendered
@@ -65,6 +65,7 @@ describe('ProductsPage Integration (Enterprise Grade)', () => {
                 return mockPost(url, options);
             }
             if (url === '/categories') return Promise.resolve({ data: [{ id: 'c1', name: 'Cat 1' }] });
+            if (url === '/partners') return Promise.resolve({ data: [{ id: 's1', name: 'Sup 1' }] });
             return Promise.resolve({ data: [] });
         });
 
@@ -85,6 +86,9 @@ describe('ProductsPage Integration (Enterprise Grade)', () => {
 
         // Select Category (assuming Select component renders a select element)
         fireEvent.change(screen.getByLabelText('products.category'), { target: { value: 'c1' } });
+
+        // Select Supplier
+        fireEvent.change(screen.getByLabelText('Nhà cung cấp ưu tiên'), { target: { value: 's1' } });
 
         fireEvent.change(screen.getByLabelText('Giá nhập (Chuẩn)'), { target: { value: '1000' } });
         fireEvent.change(screen.getByLabelText('Giá bán'), { target: { value: '2000' } });

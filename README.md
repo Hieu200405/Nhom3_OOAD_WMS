@@ -76,6 +76,16 @@ npm run docker:up
 
 ### Chạy Tests
 
+**Tất cả Tests (Khuyến nghị):**
+```bash
+# Chạy script tự động
+.\run-all-tests.ps1
+
+# Hoặc chạy từng loại test
+npm run test --workspaces  # Frontend + Backend
+cd e2e && npx playwright test  # E2E tests
+```
+
 **Backend Tests (Jest + Supertest):**
 ```bash
 cd wms/server
@@ -88,10 +98,17 @@ cd wms/frontend
 npm test
 ```
 
+**E2E Tests (Playwright):**
+```bash
+cd wms/e2e
+npx playwright test
+```
+
 ### Kết Quả Kiểm Thử
 
 ✅ **Backend:** 8 test suites, 21 tests - **100% PASSED**  
-✅ **Frontend:** 5 test files, 14 tests - **100% PASSED**
+✅ **Frontend:** 5 test files, 14 tests - **100% PASSED**  
+✅ **E2E:** 10/16 tests - **62.5% PASSED** (critical flows)
 
 **Modules đã kiểm thử:**
 - Authentication & Authorization
@@ -106,7 +123,8 @@ npm test
 ### Tài Liệu Kiểm Thử
 
 Xem chi tiết tại:
-- 📚 [PROJECT_GUIDE.md](./PROJECT_GUIDE.md) - Hướng dẫn toàn diện về dự án, testing, E2E
+- 📋 **[TEST_GUIDE.md](./wms/TEST_GUIDE.md)** - Hướng dẫn chi tiết chạy tests và xem kết quả
+- 📚 [PROJECT_GUIDE.md](./PROJECT_GUIDE.md) - Hướng dẫn toàn diện về dự án
 - 📊 [SEED_DATA.md](./SEED_DATA.md) - Tài liệu dữ liệu seed chi tiết
 
 ## 📚 Tài liệu API
