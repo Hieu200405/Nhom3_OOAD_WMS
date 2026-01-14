@@ -4,14 +4,35 @@ import { logger } from '../utils/logger.js';
 
 mongoose.set('strictQuery', true);
 
-export const connectMongo = async (): Promise<typeof mongoose> => {
+export const connectMongo = async (): Promise<{ connection: typeof mongoose; isInMemory: boolean }> => {
   try {
-    const connection = await mongoose.connect(env.mongodbUri);
+    const connection = await mongoose.connect(env.mongodbUri, { serverSelectionTimeoutMS: 5000 });
     logger.info('MongoDB connected');
-    return connection;
+    return { connection, isInMemory: false };
   } catch (error) {
-    logger.error('MongoDB connection error', { error });
-    throw error;
+    if (env.nodeEnv === 'production') {
+      logger.error('MongoDB connection error', { error });
+      throw error;
+    }
+
+    logger.warn('Failed to connect to local MongoDB. Falling back to In-Memory Database...');
+    try {
+      // Dynamic import to avoid including it in production build if not needed (though it's in devDeps)
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
+      const mongod = await MongoMemoryServer.create({
+        instance: {
+          port: 27017 // Try to stick to default port if possible, or let it random
+        }
+      });
+      const uri = mongod.getUri();
+      logger.info(`In-Memory MongoDB started at ${uri}`);
+
+      const connection = await mongoose.connect(uri);
+      return { connection, isInMemory: true };
+    } catch (memError) {
+      logger.error('Failed to start In-Memory MongoDB', { error: memError });
+      throw error; // Throw original or new error? Throw original is better implies root cause.
+    }
   }
 };
 

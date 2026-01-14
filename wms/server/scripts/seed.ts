@@ -465,8 +465,12 @@ const seedFinancials = async (partners: any[]) => {
   }
 };
 
-const seed = async () => {
-  await connectMongo();
+import { fileURLToPath } from 'node:url';
+
+export const seed = async (skipConnect = false) => {
+  if (!skipConnect) {
+    await connectMongo();
+  }
   logger.info('🌱 Starting MASSIVE seed process...\n');
 
   const collections = [UserModel, CategoryModel, ProductModel, PartnerModel, WarehouseNodeModel, InventoryModel];
@@ -527,11 +531,13 @@ const seed = async () => {
   `);
 };
 
-seed()
-  .catch((error) => {
-    logger.error('Seed failed', { error });
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await disconnectMongo();
-  });
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  seed()
+    .catch((error) => {
+      logger.error('Seed failed', { error });
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await disconnectMongo();
+    });
+}

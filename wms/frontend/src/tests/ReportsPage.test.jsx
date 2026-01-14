@@ -78,15 +78,15 @@ describe('ReportsPage', () => {
 
     it('switches tabs and fetches new data', async () => {
         // First load (overview)
-        apiClient.mockResolvedValueOnce({ data: {} });
+        apiClient.mockImplementation((url) => {
+            if (url.includes('inventory')) return Promise.resolve({ data: [{ sku: 'INV1', totalQty: 10, status: 'ok' }] });
+            return Promise.resolve({ data: {} });
+        });
 
         render(<ReportsPage />);
 
         // Click Inventory Tab
         const inventoryTab = screen.getByText('Inventory Level');
-
-        // Mock subsequent calls
-        apiClient.mockResolvedValueOnce({ data: [] }); // Response for inventory
 
         fireEvent.click(inventoryTab);
 

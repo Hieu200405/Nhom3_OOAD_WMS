@@ -160,15 +160,8 @@ describe('Receipt & Delivery flows', () => {
           }
         ]
       });
-    expect(insufficientDelivery.status).toBe(201);
-    const insufficientId = insufficientDelivery.body.data._id ?? insufficientDelivery.body.data.id;
-
-    const conflictRes = await request(app)
-      .post(`/api/v1/deliveries/${insufficientId}/transition`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ to: 'approved' });
-    expect(conflictRes.status).toBe(409);
-    expect(conflictRes.body.error.code).toBe('CONFLICT');
+    expect(insufficientDelivery.status).toBe(409);
+    expect(insufficientDelivery.body.error.code).toBe('CONFLICT');
 
     const inventoryFinal = await InventoryModel.findOne({
       productId,

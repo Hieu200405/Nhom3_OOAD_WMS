@@ -10,7 +10,15 @@ const server = createServer(app);
 
 const start = async () => {
   try {
-    await connectMongo();
+    const { isInMemory } = await connectMongo();
+
+    if (isInMemory) {
+      logger.info('⚠️ Using In-Memory Database. Performing auto-seed...');
+      // @ts-ignore
+      const { seed } = await import('../scripts/seed.ts');
+      await seed(true);
+    }
+
     await import('./services/setting.service.js').then(s => s.initializeDefaultSettings());
     // Initialize Socket.io
     initSocket(server);

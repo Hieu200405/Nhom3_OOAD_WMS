@@ -9,6 +9,7 @@ describe('Product API', () => {
   const app = createApp();
   let token: string;
   let categoryId: string;
+  let supplierId: string;
 
   beforeEach(async () => {
     const passwordHash = await bcrypt.hash('Admin123!', env.saltRounds);
@@ -25,6 +26,16 @@ describe('Product API', () => {
     token = login.body.data.accessToken;
     const category = await CategoryModel.create({ name: 'Beverages', code: 'BEV-001' });
     categoryId = category.id;
+
+    // Create a supplier
+    const { PartnerModel } = await import('../src/models/partner.model.js');
+    const supplier = await PartnerModel.create({
+      type: 'supplier',
+      name: 'Test Supplier',
+      code: 'SUP-001',
+      isActive: true
+    });
+    supplierId = supplier.id;
   });
 
   it('performs full CRUD lifecycle on product', async () => {
@@ -38,7 +49,8 @@ describe('Product API', () => {
         unit: 'pcs',
         priceIn: 10,
         priceOut: 15,
-        minStock: 5
+        minStock: 5,
+        preferredSupplierId: supplierId
       });
 
     expect(createResponse.status).toBe(201);

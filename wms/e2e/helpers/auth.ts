@@ -9,8 +9,8 @@ export async function loginAsAdmin(page: Page) {
     await page.locator('input[type="password"]').fill('123456');
     await page.click('button[type="submit"]');
 
-    // Wait for navigation to dashboard or home
-    await page.waitForURL(/.*\/(dashboard|home|inventory|products)/, { timeout: 10000 });
+    // Wait for navigation to dashboard
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 }
 
 /**
@@ -18,12 +18,12 @@ export async function loginAsAdmin(page: Page) {
  */
 export async function loginAsManager(page: Page) {
     await page.goto('/');
-    await page.locator('input[type="text"], input:not([type="password"])').first().fill('manager@wms.local');
+    await page.locator('input[type="text"], input:not([type="password"])').first().fill('manager1@wms.local');
     await page.locator('input[type="password"]').fill('123456');
     await page.click('button[type="submit"]');
 
     // Wait for navigation
-    await page.waitForURL(/.*\/(dashboard|home|inventory|products)/, { timeout: 10000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 }
 
 /**
@@ -31,12 +31,12 @@ export async function loginAsManager(page: Page) {
  */
 export async function loginAsStaff(page: Page) {
     await page.goto('/');
-    await page.locator('input[type="text"], input:not([type="password"])').first().fill('staff@wms.local');
+    await page.locator('input[type="text"], input:not([type="password"])').first().fill('staff1@wms.local');
     await page.locator('input[type="password"]').fill('123456');
     await page.click('button[type="submit"]');
 
     // Wait for navigation
-    await page.waitForURL(/.*\/(dashboard|home|inventory|products)/, { timeout: 10000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 }
 
 /**
