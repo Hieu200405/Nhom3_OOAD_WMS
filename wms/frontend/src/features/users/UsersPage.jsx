@@ -34,16 +34,14 @@ export function UsersPage() {
     setLoading(true);
     try {
       const res = await apiClient('/users');
-      // Backend returns { data: [...], meta: ... } or just array? 
-      // Controller list calls buildPagedResponse which returns { data, meta }.
       setUsers(res.data || []);
     } catch (err) {
       console.error(err);
-      toast.error('Không thể tải danh sách người dùng');
+      toast.error(t('users.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchUsers();
@@ -57,7 +55,7 @@ export function UsersPage() {
 
   const openEditModal = (user) => {
     setEditing(user);
-    setForm({ ...user, password: '' }); // Don't show numeric hash or actual password
+    setForm({ ...user, password: '' });
     setOpen(true);
   };
 
@@ -65,58 +63,56 @@ export function UsersPage() {
     event.preventDefault();
 
     if (!form.email || !form.fullName) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      toast.error(t('users.validation.required'));
       return;
     }
 
     try {
       if (editing) {
         const payload = { ...form };
-        if (!payload.password) delete payload.password; // Don't send empty password
+        if (!payload.password) delete payload.password;
 
         await apiClient(`/users/${editing.id}`, {
           method: 'PUT',
           body: payload
         });
-        toast.success('Cập nhật thành công');
+        toast.success(t('users.updateSuccess'));
       } else {
         if (!form.password) {
-          toast.error('Vui lòng nhập mật khẩu');
+          toast.error(t('users.validation.passwordRequired'));
           return;
         }
-        // Remove isActive from create payload since creation schema doesn't accept it
         const { isActive, ...createPayload } = form;
         await apiClient('/users', {
           method: 'POST',
           body: createPayload
         });
-        toast.success('Tạo tài khoản thành công');
+        toast.success(t('users.createSuccess'));
       }
       setOpen(false);
       fetchUsers();
     } catch (error) {
       console.error(error);
       if (error.details && Array.isArray(error.details)) {
-        // Show specific validation errors
         error.details.forEach(issue => {
           const field = issue.path.join('.');
           toast.error(`${field}: ${issue.message}`);
         });
       } else {
-        toast.error(error.message || 'Có lỗi xảy ra');
+        toast.error(error.message || t('app.error'));
       }
     }
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Bạn có chắc muốn xóa tài khoản này?')) {
+    if (confirm(t('users.deleteConfirm'))) {
       try {
         await apiClient(`/users/${id}`, { method: 'DELETE' });
-        toast.success('Xóa tài khoản thành công');
+        toast.success(t('users.deleteSuccess'));
         fetchUsers();
       } catch (error) {
         console.error(error);
-        toast.error(error.message || 'Không thể xóa tài khoản');
+        toast.error(error.message || t('users.deleteError'));
       }
     }
   };
@@ -124,7 +120,7 @@ export function UsersPage() {
   const columns = [
     {
       key: 'fullName',
-      header: 'Họ và tên',
+      header: t('users.fields.fullName'),
       render: (value, row) => (
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
@@ -139,7 +135,7 @@ export function UsersPage() {
     },
     {
       key: 'role',
-      header: 'Phân quyền',
+      header: t('users.fields.role'),
       render: (value) => (
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium border ${value === 'Admin'
           ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800'
@@ -154,37 +150,37 @@ export function UsersPage() {
     },
     {
       key: 'isActive',
-      header: 'Trạng thái',
+      header: t('users.fields.status'),
       render: (value) => (
         <span className={`inline-flex items-center gap-1 text-xs font-medium ${value ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
           }`}>
           {value ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-          {value ? 'Hoạt động' : 'Đã khóa'}
+          {value ? t('users.status.active') : t('users.status.inactive')}
         </span>
       ),
     },
     {
       key: 'createdAt',
-      header: 'Ngày tạo',
-      render: (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '—',
+      header: t('users.fields.createdAt'),
+      render: (value) => value ? new Date(value).toLocaleDateString() : '—',
     },
     {
       key: 'actions',
-      header: 'Hành động',
+      header: t('app.actions'),
       sortable: false,
       render: (_, row) => (
         <div className="flex gap-2">
           <button
             onClick={() => openEditModal(row)}
             className="rounded p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-            title="Chỉnh sửa"
+            title={t('app.edit')}
           >
             <Pencil className="h-4 w-4" />
           </button>
           <button
             onClick={() => handleDelete(row.id)}
             className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-            title="Xóa"
+            title={t('app.delete')}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -198,10 +194,10 @@ export function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            Quản lý người dùng
+            {t('users.title')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Quản lý tài khoản, phân quyền và cấp phép truy cập
+            {t('users.description')}
           </p>
         </div>
         <button
@@ -209,7 +205,7 @@ export function UsersPage() {
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
         >
           <Plus className="h-4 w-4" />
-          Thêm tài khoản
+          {t('users.create')}
         </button>
       </div>
 
@@ -221,35 +217,35 @@ export function UsersPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={editing ? 'Cập nhật tài khoản' : 'Thêm tài khoản mới'}
+        title={editing ? t('users.edit') : t('users.create')}
         actions={
           <>
             <button
               onClick={() => setOpen(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              Hủy
+              {t('app.cancel')}
             </button>
             <button
               type="submit"
               form="user-form"
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
             >
-              {editing ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+              {editing ? t('app.save') : t('users.create')}
             </button>
           </>
         }
       >
         <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Họ và tên"
+            label={t('users.fields.fullName')}
             value={form.fullName}
             onChange={(e) => setForm({ ...form, fullName: e.target.value })}
             required
-            placeholder="Ví dụ: Nguyễn Văn A"
+            placeholder="Ex: John Doe"
           />
           <Input
-            label="Email"
+            label={t('users.fields.email')}
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -257,7 +253,7 @@ export function UsersPage() {
             placeholder="user@example.com"
           />
           <Select
-            label="Phân quyền (Role)"
+            label={t('users.fields.role')}
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             options={ROLES}
@@ -265,19 +261,19 @@ export function UsersPage() {
 
           {!editing && (
             <Input
-              label="Mật khẩu"
+              label={t('users.fields.password')}
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
               minLength={8}
-              placeholder="Min 8 chars"
+              placeholder={t('users.validation.passwordMin')}
             />
           )}
 
           {editing && (
             <Input
-              label="Mật khẩu mới (Để trống nếu không đổi)"
+              label={t('users.fields.newPassword')}
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -295,7 +291,7 @@ export function UsersPage() {
                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
               />
               <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Kích hoạt tài khoản
+                {t('users.fields.isActive')}
               </label>
             </div>
           )}

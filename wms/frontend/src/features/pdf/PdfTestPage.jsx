@@ -23,11 +23,11 @@ export function PdfTestPage() {
   }, []);
 
   const productColumns = [
-    { key: 'sku', header: 'Mã SKU' },
-    { key: 'name', header: 'Tên sản phẩm' },
-    { key: 'category', header: 'Danh mục' },
-    { key: 'unit', header: 'Đơn vị' },
-    { key: 'priceOut', header: 'Giá bán' },
+    { key: 'sku', header: t('pdf.columns.sku') },
+    { key: 'name', header: t('pdf.columns.name') },
+    { key: 'category', header: t('pdf.columns.category') },
+    { key: 'unit', header: t('pdf.columns.unit') },
+    { key: 'priceOut', header: t('pdf.columns.priceOut') },
   ];
 
   const [startDate, setStartDate] = useState('');
@@ -56,19 +56,19 @@ export function PdfTestPage() {
     priceOut: typeof p.priceOut === 'number'
       ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.priceOut)
       : p.priceOut,
-    createdAt: new Date(p.createdAt).toLocaleDateString('vi-VN')
+    createdAt: new Date(p.createdAt).toLocaleDateString()
   }));
 
   const productColumnsWithDate = [
     ...productColumns,
-    { key: 'createdAt', header: 'Ngày tạo' }
+    { key: 'createdAt', header: t('pdf.columns.createdAt') }
   ];
 
   // Standardized dummy columns for reference
   const dummyColumns = [
-    { key: 'name', header: 'Họ tên' },
-    { key: 'note', header: 'Ghi chú' },
-    { key: 'qty', header: 'Số lượng' },
+    { key: 'name', header: t('pdf.columns.name') },
+    { key: 'note', header: t('receipts.note') },
+    { key: 'qty', header: t('inventory.quantity') },
   ];
 
   const dummyRows = [
@@ -80,8 +80,8 @@ export function PdfTestPage() {
   return (
     <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold mb-2 text-slate-900 dark:text-slate-100">Xuất báo cáo PDF</h1>
-        <p className="text-slate-500 dark:text-slate-400">Kiểm tra tính năng xuất PDF với font tiếng Việt.</p>
+        <h1 className="text-2xl font-semibold mb-2 text-slate-900 dark:text-slate-100">{t('pdf.title')}</h1>
+        <p className="text-slate-500 dark:text-slate-400">{t('pdf.description')}</p>
       </div>
 
       {/* Real Data Section */}
@@ -89,12 +89,12 @@ export function PdfTestPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Danh sách sản phẩm</h2>
-              <p className="text-sm text-slate-500">Dữ liệu thực tế từ hệ thống</p>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('pdf.productList')}</h2>
+              <p className="text-sm text-slate-500">{t('pdf.realData')}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Từ:</span>
+                <span className="text-sm text-slate-500">{t('pdf.from')}:</span>
                 <input
                   type="date"
                   className="rounded-lg border border-slate-200 dark:border-slate-700 text-sm py-1.5 px-3 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
@@ -103,7 +103,7 @@ export function PdfTestPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Đến:</span>
+                <span className="text-sm text-slate-500">{t('pdf.to')}:</span>
                 <input
                   type="date"
                   className="rounded-lg border border-slate-200 dark:border-slate-700 text-sm py-1.5 px-3 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
@@ -112,8 +112,8 @@ export function PdfTestPage() {
                 />
               </div>
               <PDFButton
-                title={`Danh sách sản phẩm ${startDate ? `(Từ ${startDate})` : ''} ${endDate ? `(Đến ${endDate})` : ''}`}
-                fileName={`san-pham-${startDate || 'all'}-${endDate || 'all'}.pdf`}
+                title={`${t('pdf.productList')} ${startDate ? `(${t('pdf.from')} ${startDate})` : ''} ${endDate ? `(${t('pdf.to')} ${endDate})` : ''}`}
+                fileName={`products-report-${startDate || 'all'}-${endDate || 'all'}.pdf`}
                 columns={productColumnsWithDate}
                 rows={productRows}
               />
@@ -121,7 +121,7 @@ export function PdfTestPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-slate-500">Đang tải dữ liệu...</div>
+            <div className="text-center py-8 text-slate-500">{t('pdf.loading')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -151,14 +151,14 @@ export function PdfTestPage() {
                   ) : (
                     <tr>
                       <td colSpan={productColumnsWithDate.length} className="py-8 text-center text-slate-500 italic">
-                        Không có dữ liệu trong khoảng thời gian này
+                        {t('pdf.noData')}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
               <div className="mt-2 text-xs text-center text-slate-400 italic">
-                (Hiển thị {Math.min(10, productRows.length)} / {productRows.length} dòng)
+                {t('pdf.showing', { count: Math.min(10, productRows.length), total: productRows.length })}
               </div>
             </div>
           )}
@@ -169,12 +169,12 @@ export function PdfTestPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 opacity-60 hover:opacity-100 transition-opacity">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Dữ liệu mẫu (Test)</h2>
-            <p className="text-sm text-slate-500">Để kiểm tra font chữ unicode</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('pdf.testData')}</h2>
+            <p className="text-sm text-slate-500">{t('pdf.testDesc')}</p>
           </div>
           <PDFButton
-            title="Báo cáo mẫu"
-            fileName="bao-cao-mau.pdf"
+            title={t('pdf.sampleReport')}
+            fileName="sample-report.pdf"
             columns={dummyColumns}
             rows={dummyRows}
           />

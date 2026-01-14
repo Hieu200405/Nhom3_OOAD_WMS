@@ -230,7 +230,17 @@
     "batch": "Lo",
     "viewLocation": "Xem vị trí",
     "allCategories": "Tất cả danh mục",
-    "checkSmart": "Kiểm tra thông minh"
+    "checkSmart": "Kiểm tra thông minh",
+    "locationList": "Danh sách vị trí",
+    "noLocation": "Không có tồn tại vị trí",
+    "expiry": "HSD",
+    "messages": {
+      "checking": "Đang kiểm tra tồn kho...",
+      "sufficient": "Hệ thống đủ hàng, không cần bổ sung.",
+      "checkError": "Lỗi kiểm tra",
+      "createSuccess": "Đã tạo {{count}} phiếu nhập kho nháp thành công!",
+      "createError": "Lỗi tạo phiếu"
+    }
   },
   "receipts": {
     "title": "Phiếu nhập kho",
@@ -415,7 +425,60 @@
     "receipts": "Nhập kho",
     "deliveries": "Xuất kho",
     "stocktaking": "Kiểm kê & điều chỉnh",
-    "financials": "Công nợ"
+    "financials": "Công nợ",
+    "stats": {
+      "totalInventoryValue": "Tổng giá trị tồn kho",
+      "products": "Sản phẩm",
+      "pendingReceipts": "Phiếu nhập chờ xử lý",
+      "pendingDeliveries": "Phiếu xuất chờ xử lý",
+      "totalSkus": "Tổng số mã hàng",
+      "lowStock": "Sắp hết hàng",
+      "outOfStock": "Hết hàng",
+      "stockValue": "Giá trị tồn kho (Ước tính)",
+      "inboundVolume": "Khối lượng nhập kho",
+      "pending": "Đang chờ",
+      "completed": "Hoàn tất",
+      "avgProcessingTime": "Thời gian xử lý TB",
+      "outboundVolume": "Khối lượng xuất kho",
+      "onTimeDelivery": "Giao hàng đúng hạn",
+      "totalStocktakes": "Số lần kiểm kê",
+      "accuracyRate": "Tỷ lệ chính xác",
+      "netAdjustments": "Giá trị điều chỉnh ròng",
+      "discrepancyRate": "Tỷ lệ sai lệch"
+    },
+    "charts": {
+      "revenueVsExpenses": "Doanh thu vs Chi phí (6 tháng)",
+      "inventoryStatus": "Trạng thái tồn kho",
+      "stockDistribution": "Phân bổ tồn kho theo danh mục",
+      "topProducts": "Top 5 sản phẩm theo giá trị",
+      "monthlyInbound": "Nhập kho hàng tháng",
+      "monthlyOutbound": "Xuất kho hàng tháng",
+      "deliveryStatus": "Trạng thái giao hàng",
+      "accuracyTrend": "Xu hướng độ chính xác tồn kho"
+    },
+    "common": {
+      "noData": "Không có dữ liệu báo cáo",
+      "downloadCompleted": "Tải xuống hoàn tất",
+      "downloadFailed": "Tải xuống thất bại",
+      "refresh": "Làm mới",
+      "exportPdf": "Xuất PDF",
+      "revenue": "Doanh thu",
+      "expenses": "Chi phí",
+      "available": "Sẵn sàng",
+      "allocated": "Đã phân bổ",
+      "reserved": "Đã giữ chỗ",
+      "quarantined": "Hàng lỗi/Chờ kiểm",
+      "volume": "Khối lượng",
+      "value": "Giá trị",
+      "orders": "Đơn hàng"
+    },
+    "tabs": {
+      "overview": "Tổng quan",
+      "inventoryLevel": "Mức tồn kho",
+      "inbound": "Nhập kho",
+      "outbound": "Xuất kho",
+      "stocktakeAccuracy": "Độ chính xác kiểm kê"
+    }
   },
   "financials": {
     "title": "Quản lý công nợ",
@@ -505,5 +568,58 @@
     "updated": "Đã cập nhật",
     "deleted": "Đã xóa",
     "statusChanged": "Đã cập nhật trạng thái"
+  },
+  "users": {
+    "title": "Quản lý người dùng",
+    "description": "Quản lý tài khoản, phân quyền và cấp phép truy cập",
+    "create": "Thêm tài khoản",
+    "edit": "Cập nhật tài khoản",
+    "deleteConfirm": "Bạn có chắc muốn xóa tài khoản này?",
+    "deleteSuccess": "Xóa tài khoản thành công",
+    "createSuccess": "Tạo tài khoản thành công",
+    "updateSuccess": "Cập nhật thành công",
+    "loadError": "Không thể tải danh sách người dùng",
+    "deleteError": "Không thể xóa tài khoản",
+    "validation": {
+      "required": "Vui lòng điền đầy đủ thông tin",
+      "passwordRequired": "Vui lòng nhập mật khẩu",
+      "passwordMin": "Tối thiểu 8 ký tự"
+    },
+    "fields": {
+      "fullName": "Họ và tên",
+      "email": "Email",
+      "role": "Phân quyền",
+      "status": "Trạng thái",
+      "password": "Mật khẩu",
+      "newPassword": "Mật khẩu mới (Để trống nếu không đổi)",
+      "isActive": "Kích hoạt tài khoản",
+      "createdAt": "Ngày tạo"
+    },
+    "status": {
+      "active": "Hoạt động",
+      "inactive": "Đã khóa"
+    }
+  },
+  "pdf": {
+    "title": "Xuất báo cáo PDF",
+    "description": "Kiểm tra tính năng xuất PDF với font tiếng Việt.",
+    "productList": "Danh sách sản phẩm",
+    "realData": "Dữ liệu thực tế từ hệ thống",
+    "testData": "Dữ liệu mẫu (Test)",
+    "testDesc": "Để kiểm tra font chữ unicode",
+    "from": "Từ",
+    "to": "Đến",
+    "loading": "Đang tải dữ liệu...",
+    "noData": "Không có dữ liệu trong khoảng thời gian này",
+    "showing": "Hiển thị {{count}} / {{total}} dòng",
+    "sampleReport": "Báo cáo mẫu",
+    "columns": {
+      "sku": "Mã SKU",
+      "name": "Tên sản phẩm",
+      "category": "Danh mục",
+      "unit": "Đơn vị",
+      "priceOut": "Giá bán",
+      "createdAt": "Ngày tạo"
+    }
   }
 }

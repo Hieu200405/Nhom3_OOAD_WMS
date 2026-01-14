@@ -20,7 +20,6 @@
     "lineItems": "Lines",
     "exportPdf": "Export PDF",
     "reset": "Reset demo data",
-    "notes": "Note",
     "sku": "SKU",
     "isActive": "Active",
     "notActive": "Inactive",
@@ -54,6 +53,59 @@
     "audit": "Audit Log",
     "settings": "Settings"
   },
+  "audit": {
+    "title": "Audit Log",
+    "description": "Track full history of system changes",
+    "time": "Time",
+    "actor": "Actor",
+    "action": "Action",
+    "entity": "Entity",
+    "details": "Change Details",
+    "filter": {
+      "entity": "Entity Type",
+      "timeRange": "Time Range",
+      "startDate": "From Date",
+      "endDate": "To Date",
+      "searchPlaceholder": "Search by user or content..."
+    },
+    "actions": {
+      "create": "Create",
+      "created": "Created",
+      "update": "Update",
+      "updated": "Updated",
+      "delete": "Delete",
+      "deleted": "Deleted",
+      "login": "Login",
+      "logout": "Logout",
+      "approve": "Approve",
+      "approved": "Approved",
+      "reject": "Reject",
+      "rejected": "Rejected",
+      "confirms": "Confirm",
+      "confirmed": "Confirmed",
+      "cancel": "Cancel",
+      "cancelled": "Cancelled",
+      "complete": "Complete",
+      "completed": "Completed",
+      "import": "Import",
+      "export": "Export",
+      "setting.updated": "Config Updated"
+    },
+    "entities": {
+      "Product": "Product",
+      "Category": "Category",
+      "Partner": "Partner",
+      "Receipt": "Receipt",
+      "Delivery": "Delivery",
+      "Inventory": "Inventory",
+      "User": "User",
+      "Setting": "Setting",
+      "Incident": "Incident",
+      "Stocktake": "Stocktake",
+      "Return": "Return",
+      "Disposal": "Disposal"
+    }
+  },
   "login": {
     "title": "Sign in",
     "username": "Username",
@@ -71,10 +123,10 @@
     "welcome": "Welcome, {{name}}!",
     "todayPending": "Today warehouse has <1>{{count}}</1> pending operations.",
     "cards": {
-      "inventoryValue": "Inventory value",
-      "pendingReceipts": "Pending receipts",
-      "pendingDeliveries": "Pending deliveries",
-      "incidents": "Open incidents"
+      "inventoryValue": "Inventory Value",
+      "pendingReceipts": "Pending Receipts",
+      "pendingDeliveries": "Pending Deliveries",
+      "incidents": "Open Incidents"
     },
     "metrics": {
       "inventoryValue": "Inventory Value",
@@ -101,7 +153,8 @@
     "stockoutChance": "Stockout risk:",
     "inDays": "In {{days}} days",
     "planRestock": "Plan Restock",
-    "recentActivities": "Recent activities"
+    "recentActivities": "Recent activities",
+    "noData": "No report data available"
   },
   "warehouse": {
     "title": "Warehouse structure",
@@ -111,38 +164,13 @@
     "type": "Level",
     "name": "Name",
     "code": "Code",
-    "subtitle":"Scan barcode to jump to location instantly.",
+    "subtitle": "Scan barcode to jump to location instantly.",
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "title2": "Hierarchical structure",
     "subtitle2": "Expand branches to view child locations.",
     "mapView": "Map view",
     "addChild": "Add child"
-    
-  },
-  "adjustments": {
-    "title": "Inventory Adjustments",
-    "subtitle": "Record manual corrections to inventory by location.",
-    "create": "Create adjustment",
-    "code": "Code",
-    "reason": "Reason",
-    "lines": "Lines",
-    "approvedAt": "Approved at",
-    "addLine": "Add line",
-    "product": "Product",
-    "location": "Location",
-    "batch": "Batch",
-    "delta": "Delta",
-    "selectProduct": "Select product",
-    "selectLocation": "Select location",
-    "selectBatch": "Select batch",
-    "noBatch": "No batch",
-    "reasons": {
-      "loss": "Loss",
-      "mismatch": "Mismatch",
-      "damaged": "Damaged",
-      "stocktakeError": "Stocktake error"
-    }
   },
   "products": {
     "title": "Products",
@@ -200,9 +228,20 @@
     "quantity": "Quantity in stock",
     "product": "Product",
     "location": "Location",
+    "batch": "Batch",
     "viewLocation": "View location",
     "allCategories": "All categories",
-    "checkSmart": "Smart check"
+    "checkSmart": "Smart check",
+    "locationList": "Location List",
+    "noLocation": "No location exists",
+    "expiry": "Exp",
+    "messages": {
+      "checking": "Checking inventory...",
+      "sufficient": "Inventory sufficient, no replenishment needed.",
+      "checkError": "Check error",
+      "createSuccess": "Successfully created {{count}} draft receipts!",
+      "createError": "Creation error"
+    }
   },
   "receipts": {
     "title": "Inbound receipts",
@@ -331,6 +370,30 @@
     "attachmentsPlaceholder": "Attachment URLs, comma-separated",
     "items": "Items"
   },
+  "adjustments": {
+    "title": "Inventory Adjustments",
+    "subtitle": "Record manual corrections to inventory by location.",
+    "create": "Create adjustment",
+    "code": "Code",
+    "reason": "Reason",
+    "lines": "Lines",
+    "approvedAt": "Approved at",
+    "addLine": "Add line",
+    "product": "Product",
+    "location": "Location",
+    "batch": "Batch",
+    "delta": "Delta",
+    "selectProduct": "Select product",
+    "selectLocation": "Select location",
+    "selectBatch": "Select batch",
+    "noBatch": "No batch",
+    "reasons": {
+      "loss": "Loss",
+      "mismatch": "Mismatch",
+      "damaged": "Damaged",
+      "stocktakeError": "Stocktake error"
+    }
+  },
   "returns": {
     "title": "Return orders",
     "create": "Create return",
@@ -363,7 +426,60 @@
     "receipts": "Inbound",
     "deliveries": "Outbound",
     "stocktaking": "Adjustments",
-    "financials": "Financials"
+    "financials": "Financials",
+    "stats": {
+      "totalInventoryValue": "Total Inventory Value",
+      "products": "Products",
+      "pendingReceipts": "Pending Receipts",
+      "pendingDeliveries": "Pending Deliveries",
+      "totalSkus": "Total SKUs",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "stockValue": "Stock Value (Est)",
+      "inboundVolume": "Inbound Volume",
+      "pending": "Pending",
+      "completed": "Completed",
+      "avgProcessingTime": "Avg Processing Time",
+      "outboundVolume": "Outbound Volume",
+      "onTimeDelivery": "On-time Delivery",
+      "totalStocktakes": "Total Stocktakes",
+      "accuracyRate": "Accuracy Rate",
+      "netAdjustments": "Net Adjustments",
+      "discrepancyRate": "Discrepancy Rate"
+    },
+    "charts": {
+      "revenueVsExpenses": "Revenue vs Expenses (6 Months)",
+      "inventoryStatus": "Inventory Status",
+      "stockDistribution": "Stock Distribution by Category",
+      "topProducts": "Top 5 Products by Value",
+      "monthlyInbound": "Monthly Inbound",
+      "monthlyOutbound": "Monthly Outbound",
+      "deliveryStatus": "Delivery Status",
+      "accuracyTrend": "Inventory Accuracy Trend"
+    },
+    "common": {
+      "noData": "No report data available",
+      "downloadCompleted": "Download completed",
+      "downloadFailed": "Download failed",
+      "refresh": "Refresh",
+      "exportPdf": "Export PDF",
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "available": "Available",
+      "allocated": "Allocated",
+      "reserved": "Reserved",
+      "quarantined": "Quarantined/Inspecting",
+      "volume": "Volume",
+      "value": "Value",
+      "orders": "Orders"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "inventoryLevel": "Inventory Level",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "stocktakeAccuracy": "Stocktake Accuracy"
+    }
   },
   "financials": {
     "title": "Financial Management",
@@ -410,15 +526,101 @@
     "updateSuccess": "Setting updated",
     "updateError": "Failed to update setting",
     "true": "True",
-    "false": "False"
+    "false": "False",
+    "groups": {
+      "general": "General",
+      "delivery": "Delivery",
+      "inventory": "Inventory",
+      "disposal": "Disposal"
+    },
+    "keys": {
+      "company.name": {
+        "label": "Company Name",
+        "desc": "Company name displayed on system and reports"
+      },
+      "delivery.sla.corporate": {
+        "label": "SLA Corporate Customers (Days)",
+        "desc": "Committed delivery time for corporate customers"
+      },
+      "delivery.sla.individual": {
+        "label": "SLA Individual Customers (Days)",
+        "desc": "Committed delivery time for individual customers"
+      },
+      "delivery.limit.corporate": {
+        "label": "Order Limit (Corporate)",
+        "desc": "Maximum quantity per order for corporate customers"
+      },
+      "delivery.limit.individual": {
+        "label": "Order Limit (Individual)",
+        "desc": "Maximum quantity per order for individual customers"
+      },
+      "inventory.low_stock_threshold": {
+        "label": "Low Stock Threshold",
+        "desc": "System warns when inventory drops below this level (if no product specific config)"
+      },
+      "disposal.approval_threshold": {
+        "label": "Disposal Approval Threshold (VND)",
+        "desc": "Disposal value requiring level 2 approval"
+      }
+    }
   },
   "notifications": {
     "saved": "Saved successfully",
     "updated": "Updated",
     "deleted": "Deleted",
     "statusChanged": "Status updated"
+  },
+  "users": {
+    "title": "User Management",
+    "description": "Manage user accounts, roles and access permissions",
+    "create": "Add User",
+    "edit": "Edit User",
+    "deleteConfirm": "Are you sure you want to delete this account?",
+    "deleteSuccess": "Account deleted successfully",
+    "createSuccess": "Account created successfully",
+    "updateSuccess": "Update successful",
+    "loadError": "Failed to load users",
+    "deleteError": "Failed to delete account",
+    "validation": {
+      "required": "Please fill in all required fields",
+      "passwordRequired": "Please enter password",
+      "passwordMin": "Minimum 8 characters"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "password": "Password",
+      "newPassword": "New Password (Leave blank if not changing)",
+      "isActive": "Active Account",
+      "createdAt": "Created At"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "pdf": {
+    "title": "PDF Report Export",
+    "description": "Test PDF export feature with unicode fonts.",
+    "productList": "Product List",
+    "realData": "Real data from system",
+    "testData": "Sample Data (Test)",
+    "testDesc": "To check unicode font rendering",
+    "from": "From",
+    "to": "To",
+    "loading": "Loading data...",
+    "noData": "No data available for this period",
+    "showing": "Showing {{count}} / {{total}} rows",
+    "sampleReport": "Sample Report",
+    "columns": {
+      "sku": "SKU",
+      "name": "Product Name",
+      "category": "Category",
+      "unit": "Unit",
+      "priceOut": "Selling Price",
+      "createdAt": "Created At"
+    }
   }
 }
-
-
-

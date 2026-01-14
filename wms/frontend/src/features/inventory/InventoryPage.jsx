@@ -99,17 +99,17 @@ export function InventoryPage() {
   };
 
   const handleCheckReplenishment = async () => {
-    const toastId = toast.loading('Đang kiểm tra tồn kho...');
+    const toastId = toast.loading(t('inventory.messages.checking'));
     try {
       const res = await apiClient('/inventory/replenishment/check');
       setSuggestions(res.data || []);
       setReplenishModalOpen(true);
       toast.dismiss(toastId);
       if (res.data?.length === 0) {
-        toast.success('Hệ thống đủ hàng, không cần bổ sung.');
+        toast.success(t('inventory.messages.sufficient'));
       }
     } catch (err) {
-      toast.error('Lỗi kiểm tra: ' + err.message, { id: toastId });
+      toast.error(t('inventory.messages.checkError') + ': ' + err.message, { id: toastId });
     }
   };
 
@@ -119,11 +119,11 @@ export function InventoryPage() {
         method: 'POST',
         body: { suggestions: selectedSuggestions }
       });
-      toast.success(`Đã tạo ${selectedSuggestions.length} phiếu nhập kho nháp thành công!`);
+      toast.success(t('inventory.messages.createSuccess', { count: selectedSuggestions.length }));
       // Optionally refresh inventory if anything changed immediately? 
       // Receipts are drafts so inventory wont change yet.
     } catch (err) {
-      toast.error('Lỗi tạo phiếu: ' + err.message);
+      toast.error(t('inventory.messages.createError') + ': ' + err.message);
       throw err;
     }
   };
@@ -205,7 +205,7 @@ export function InventoryPage() {
                 </button>
                 {openProductId === row.productId ? (
                   <div className="absolute right-0 z-20 mt-2 w-96 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Danh sách vị trí</div>
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">{t('inventory.locationList')}</div>
                     <div className="max-h-64 space-y-2 overflow-auto">
                       {row.items.map((item, idx) => {
                         const loc = item.location || { name: item.locationId, code: '' };
@@ -214,15 +214,15 @@ export function InventoryPage() {
                           <div key={`${item.locationId}-${idx}`} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
                             <div className="font-semibold">{loc.code ? `${loc.code} - ${loc.name}` : loc.name}</div>
                             <div className="mt-1 flex flex-wrap gap-2">
-                              <span>Qty: {formatNumber(item.quantity)}</span>
-                              <span>Batch: {item.batch || '-'}</span>
-                              <span>Expiry: {exp}</span>
+                              <span>{t('inventory.quantity')}: {formatNumber(item.quantity)}</span>
+                              <span>{t('inventory.batch')}: {item.batch || '-'}</span>
+                              <span>{t('inventory.expiry')}: {exp}</span>
                               <StatusBadge status={item.status} />
                             </div>
                           </div>
                         );
                       })}
-                      {row.items.length === 0 ? <div>Không có tồn tại vị trí.</div> : null}
+                      {row.items.length === 0 ? <div>{t('inventory.noLocation')}</div> : null}
                     </div>
                   </div>
                 ) : null}

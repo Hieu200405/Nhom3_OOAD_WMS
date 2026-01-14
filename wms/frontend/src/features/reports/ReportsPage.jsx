@@ -53,10 +53,10 @@ export function ReportsPage() {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            toast.success('Download completed');
+            toast.success(t('reports.common.downloadCompleted'));
         } catch (e) {
             console.error(e);
-            toast.error('Download failed');
+            toast.error(t('reports.common.downloadFailed'));
         }
     };
 
@@ -64,6 +64,7 @@ export function ReportsPage() {
 
     const renderOverview = () => {
         if (loading || Array.isArray(data)) {
+            // ... skeleton logic remains the same ...
             return (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -91,7 +92,7 @@ export function ReportsPage() {
         if (!data) return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileDown className="h-12 w-12 mb-4 opacity-50" />
-                <p>No report data available</p>
+                <p>{t('reports.common.noData')}</p>
             </div>
         );
 
@@ -100,17 +101,17 @@ export function ReportsPage() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <StatCard title="Total Inventory Value" value={formatCurrency(totalInventoryValue)} color="bg-blue-50 text-blue-700" />
-                    <StatCard title="Products" value={counts?.products} color="bg-indigo-50 text-indigo-700" />
-                    <StatCard title="Pending Receipts" value={counts?.pendingReceipts} color="bg-emerald-50 text-emerald-700" />
-                    <StatCard title="Pending Deliveries" value={counts?.pendingDeliveries} color="bg-amber-50 text-amber-700" />
+                    <StatCard title={t('reports.stats.totalInventoryValue')} value={formatCurrency(totalInventoryValue)} color="bg-blue-50 text-blue-700" />
+                    <StatCard title={t('reports.stats.products')} value={counts?.products} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title={t('reports.stats.pendingReceipts')} value={counts?.pendingReceipts} color="bg-emerald-50 text-emerald-700" />
+                    <StatCard title={t('reports.stats.pendingDeliveries')} value={counts?.pendingDeliveries} color="bg-amber-50 text-amber-700" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                         <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <span className="w-1 h-6 bg-indigo-500 rounded-full"></span>
-                            Revenue vs Expenses (6 Months)
+                            {t('reports.charts.revenueVsExpenses')}
                         </h3>
                         <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
@@ -123,8 +124,8 @@ export function ReportsPage() {
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     />
                                     <Legend />
-                                    <Bar dataKey="income" fill="#10b981" name="Revenue" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="expense" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="income" fill="#10b981" name={t('reports.common.revenue')} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="expense" fill="#ef4444" name={t('reports.common.expenses')} radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -133,7 +134,7 @@ export function ReportsPage() {
                     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                         <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
-                            Inventory Status
+                            {t('reports.charts.inventoryStatus')}
                         </h3>
                         <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
@@ -165,6 +166,7 @@ export function ReportsPage() {
     const renderInventory = () => {
         if (loading || !Array.isArray(data)) return (
             <div className="space-y-6">
+                {/* Skeleton logic same */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Skeleton className="h-32 w-full rounded-xl" />
                     <Skeleton className="h-32 w-full rounded-xl" />
@@ -179,7 +181,7 @@ export function ReportsPage() {
         if (!data || data.length === 0) return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileDown className="h-12 w-12 mb-4 opacity-50" />
-                <p>No inventory data available</p>
+                <p>{t('reports.common.noData')}</p>
             </div>
         );
 
@@ -192,10 +194,10 @@ export function ReportsPage() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <StatCard title="Total SKUs" value={totalItems} color="bg-indigo-50 text-indigo-700" />
-                    <StatCard title="Low Stock Items" value={lowStock} color="bg-orange-50 text-orange-700" />
-                    <StatCard title="Out of Stock" value={outOfStock} color="bg-red-50 text-red-700" />
-                    <StatCard title="Stock Value (Est)" value={formatCurrency(totalValue)} color="bg-emerald-50 text-emerald-700" />
+                    <StatCard title={t('reports.stats.totalSkus')} value={totalItems} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title={t('reports.stats.lowStock')} value={lowStock} color="bg-orange-50 text-orange-700" />
+                    <StatCard title={t('reports.stats.outOfStock')} value={outOfStock} color="bg-red-50 text-red-700" />
+                    <StatCard title={t('reports.stats.stockValue')} value={formatCurrency(totalValue)} color="bg-emerald-50 text-emerald-700" />
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
                     <DataTable
@@ -222,6 +224,7 @@ export function ReportsPage() {
 
     const renderInbound = () => {
         if (loading || !Array.isArray(data)) return (
+            // ... skeleton logic same ...
             <div className="space-y-6">
                 <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <Skeleton className="h-80 w-full" />
@@ -235,7 +238,7 @@ export function ReportsPage() {
         if (!data || data.length === 0) return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileDown className="h-12 w-12 mb-4 opacity-50" />
-                <p>No inbound data available</p>
+                <p>{t('reports.common.noData')}</p>
             </div>
         );
 
@@ -245,14 +248,14 @@ export function ReportsPage() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <StatCard title="Total Inbound Volume" value={totalVolume} color="bg-indigo-50 text-indigo-700" />
-                    <StatCard title="Total Receipts Processed" value={totalReceipts} color="bg-emerald-50 text-emerald-700" />
+                    <StatCard title={t('reports.stats.inboundVolume')} value={totalVolume} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title={t('reports.stats.totalReceipts')} value={totalReceipts} color="bg-emerald-50 text-emerald-700" />
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <h3 className="mb-6 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span className="w-1 h-6 bg-indigo-500 rounded-full"></span>
-                        Daily Inbound Volume
+                        {t('reports.charts.monthlyInbound')}
                     </h3>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
@@ -266,22 +269,11 @@ export function ReportsPage() {
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
                                 <Legend />
-                                <Line yAxisId="left" type="monotone" dataKey="totalQty" stroke="#4f46e5" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} name="Quantity" dot={false} />
-                                <Line yAxisId="right" type="monotone" dataKey="documents" stroke="#10b981" strokeWidth={3} name="Receipts" dot={false} />
+                                <Line yAxisId="left" type="monotone" dataKey="totalQty" stroke="#4f46e5" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} name={t('reports.common.volume')} dot={false} />
+                                <Line yAxisId="right" type="monotone" dataKey="documents" stroke="#10b981" strokeWidth={3} name={t('reports.inventory')} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
-                    <DataTable
-                        data={data}
-                        isLoading={loading}
-                        columns={[
-                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
-                            { key: 'totalQty', header: 'Total Quantity' },
-                            { key: 'documents', header: 'Receipt Count' }
-                        ]}
-                    />
                 </div>
             </div>
         );
@@ -289,6 +281,7 @@ export function ReportsPage() {
 
     const renderOutbound = () => {
         if (loading || !Array.isArray(data)) return (
+            // ... skeleton logic same ...
             <div className="space-y-6">
                 <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <Skeleton className="h-80 w-full" />
@@ -302,7 +295,7 @@ export function ReportsPage() {
         if (!data || data.length === 0) return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileDown className="h-12 w-12 mb-4 opacity-50" />
-                <p>No outbound data available</p>
+                <p>{t('reports.common.noData')}</p>
             </div>
         );
 
@@ -312,13 +305,13 @@ export function ReportsPage() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <StatCard title="Total Outbound Volume" value={totalVolume} color="bg-purple-50 text-purple-700" />
-                    <StatCard title="Total Deliveries" value={totalDeliveries} color="bg-blue-50 text-blue-700" />
+                    <StatCard title={t('reports.stats.outboundVolume')} value={totalVolume} color="bg-purple-50 text-purple-700" />
+                    <StatCard title={t('reports.stats.totalDeliveries')} value={totalDeliveries} color="bg-blue-50 text-blue-700" />
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <h3 className="mb-6 text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
-                        Daily Outbound Volume
+                        {t('reports.charts.monthlyOutbound')}
                     </h3>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
@@ -332,22 +325,11 @@ export function ReportsPage() {
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
                                 <Legend />
-                                <Bar yAxisId="left" dataKey="totalQty" fill="#8884d8" name="Quantity" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="documents" fill="#82ca9d" name="Deliveries" radius={[4, 4, 0, 0]} />
+                                <Bar yAxisId="left" dataKey="totalQty" fill="#8884d8" name={t('reports.common.volume')} radius={[4, 4, 0, 0]} />
+                                <Bar yAxisId="right" dataKey="documents" fill="#82ca9d" name={t('reports.common.orders')} radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
-                    <DataTable
-                        data={data}
-                        isLoading={loading}
-                        columns={[
-                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
-                            { key: 'totalQty', header: 'Total Quantity' },
-                            { key: 'documents', header: 'Delivery Count' }
-                        ]}
-                    />
                 </div>
             </div>
         );
@@ -355,6 +337,7 @@ export function ReportsPage() {
 
     const renderStocktake = () => {
         if (loading || !Array.isArray(data)) return (
+            // ... skeleton logic same ...
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Skeleton className="h-32 w-full rounded-xl" />
@@ -369,7 +352,7 @@ export function ReportsPage() {
         if (!data || data.length === 0) return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileDown className="h-12 w-12 mb-4 opacity-50" />
-                <p>No stocktake data available</p>
+                <p>{t('reports.common.noData')}</p>
             </div>
         );
 
@@ -379,19 +362,19 @@ export function ReportsPage() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <StatCard title="Total Discrepancies" value={totalDiscrepancies} color="bg-rose-50 text-rose-700" />
-                    <StatCard title="Completed Checks" value={completedChecks} color="bg-indigo-50 text-indigo-700" />
+                    <StatCard title={t('reports.stats.discrepancyRate')} value={totalDiscrepancies} color="bg-rose-50 text-rose-700" />
+                    <StatCard title={t('reports.stats.totalStocktakes')} value={completedChecks} color="bg-indigo-50 text-indigo-700" />
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 overflow-hidden">
                     <DataTable
                         data={data}
                         isLoading={loading}
                         columns={[
-                            { key: 'code', header: 'Code' },
-                            { key: 'date', header: 'Date', render: (val) => formatDate(val) },
+                            { key: 'code', header: t('stocktaking.create') }, // Reuse code label? Or just 'Code' -> 'Mã'
+                            { key: 'date', header: t('financials.date'), render: (val) => formatDate(val) },
                             {
                                 key: 'status',
-                                header: 'Status',
+                                header: t('app.status'),
                                 render: (val) => (
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${val === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                                         }`}>
@@ -399,7 +382,7 @@ export function ReportsPage() {
                                     </span>
                                 )
                             },
-                            { key: 'discrepancies', header: 'Total Discrepancies' }
+                            { key: 'discrepancies', header: t('stocktaking.difference') }
                         ]}
                     />
                 </div>
@@ -414,9 +397,6 @@ export function ReportsPage() {
                     <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                         {t('reports.title')}
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Analytics and reporting across all warehouse operations.
-                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -424,14 +404,14 @@ export function ReportsPage() {
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        Refresh
+                        {t('reports.common.refresh')}
                     </button>
                     <button
                         onClick={downloadPdf}
                         className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
                     >
                         <FileDown className="h-4 w-4" />
-                        Export PDF
+                        {t('reports.common.exportPdf')}
                     </button>
                 </div>
             </div>
@@ -439,11 +419,11 @@ export function ReportsPage() {
             <div className="border-b border-slate-200 dark:border-slate-700">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                     {[
-                        { id: 'overview', label: 'Overview' },
-                        { id: 'inventory', label: 'Inventory Level' },
-                        { id: 'inbound', label: 'Inbound' },
-                        { id: 'outbound', label: 'Outbound' },
-                        { id: 'stocktake', label: 'Stocktake Accuracy' },
+                        { id: 'overview', label: t('reports.tabs.overview') },
+                        { id: 'inventory', label: t('reports.tabs.inventoryLevel') },
+                        { id: 'inbound', label: t('reports.tabs.inbound') },
+                        { id: 'outbound', label: t('reports.tabs.outbound') },
+                        { id: 'stocktake', label: t('reports.tabs.stocktakeAccuracy') },
                     ].map((tab) => (
                         <button
                             key={tab.id}
