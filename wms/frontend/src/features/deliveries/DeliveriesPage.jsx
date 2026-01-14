@@ -306,11 +306,10 @@ export function DeliveriesPage() {
                   }
                   transition(row, action.status);
                 }}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition ${
-                  action.variant === 'danger'
+                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition ${action.variant === 'danger'
                     ? 'bg-rose-600 hover:bg-rose-500'
                     : 'bg-indigo-600 hover:bg-indigo-500'
-                }`}
+                  }`}
               >
                 {action.label}
               </button>
@@ -438,14 +437,23 @@ export function DeliveriesPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Chi tiết sản phẩm</div>
-                          </div>
+            </div>
             {form.lines.map((line, index) => (
               <div key={index} className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 grid md:grid-cols-5 gap-3 relative">
                 <div className="md:col-span-2">
                   <Select
                     label="Sản phẩm"
                     value={line.productId}
-                    onChange={(e) => updateLine(index, { productId: e.target.value, locationId: '', batch: '' })}
+                    onChange={(e) => {
+                      const selectedProductId = e.target.value;
+                      const selectedProduct = products.find(p => p.id === selectedProductId);
+                      updateLine(index, {
+                        productId: selectedProductId,
+                        locationId: '',
+                        batch: '',
+                        price: selectedProduct?.priceOut || 0
+                      });
+                    }}
                     options={productOptions}
                     placeholder="Chọn sản phẩm"
                     required

@@ -82,6 +82,7 @@ export const createDisposal = async (
     boardRequired,
     boardMembers: payload.boardMembers ?? [],
     minutesFileUrl: payload.minutesFileUrl,
+    createdBy: new Types.ObjectId(actorId),
     items: payload.items.map((item) => {
       const entry = {
         productId: new Types.ObjectId(item.productId),

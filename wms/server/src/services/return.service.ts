@@ -116,10 +116,18 @@ const validateReturnQuantities = async (
   if (from === 'customer') {
     const doc = await DeliveryModel.findById(new Types.ObjectId(refId)).lean();
     if (!doc) throw notFound('Original Delivery not found');
+    // Check delivery must be completed before creating return
+    if (doc.status !== 'completed') {
+      throw badRequest('Chỉ được tạo phiếu trả hàng cho phiếu xuất đã hoàn tất. Vui lòng hoàn tất phiếu xuất trước.');
+    }
     originalLines = doc.lines.map(l => ({ productId: l.productId, qty: l.qty }));
   } else {
     const doc = await ReceiptModel.findById(new Types.ObjectId(refId)).lean();
     if (!doc) throw notFound('Original Receipt not found');
+    // Check receipt must be completed before creating return
+    if (doc.status !== 'completed') {
+      throw badRequest('Chỉ được tạo phiếu trả hàng cho phiếu nhập đã hoàn tất. Vui lòng hoàn tất phiếu nhập trước.');
+    }
     originalLines = doc.lines.map(l => ({ productId: l.productId, qty: l.qty }));
   }
 
