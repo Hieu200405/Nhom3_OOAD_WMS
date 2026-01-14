@@ -14,7 +14,7 @@ const emptyCustomer = {
   type: 'customer',
   code: '',
   name: '',
-  customerType: 'Cá nhân',
+  customerType: 'Individual',
   policy: '',
   creditLimit: 0,
   paymentTerm: 'Net 30',
@@ -22,17 +22,6 @@ const emptyCustomer = {
   isActive: true,
 };
 
-const customerTypes = [
-  { value: 'Cá nhân', label: 'Cá nhân' },
-  { value: 'Doanh nghiệp', label: 'Doanh nghiệp' },
-];
-
-const paymentTerms = [
-  { value: 'COD', label: 'Thanh toán khi nhận hàng (COD)' },
-  { value: '15 Ngày', label: 'Công nợ 15 ngày' },
-  { value: '30 Ngày', label: 'Công nợ 30 ngày' },
-  { value: 'Trả trước', label: 'Trả trước' },
-];
 
 export function CustomersPage() {
   const { t } = useTranslation();
@@ -41,6 +30,19 @@ export function CustomersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyCustomer);
+
+  const customerTypes = [
+    { value: 'Individual', label: t('partners.customerTypes.individual') },
+    { value: 'Corporate', label: t('partners.customerTypes.corporate') },
+  ];
+
+  const paymentTerms = [
+    { value: 'COD', label: t('partners.paymentTerms.cod') },
+    { value: 'Net 15', label: t('partners.paymentTerms.net15') },
+    { value: 'Net 30', label: t('partners.paymentTerms.net30') },
+    { value: 'Prepaid', label: t('partners.paymentTerms.prepaid') },
+  ];
+
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -131,9 +133,9 @@ export function CustomersPage() {
         columns={[
           { key: 'code', header: t('app.sku') },
           { key: 'name', header: t('partners.customername') },
-          { key: 'customerType', header: t('partners.customerType') },
+          { key: 'customerType', header: t('partners.customerType'), render: (value) => customerTypes.find((item) => item.value === value)?.label ?? value },
           { key: 'creditLimit', header: t('partners.creditLimit'), render: (val) => val?.toLocaleString() ?? 0 },
-          { key: 'paymentTerm', header: t('partners.paymentTerm') },
+          { key: 'paymentTerm', header: t('partners.paymentTerm'), render: (value) => paymentTerms.find((item) => item.value === value)?.label ?? value },
           {
             key: 'isActive',
             header: t('app.status'),
@@ -253,3 +255,8 @@ export function CustomersPage() {
     </div>
   );
 }
+
+
+
+
+

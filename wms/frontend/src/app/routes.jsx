@@ -28,6 +28,7 @@ import { DeliveriesPage } from '../features/deliveries/DeliveriesPage.jsx';
 import { DeliveryDetailPage } from '../features/deliveries/DeliveryDetailPage.jsx';
 import { IncidentsPage } from '../features/incidents/IncidentsPage.jsx';
 import { StocktakingPage } from '../features/stocktaking/StocktakingPage.jsx';
+import { AdjustmentsPage } from '../features/adjustments/AdjustmentsPage.jsx';
 import { ReturnsPage } from '../features/returns/ReturnsPage.jsx';
 import { DisposalsPage } from '../features/disposals/DisposalsPage.jsx';
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
@@ -147,6 +148,13 @@ export const appRoutes = [
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
   },
   {
+    path: '/adjustments',
+    labelKey: 'navigation.adjustments',
+    icon: RotateCw,
+    component: AdjustmentsPage,
+    roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
+  },
+  {
     path: '/returns',
     labelKey: 'navigation.returns',
     icon: FileChartColumn,
@@ -211,3 +219,5 @@ export const appRoutes = [
     hiddenInMenu: true,
   },
 ];
+
+

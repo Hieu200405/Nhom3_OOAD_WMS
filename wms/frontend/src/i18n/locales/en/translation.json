@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "Warehouse Management System",
     "language": "Language",
@@ -43,6 +43,7 @@
     "deliveries": "Deliveries",
     "incidents": "Incidents",
     "stocktaking": "Stocktaking",
+    "adjustments": "Adjustments",
     "returns": "Returns",
     "disposals": "Disposals",
     "reports": "Reports",
@@ -119,6 +120,30 @@
     "addChild": "Add child"
     
   },
+  "adjustments": {
+    "title": "Inventory Adjustments",
+    "subtitle": "Record manual corrections to inventory by location.",
+    "create": "Create adjustment",
+    "code": "Code",
+    "reason": "Reason",
+    "lines": "Lines",
+    "approvedAt": "Approved at",
+    "addLine": "Add line",
+    "product": "Product",
+    "location": "Location",
+    "batch": "Batch",
+    "delta": "Delta",
+    "selectProduct": "Select product",
+    "selectLocation": "Select location",
+    "selectBatch": "Select batch",
+    "noBatch": "No batch",
+    "reasons": {
+      "loss": "Loss",
+      "mismatch": "Mismatch",
+      "damaged": "Damaged",
+      "stocktakeError": "Stocktake error"
+    }
+  },
   "products": {
     "title": "Products",
     "sku": "SKU",
@@ -143,6 +168,11 @@
     "suppliername": "Supplier name",
     "contact": "Contact",
     "businessType": "Business type",
+    "businessTypes": {
+      "manufacturer": "Manufacturer",
+      "distributor": "Distributor",
+      "retailer": "Retailer"
+    },
     "manufacturer": "Manufacturer",
     "distributor": "Distributor",
     "retailer": "Retailer",
@@ -151,8 +181,18 @@
     "subtitle": "Manage supplier list and contact information.",
     "customername": "Customer name",
     "customerType": "Customer type",
+    "customerTypes": {
+      "individual": "Individual",
+      "corporate": "Corporate"
+    },
     "creditLimit": "Credit limit",
     "paymentTerm": "Payment term",
+    "paymentTerms": {
+      "cod": "Cash on delivery (COD)",
+      "net15": "Net 15",
+      "net30": "Net 30",
+      "prepaid": "Prepaid"
+    },
     "customerSubtitle": "Manage customer list and credit limits."
   },
   "inventory": {
@@ -379,5 +419,6 @@
     "statusChanged": "Status updated"
   }
 }
+
 
 

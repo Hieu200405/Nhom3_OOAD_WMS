@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "Hệ thống quản lý kho",
     "language": "Ngôn ngữ",
@@ -22,7 +22,7 @@
     "reset": "Khôi phục dữ liệu mẫu",
     "sku": "SKU",
     "isActive": "Hoạt động",
-    "notActive": "Tạm ẩn",
+    "notActive": "Tạm ngưng",
     "exportExcel": "Xuất Excel",
     "close": "Đóng",
     "details": "Chi tiết",
@@ -42,6 +42,7 @@
     "deliveries": "Xuất kho",
     "incidents": "Phiếu sự cố",
     "stocktaking": "Kiểm kê",
+    "adjustments": "Điều chỉnh tồn kho",
     "returns": "Trả hàng",
     "disposals": "Hủy hàng",
     "reports": "Báo cáo",
@@ -77,7 +78,7 @@
       "login": "Đăng nhập",
       "logout": "Đăng xuất",
       "approve": "Phê duyệt",
-      "approved": "Đã duyệt",
+      "approved": "Đã phê duyệt",
       "reject": "Từ chối",
       "rejected": "Đã từ chối",
       "confirms": "Xác nhận",
@@ -114,7 +115,7 @@
     "hint": "Tài khoản mẫu: admin/admin123, manager/manager123, staff/staff123"
   },
   "roles": {
-    "Admin": "Quản trị",
+    "Admin": "Quản trị viên",
     "Manager": "Quản lý",
     "Staff": "Nhân viên"
   },
@@ -125,13 +126,13 @@
       "inventoryValue": "Giá trị tồn kho",
       "pendingReceipts": "Phiếu nhập chờ",
       "pendingDeliveries": "Phiếu xuất chờ",
-      "incidents": "Sự cố mở"
+      "incidents": "Sự cố đang xử lý"
     },
     "metrics": {
       "inventoryValue": "Giá trị tồn kho",
       "pendingReceipts": "Nhập kho chờ",
       "pendingDeliveries": "Xuất kho chờ",
-      "openIncidents": "Sự cố mở",
+      "openIncidents": "Sự cố đang xử lý",
       "expiringSoon": "Sắp hết hạn"
     },
     "trends": {
@@ -162,7 +163,7 @@
     "type": "Cấp",
     "name": "Tên",
     "code": "Mã vị trí",
-    "subtitle":"Quét mã vạch để chuyển đến vị trí ngay lập tức.",
+    "subtitle":"Quản lý mã vị trí để chuyển động trong vị trí ngay lập tức.",
     "expandAll": "Mở rộng tất cả",
     "collapseAll": "Thu gọn tất cả",
     "title2": "Cấu trúc phân cấp",
@@ -194,6 +195,11 @@
     "suppliername": "Tên nhà cung cấp",
     "contact": "Liên hệ",
     "businessType": "Loại hình",
+    "businessTypes": {
+      "manufacturer": "Nhà sản xuất",
+      "distributor": "Nhà phân phối",
+      "retailer": "Nhà bán lẻ"
+    },
     "manufacturer": "Nhà sản xuất",
     "distributor": "Nhà phân phối",
     "retailer": "Nhà bán lẻ",
@@ -201,16 +207,27 @@
     "company": "Doanh nghiệp",
     "subtitle": "Quản lý danh sách nhà cung cấp và thông tin liên hệ.",
     "customername": "Tên khách hàng",
-    "customerType": "Loại khách",
-    "creditLimit": "Hạn mức nợ",
+    "customerType": "Loại khách hàng",
+    "customerTypes": {
+      "individual": "Cá nhân",
+      "corporate": "Doanh nghiệp"
+    },
+    "creditLimit": "Hạn mức tín dụng",
     "paymentTerm": "Điều khoản thanh toán",
-    "customerSubtitle": "Quản lý danh sách khách hàng và hạn mức công nợ."
+    "paymentTerms": {
+      "cod": "Thanh toán khi nhận hàng (COD)",
+      "net15": "Công nợ 15 ngày",
+      "net30": "Công nợ 30 ngày",
+      "prepaid": "Trả trước"
+    },
+    "customerSubtitle": "Quản lý danh sách khách hàng và hạn mức tín dụng."
   },
    "inventory": {
-    "subtitle": "Theo dõi chi tiết mức độ tồn kho và vị trí lưu trữ hàng hóa.",
+    "subtitle": "Theo dõi chi tiết mức tồn kho và vị trí lưu trữ hàng hóa.",
     "quantity": "Số lượng tồn",
     "product": "Sản phẩm",
     "location": "Vị trí",
+    "batch": "Lo",
     "viewLocation": "Xem vị trí",
     "allCategories": "Tất cả danh mục",
     "checkSmart": "Kiểm tra thông minh"
@@ -221,7 +238,7 @@
     "supplier": "Nhà cung cấp",
     "date": "Ngày nhập",
     "status": {
-      "Draft": "Nháp",
+      "Draft": "Nhập",
       "Approved": "Đã duyệt",
       "Supplier Confirmed": "Nhà cung cấp xác nhận",
       "Completed": "Hoàn tất",
@@ -254,7 +271,7 @@
     "note": "Ghi chú",
     "rejectTitle": "Từ chối phiếu nhập",
     "reject": "Từ chối",
-    "rejectDescription": "Bạn có thể ghi chú lý do từ chối để tiện theo dõi sau này.",
+    "rejectDescription": "Bạn có thể ghi chú lý do từ chối để theo dõi sau này.",
     "noteOptional": "Ghi chú (tùy chọn)",
     "rejectPlaceholder": "VD: Sai nhà cung cấp, sai giá nhập...",
     "actions": {
@@ -273,7 +290,7 @@
     "date": "Ngày xuất",
     "expectedDate": "Ngày dự kiến giao",
     "status": {
-      "Draft": "Nháp",
+      "Draft": "Nhập",
       "Approved": "Đã duyệt",
       "Prepared": "Đã chuẩn bị",
       "Delivered": "Đã giao",
@@ -281,20 +298,20 @@
       "Cancelled": "Hủy"
     },
     "prepare": "Chuẩn bị",
-    "deliver": "Đã giao",
+    "deliver": "Giao hàng",
     "complete": "Hoàn tất",
     "deliveryNote": "Phiếu xuất",
     "subtitle": "Quản lý phiếu xuất kho và quá trình chuyển đổi trạng thái."
   },
   "incidents": {
     "title": "Phiếu sự cố",
-    "subtitle": "Ghi nhận giao thiếu, hỏng hóc, giao chậm hoặc từ chối của khách hàng và lưu lại hướng xử lý tiếp theo.",
+    "subtitle": "Ghi nhận giao thiếu, hàng hỏng, giao chậm hoặc từ chối của khách hàng và lưu lại hướng xử lý tiếp theo.",
     "type": "Loại sự cố",
     "selectType": "Chọn loại sự cố",
     "note": "Nội dung",
     "action": "Hướng xử lý",
     "create": "Ghi nhận sự cố",
-    "refType": "Loại hình",
+    "refType": "Loại hành",
     "refId": "ID tham chiếu",
     "date": "Ngày tạo",
     "product": "Sản phẩm",
@@ -312,7 +329,7 @@
     "types": {
       "shortage": "Giao thiếu",
       "late": "Giao chậm",
-      "damaged": "Hỏng hóc",
+      "damaged": "Hàng hỏng",
       "rejected": "Từ chối"
     },
     "actions": {
@@ -328,30 +345,54 @@
   },
   "stocktaking": {
     "title": "Kiểm kê kho",
-    "subtitle": "Thực hiện kiểm kê định kỳ hoặc đột xuất để đảm bảo độ chính xác của số liệu tồn kho.",
+    "subtitle": "Thực hiện kiểm kê định kỳ hoặc đặt xuất để đảm bảo chính xác của s? liệu tồn kho.",
     "create": "Tạo phiếu kiểm kê",
     "adjustments": "Phiếu điều chỉnh",
     "difference": "Chênh lệch",
-    "apply": "Áp tồn",
+    "apply": "Áp dụng",
     "approve": "Duyệt kiểm kê",
     "approvedBy": "Duyệt bởi",
     "approvedAt": "Duyệt lúc",
     "minutes": "Ghi chú",
-    "attachments": "Tệp đính kèm",
+    "attachments": "Tập đính kèm",
     "minutesPlaceholder": "Ghi chú hoặc ghi chú duyệt",
     "attachmentsPlaceholder": "Tải lên biên bản kiểm kê hoặc hình ảnh",
     "items": "Sản phẩm"
   },
+    "adjustments": {
+    "title": "Điều chỉnh tồn kho",
+    "subtitle": "Ghi nhận điều chỉnh tồn kho theo vị trí.",
+    "create": "Tạo phiếu điều chỉnh",
+    "code": "Mã",
+    "reason": "Lý do",
+    "lines": "Dòng hàng",
+    "approvedAt": "Ngày duyệt",
+    "addLine": "Thêm dòng",
+    "product": "Sản phẩm",
+    "location": "Vị trí",
+    "batch": "Lô",
+    "delta": "Chênh lệch",
+    "selectProduct": "Chọn sản phẩm",
+    "selectLocation": "Chọn vị trí",
+    "selectBatch": "Chọn lô",
+    "noBatch": "Không có lô",
+    "reasons": {
+      "loss": "Mất mát",
+      "mismatch": "Nhầm lẫn",
+      "damaged": "Hư hỏng",
+      "stocktakeError": "Kiểm kê sai"
+    }
+  },
   "returns": {
     "title": "Phiếu trả hàng",
-    "create": "Tạo phiếu trả",
+    "create": "Tạo phiếu trả hàng",
     "reason": "Lý do",
     "status": {
       "Awaiting Inspection": "Chờ kiểm tra",
       "Restocked": "Đã nhập lại",
       "Disposed": "Đã chuyển hủy"
     },
-    "subtitle": "Ghi nhận hàng trả từ khách hàng và quyết định nhập lại hay hủy bỏ.",
+    "subtitle": "Ghi nhận hàng trả từ khách hàng và quyết định nhập lại hay hủy.",
     "from": "Khách hàng",
     "items": "Sản phẩm"
   },
@@ -363,10 +404,10 @@
     "reason": "Lý do hủy",
     "reasons": {
       "expired": "Hết hạn",
-      "damaged": "Hỏng hóc",
+      "damaged": "Hàng hỏng",
       "lost": "Mất mát"
     },
-    "subtitle": "Xử lý hủy hàng hết hạn, hỏng hóc hoặc mất mát sau khi được quản lý phê duyệt."
+    "subtitle": "Xử lý hủy hàng hết hạn, hàng hỏng hoặc mất mát sau khi được quản lý phê duyệt."
   },
   "reports": {
     "title": "Báo cáo kho",
@@ -392,17 +433,17 @@
     "debtAmount": "Số tiền nợ",
     "receivable": "Phải thu",
     "payable": "Phải trả",
-    "totalReceivable": "Tổng công nợ phải thu",
-    "totalPayable": "Tổng công nợ phải trả",
+    "totalReceivable": "Tổng cộng nợ phải thu",
+    "totalPayable": "Tổng cộng nợ phải trả",
     "overdueCount": "Số công nợ quá hạn",
-    "totalCollected": "Tổng đã thu trong kỳ",
-    "totalPaidInPeriod": "Tổng đã trả trong kỳ",
-    "payNow": "Trả",
+    "totalCollected": "Tổng thu trong kỳ",
+    "totalPaidInPeriod": "Tổng trả trong kỳ",
+    "payNow": "Trả ngay",
     "collectNow": "Thu",
     "quickPayAmount": "Số tiền thanh toán",
     "id": "Mã Transaction",
     "relatedReceipt": "Phiếu liên quan",
-    "paidAmount": "Đã trả",
+    "paidAmount": "Số tiền trả",
     "paymentDueDate": "Hạn thanh toán",
     "status": "Trạng thái",
     "overdueDays": "Quá hạn {{days}} ngày",
@@ -466,6 +507,21 @@
     "statusChanged": "Đã cập nhật trạng thái"
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
