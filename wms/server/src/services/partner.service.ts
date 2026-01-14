@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { PartnerModel } from '../models/partner.model.js';
 import { buildPagedResponse, parsePagination } from '../utils/pagination.js';
-import { conflict, notFound } from '../utils/errors.js';
+import { badRequest, conflict, notFound } from '../utils/errors.js';
 import { recordAudit } from './audit.service.js';
 import type { PartnerType } from '@wms/shared';
 
@@ -153,16 +153,59 @@ export const updatePartner = async (
 };
 
 export const deletePartner = async (id: string, actorId: string) => {
-  const partner = await PartnerModel.findByIdAndDelete(new Types.ObjectId(id));
+  const partnerId = new Types.ObjectId(id);
+
+  // Get partner first to check its type
+  const partner = await PartnerModel.findById(partnerId);
   if (!partner) {
     throw notFound('Partner not found');
   }
+
+  if (partner.type === 'supplier') {
+    // Check if supplier is linked to products
+    const { ProductModel } = await import('../models/product.model.js');
+    const productCount = await ProductModel.countDocuments({ supplierIds: partnerId });
+    if (productCount > 0) {
+      throw badRequest(`Không thể xóa nhà cung cấp đang liên kết với ${productCount} sản phẩm.`);
+    }
+
+    // Check if supplier has pending receipts
+    const { ReceiptModel } = await import('../models/receipt.model.js');
+    const pendingReceipts = await ReceiptModel.countDocuments({
+      supplierId: partnerId,
+      status: { $nin: ['completed', 'cancelled'] }
+    });
+    if (pendingReceipts > 0) {
+      throw badRequest('Không thể xóa nhà cung cấp đang có phiếu nhập chưa hoàn thành.');
+    }
+  } else if (partner.type === 'customer') {
+    // Check if customer has pending deliveries
+    const { DeliveryModel } = await import('../models/delivery.model.js');
+    const pendingDeliveries = await DeliveryModel.countDocuments({
+      customerId: partnerId,
+      status: { $nin: ['completed', 'cancelled'] }
+    });
+    if (pendingDeliveries > 0) {
+      throw badRequest('Không thể xóa khách hàng đang có phiếu xuất chưa hoàn thành.');
+    }
+
+    // Check if customer has outstanding balance (unpaid deliveries)
+    const unpaidDeliveries = await (await import('../models/delivery.model.js')).DeliveryModel.countDocuments({
+      customerId: partnerId,
+      paymentStatus: { $nin: ['paid', 'refunded'] }
+    });
+    if (unpaidDeliveries > 0) {
+      throw badRequest('Không thể xóa khách hàng còn công nợ chưa thanh toán.');
+    }
+  }
+
+  await PartnerModel.findByIdAndDelete(partnerId);
   await recordAudit({
     action: 'partner.deleted',
     entity: 'Partner',
     entityId: partner._id,
     actorId,
-    payload: { name: partner.name }
+    payload: { name: partner.name, type: partner.type }
   });
   return true;
 };

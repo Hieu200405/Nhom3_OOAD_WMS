@@ -213,7 +213,39 @@ export const updateProduct = async (
 };
 
 export const deleteProduct = async (id: string, actorId: string) => {
-  const product = await ProductModel.findByIdAndDelete(new Types.ObjectId(id));
+  const productId = new Types.ObjectId(id);
+
+  // Check if product has inventory
+  const { InventoryModel } = await import('../models/inventory.model.js');
+  const inventoryCount = await InventoryModel.countDocuments({
+    productId,
+    quantity: { $gt: 0 }
+  });
+  if (inventoryCount > 0) {
+    throw badRequest('Không thể xóa sản phẩm đang còn tồn kho. Vui lòng xuất hết hàng trước khi xóa.');
+  }
+
+  // Check if product is in pending receipts
+  const { ReceiptModel } = await import('../models/receipt.model.js');
+  const pendingReceipts = await ReceiptModel.countDocuments({
+    'lines.productId': productId,
+    status: { $nin: ['completed', 'cancelled'] }
+  });
+  if (pendingReceipts > 0) {
+    throw badRequest('Không thể xóa sản phẩm đang có phiếu nhập chưa hoàn thành.');
+  }
+
+  // Check if product is in pending deliveries
+  const { DeliveryModel } = await import('../models/delivery.model.js');
+  const pendingDeliveries = await DeliveryModel.countDocuments({
+    'lines.productId': productId,
+    status: { $nin: ['completed', 'cancelled'] }
+  });
+  if (pendingDeliveries > 0) {
+    throw badRequest('Không thể xóa sản phẩm đang có phiếu xuất chưa hoàn thành.');
+  }
+
+  const product = await ProductModel.findByIdAndDelete(productId);
   if (!product) {
     throw notFound('Product not found');
   }
