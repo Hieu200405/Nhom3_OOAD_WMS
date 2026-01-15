@@ -1,40 +1,26 @@
 {
   "errors": {
-    "lines.0.priceIn": {
+    "status": {
       "name": "ValidatorError",
-      "message": "Path `priceIn` is required.",
+      "message": "`diff` is not a valid enum value for path `status`.",
       "properties": {
-        "message": "Path `priceIn` is required.",
-        "type": "required",
-        "path": "priceIn"
+        "message": "`diff` is not a valid enum value for path `status`.",
+        "type": "enum",
+        "enumValues": [
+          "draft",
+          "approved",
+          "applied"
+        ],
+        "path": "status",
+        "value": "diff",
+        "length": 4
       },
-      "kind": "required",
-      "path": "priceIn"
-    },
-    "lines.1.priceIn": {
-      "name": "ValidatorError",
-      "message": "Path `priceIn` is required.",
-      "properties": {
-        "message": "Path `priceIn` is required.",
-        "type": "required",
-        "path": "priceIn"
-      },
-      "kind": "required",
-      "path": "priceIn"
-    },
-    "lines.2.priceIn": {
-      "name": "ValidatorError",
-      "message": "Path `priceIn` is required.",
-      "properties": {
-        "message": "Path `priceIn` is required.",
-        "type": "required",
-        "path": "priceIn"
-      },
-      "kind": "required",
-      "path": "priceIn"
+      "kind": "enum",
+      "path": "status",
+      "value": "diff"
     }
   },
-  "_message": "Receipt validation failed",
+  "_message": "Stocktake validation failed",
   "name": "ValidationError",
-  "message": "Receipt validation failed: lines.0.priceIn: Path `priceIn` is required., lines.1.priceIn: Path `priceIn` is required., lines.2.priceIn: Path `priceIn` is required."
+  "message": "Stocktake validation failed: status: `diff` is not a valid enum value for path `status`."
 }

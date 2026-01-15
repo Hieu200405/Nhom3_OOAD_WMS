@@ -431,6 +431,13 @@
     "deliveries": "Outbound",
     "stocktaking": "Adjustments",
     "financials": "Financials",
+    "filter": {
+      "dateRange": "Filter by Date Range",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear Filter"
+    },
     "stats": {
       "totalInventoryValue": "Total Inventory Value",
       "products": "Products",
