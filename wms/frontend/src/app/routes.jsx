@@ -24,6 +24,7 @@ import { WarehouseStructurePage } from '../features/warehouse-structure/Warehous
 import { InventoryPage } from '../features/inventory/InventoryPage.jsx';
 import { ReceiptsPage } from '../features/receipts/ReceiptsPage.jsx';
 import { ReceiptDetailPage } from '../features/receipts/ReceiptDetailPage.jsx';
+import { SupplierConfirmPage } from '../features/receipts/SupplierConfirmPage.jsx';
 import { DeliveriesPage } from '../features/deliveries/DeliveriesPage.jsx';
 import { DeliveryDetailPage } from '../features/deliveries/DeliveryDetailPage.jsx';
 import { IncidentsPage } from '../features/incidents/IncidentsPage.jsx';
@@ -115,6 +116,14 @@ export const appRoutes = [
     labelKey: 'navigation.receipts',
     icon: Receipt,
     component: ReceiptDetailPage,
+    roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
+    hiddenInMenu: true,
+  },
+  {
+    path: '/receipts/:id/supplier-confirm',
+    labelKey: 'navigation.receipts',
+    icon: Receipt,
+    component: SupplierConfirmPage,
     roles: [Roles.ADMIN, Roles.MANAGER, Roles.STAFF],
     hiddenInMenu: true,
   },

@@ -340,6 +340,11 @@ export function ReceiptsPage() {
                     setRejectOpen(true);
                     return;
                   }
+                  // Navigate to supplier portal for confirmation
+                  if (action.status === 'supplierConfirmed') {
+                    navigate(`/receipts/${row.id}/supplier-confirm`);
+                    return;
+                  }
                   transition(row, action.status);
                 }}
                 className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-white shadow-sm transition

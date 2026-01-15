@@ -17,7 +17,23 @@ import { notFound } from '../utils/errors.js';
 
 const toObject = (doc: unknown) => JSON.parse(JSON.stringify(doc));
 
-export const getDashboardStats = async () => {
+// Date filter options for reports
+export interface DateFilterOptions {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export const getDashboardStats = async (options: DateFilterOptions = {}) => {
+  const { startDate, endDate } = options;
+
+  // Build date filter for queries
+  const dateFilter: any = {};
+  if (startDate) dateFilter.$gte = startDate;
+  if (endDate) {
+    const endOfDay = new Date(endDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    dateFilter.$lte = endOfDay;
+  }
   // 1. Basic Counts
   const [
     productsCount,
@@ -51,13 +67,27 @@ export const getDashboardStats = async () => {
 
   const totalInventoryValue = totalInventoryValueResult[0]?.totalValue || 0;
 
-  // 2. Revenue/Expense Chart (Last 6 months)
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  // 2. Revenue/Expense Chart
+  // Only filter by date if explicitly provided - NO FALLBACK to default range
+  const ftMatchFilter: any = {};
+  if (startDate || endDate) {
+    ftMatchFilter.date = {};
+    if (startDate) ftMatchFilter.date.$gte = startDate;
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      ftMatchFilter.date.$lte = endOfDay;
+    }
+  }
 
   // Use FinancialTransactionModel for accurate financial data
+  const ftPipeline: any[] = [];
+  if (Object.keys(ftMatchFilter).length > 0) {
+    ftPipeline.push({ $match: ftMatchFilter });
+  }
+
   const ftData = await FinancialTransactionModel.aggregate([
-    { $match: { date: { $gte: sixMonthsAgo } } },
+    ...(Object.keys(ftMatchFilter).length > 0 ? [{ $match: ftMatchFilter }] : []),
     {
       $group: {
         _id: {
@@ -71,22 +101,16 @@ export const getDashboardStats = async () => {
 
   const chartDataMap = new Map<string, { name: string; income: number; expense: number }>();
 
-  // Initialize map with last 6 months to ensure continuity
-  for (let i = 0; i < 6; i++) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const key = d.toISOString().slice(0, 7); // YYYY-MM
-    chartDataMap.set(key, { name: key, income: 0, expense: 0 });
-  }
-
-  // Fill data
+  // Build chart data directly from database results - no pre-generation
+  // This ensures empty data when filter has no matches
   ftData.forEach((item: any) => {
     const key = item._id.month;
-    if (chartDataMap.has(key)) {
-      const entry = chartDataMap.get(key)!;
-      if (item._id.type === 'revenue' || item._id.type === 'income') entry.income += item.total;
-      if (item._id.type === 'expense' || item._id.type === 'payment') entry.expense += item.total;
+    if (!chartDataMap.has(key)) {
+      chartDataMap.set(key, { name: key, income: 0, expense: 0 });
     }
+    const entry = chartDataMap.get(key)!;
+    if (item._id.type === 'revenue' || item._id.type === 'income') entry.income += item.total;
+    if (item._id.type === 'expense' || item._id.type === 'payment') entry.expense += item.total;
   });
 
   const revenueChart = Array.from(chartDataMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -239,8 +263,23 @@ const groupByDate = (field: string): PipelineStage[] => [
   { $sort: { _id: 1 as const } }
 ];
 
-export const getInboundReport = async () => {
-  const rows = await ReceiptModel.aggregate(groupByDate('date'));
+export const getInboundReport = async (options: DateFilterOptions = {}) => {
+  const { startDate, endDate } = options;
+
+  // Build match stage for date filtering
+  const matchStage: any[] = [];
+  if (startDate || endDate) {
+    const dateFilter: any = {};
+    if (startDate) dateFilter.$gte = startDate;
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter.$lte = endOfDay;
+    }
+    matchStage.push({ $match: { date: dateFilter } });
+  }
+
+  const rows = await ReceiptModel.aggregate([...matchStage, ...groupByDate('date')]);
   return rows.map((row) => ({
     date: row._id,
     totalQty: row.totalQty,
@@ -248,8 +287,23 @@ export const getInboundReport = async () => {
   }));
 };
 
-export const getOutboundReport = async () => {
-  const rows = await DeliveryModel.aggregate(groupByDate('date'));
+export const getOutboundReport = async (options: DateFilterOptions = {}) => {
+  const { startDate, endDate } = options;
+
+  // Build match stage for date filtering
+  const matchStage: any[] = [];
+  if (startDate || endDate) {
+    const dateFilter: any = {};
+    if (startDate) dateFilter.$gte = startDate;
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter.$lte = endOfDay;
+    }
+    matchStage.push({ $match: { date: dateFilter } });
+  }
+
+  const rows = await DeliveryModel.aggregate([...matchStage, ...groupByDate('date')]);
   return rows.map((row) => ({
     date: row._id,
     totalQty: row.totalQty,
@@ -257,8 +311,24 @@ export const getOutboundReport = async () => {
   }));
 };
 
-export const getStocktakeReport = async () => {
+export const getStocktakeReport = async (options: DateFilterOptions = {}) => {
+  const { startDate, endDate } = options;
+
+  // Build match stage for date filtering
+  const matchStage: any[] = [];
+  if (startDate || endDate) {
+    const dateFilter: any = {};
+    if (startDate) dateFilter.$gte = startDate;
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      dateFilter.$lte = endOfDay;
+    }
+    matchStage.push({ $match: { date: dateFilter } });
+  }
+
   const rows = await StocktakeModel.aggregate([
+    ...matchStage,
     {
       $project: {
         code: 1,

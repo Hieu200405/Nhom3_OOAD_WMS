@@ -10,8 +10,16 @@ import {
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { badRequest } from '../utils/errors.js';
 
-export const overview = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await getDashboardStats();
+// Helper to extract date filter from query
+const extractDateFilter = (req: Request) => {
+  const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+  const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+  return { startDate, endDate };
+};
+
+export const overview = asyncHandler(async (req: Request, res: Response) => {
+  const { startDate, endDate } = extractDateFilter(req);
+  const data = await getDashboardStats({ startDate, endDate });
   res.json({ data });
 });
 
@@ -20,18 +28,21 @@ export const inventory = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ data });
 });
 
-export const inbound = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await getInboundReport();
+export const inbound = asyncHandler(async (req: Request, res: Response) => {
+  const { startDate, endDate } = extractDateFilter(req);
+  const data = await getInboundReport({ startDate, endDate });
   res.json({ data });
 });
 
-export const outbound = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await getOutboundReport();
+export const outbound = asyncHandler(async (req: Request, res: Response) => {
+  const { startDate, endDate } = extractDateFilter(req);
+  const data = await getOutboundReport({ startDate, endDate });
   res.json({ data });
 });
 
-export const stocktake = asyncHandler(async (_req: Request, res: Response) => {
-  const data = await getStocktakeReport();
+export const stocktake = asyncHandler(async (req: Request, res: Response) => {
+  const { startDate, endDate } = extractDateFilter(req);
+  const data = await getStocktakeReport({ startDate, endDate });
   res.json({ data });
 });
 
@@ -54,7 +65,8 @@ export const pdf = asyncHandler(async (req: Request, res: Response) => {
   if (!resolver) {
     throw badRequest('Unknown report type');
   }
-  const data = await resolver();
+  const { startDate, endDate } = extractDateFilter(req);
+  const data = await resolver({ startDate, endDate });
   const buffer = await createPdfBuffer(`${type.toUpperCase()} Report`, data);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename=${type}-report.pdf`);

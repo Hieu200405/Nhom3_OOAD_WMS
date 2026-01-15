@@ -16,19 +16,18 @@ export function ReportsPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+
+    // Input state (what user types in the date inputs)
+    const [startDateInput, setStartDateInput] = useState('');
+    const [endDateInput, setEndDateInput] = useState('');
+
+    // Applied filter state (what's actually used for API calls)
+    const [appliedStartDate, setAppliedStartDate] = useState('');
+    const [appliedEndDate, setAppliedEndDate] = useState('');
 
     const fetchReport = useCallback(async (type, dateStart = null, dateEnd = null) => {
         setLoading(true);
         try {
-            // API endpoint mapping
-            // overview -> /reports/overview
-            // inventory -> /reports/inventory
-            // inbound -> /reports/inbound
-            // outbound -> /reports/outbound
-            // stocktake -> /reports/stocktake
-
             // Build query params for date filtering
             const params = new URLSearchParams();
             if (dateStart) params.append('startDate', dateStart);
@@ -37,6 +36,7 @@ export function ReportsPage() {
             const queryString = params.toString();
             const url = `/reports/${type}${queryString ? `?${queryString}` : ''}`;
 
+            console.log('Fetching report:', url); // Debug log
             const res = await apiClient(url);
             setData(res.data);
         } catch (error) {
@@ -47,22 +47,34 @@ export function ReportsPage() {
         }
     }, []);
 
+    // Only fetch on tab change, using the APPLIED filter (not input state)
     useEffect(() => {
-        fetchReport(activeTab, startDate, endDate);
-    }, [activeTab, startDate, endDate, fetchReport]);
+        fetchReport(activeTab, appliedStartDate, appliedEndDate);
+    }, [activeTab, appliedStartDate, appliedEndDate, fetchReport]);
 
+    // Handle "Áp dụng" button - copies input to applied state
     const handleApplyFilter = () => {
-        fetchReport(activeTab, startDate, endDate);
+        setAppliedStartDate(startDateInput);
+        setAppliedEndDate(endDateInput);
     };
 
+    // Handle "Xóa bộ lọc" button - clears both input and applied states
     const handleClearFilter = () => {
-        setStartDate('');
-        setEndDate('');
+        setStartDateInput('');
+        setEndDateInput('');
+        setAppliedStartDate('');
+        setAppliedEndDate('');
     };
 
     const downloadPdf = async () => {
         try {
-            const blob = await apiClient(`/reports/${activeTab}/pdf`, {
+            // Build query params for PDF download too
+            const params = new URLSearchParams();
+            if (appliedStartDate) params.append('startDate', appliedStartDate);
+            if (appliedEndDate) params.append('endDate', appliedEndDate);
+            const queryString = params.toString();
+
+            const blob = await apiClient(`/reports/${activeTab}/pdf${queryString ? `?${queryString}` : ''}`, {
                 headers: { Accept: 'application/pdf' },
                 responseType: 'blob'
             });
@@ -451,8 +463,8 @@ export function ReportsPage() {
                             <input
                                 type="date"
                                 id="startDate"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
+                                value={startDateInput}
+                                onChange={(e) => setStartDateInput(e.target.value)}
                                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                             />
                         </div>
@@ -463,21 +475,21 @@ export function ReportsPage() {
                             <input
                                 type="date"
                                 id="endDate"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                value={endDateInput}
+                                onChange={(e) => setEndDateInput(e.target.value)}
                                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                             />
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleApplyFilter}
-                                disabled={!startDate && !endDate}
+                                disabled={!startDateInput && !endDateInput}
                                 className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RefreshCw className="h-3.5 w-3.5" />
                                 {t('reports.filter.apply')}
                             </button>
-                            {(startDate || endDate) && (
+                            {(startDateInput || endDateInput || appliedStartDate || appliedEndDate) && (
                                 <button
                                     onClick={handleClearFilter}
                                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
