@@ -430,6 +430,13 @@
     "deliveries": "Xuất kho",
     "stocktaking": "Kiểm kê & điều chỉnh",
     "financials": "Công nợ",
+    "filter": {
+      "dateRange": "Lọc theo khoảng thời gian",
+      "from": "Từ ngày",
+      "to": "Đến ngày",
+      "apply": "Áp dụng",
+      "clear": "Xóa bộ lọc"
+    },
     "stats": {
       "totalInventoryValue": "Tổng giá trị tồn kho",
       "products": "Sản phẩm",

@@ -4,7 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { FileDown, RefreshCw } from 'lucide-react';
+import { FileDown, RefreshCw, Calendar, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '../../components/DataTable.jsx';
 import { apiClient } from '../../services/apiClient.js';
@@ -16,8 +16,10 @@ export function ReportsPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
-    const fetchReport = useCallback(async (type) => {
+    const fetchReport = useCallback(async (type, dateStart = null, dateEnd = null) => {
         setLoading(true);
         try {
             // API endpoint mapping
@@ -26,7 +28,16 @@ export function ReportsPage() {
             // inbound -> /reports/inbound
             // outbound -> /reports/outbound
             // stocktake -> /reports/stocktake
-            const res = await apiClient(`/reports/${type}`);
+
+            // Build query params for date filtering
+            const params = new URLSearchParams();
+            if (dateStart) params.append('startDate', dateStart);
+            if (dateEnd) params.append('endDate', dateEnd);
+
+            const queryString = params.toString();
+            const url = `/reports/${type}${queryString ? `?${queryString}` : ''}`;
+
+            const res = await apiClient(url);
             setData(res.data);
         } catch (error) {
             console.error(error);
@@ -37,8 +48,17 @@ export function ReportsPage() {
     }, []);
 
     useEffect(() => {
-        fetchReport(activeTab);
-    }, [activeTab, fetchReport]);
+        fetchReport(activeTab, startDate, endDate);
+    }, [activeTab, startDate, endDate, fetchReport]);
+
+    const handleApplyFilter = () => {
+        fetchReport(activeTab, startDate, endDate);
+    };
+
+    const handleClearFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
 
     const downloadPdf = async () => {
         try {
@@ -413,6 +433,61 @@ export function ReportsPage() {
                         <FileDown className="h-4 w-4" />
                         {t('reports.common.exportPdf')}
                     </button>
+                </div>
+            </div>
+
+            {/* Date Range Filter */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <Calendar className="h-4 w-4" />
+                        <span>{t('reports.filter.dateRange')}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="startDate" className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {t('reports.filter.from')}:
+                            </label>
+                            <input
+                                type="date"
+                                id="startDate"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="endDate" className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {t('reports.filter.to')}:
+                            </label>
+                            <input
+                                type="date"
+                                id="endDate"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleApplyFilter}
+                                disabled={!startDate && !endDate}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                {t('reports.filter.apply')}
+                            </button>
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={handleClearFilter}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                    {t('reports.filter.clear')}
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
